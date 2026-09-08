@@ -99,6 +99,82 @@ distinguish between those. The CLI prints that warning with the result.
 
 ---
 
+---
+
+## Cook et al. 2019 — the whole-animal connectome
+
+`cook_2019_herm`. The adult hermaphrodite reconstructed end to end.
+
+| | |
+|---|---|
+| neurons / muscles / other | 302 / 135 / 36 (473 cells) |
+| chemical edges / weight | 4879 / 28113 |
+| gap junctions stored (once per pair) | 1450 / weight 11680 |
+| gap junctions published (directed) | 2883 / weight 23313 |
+| chemical autapses | 38 |
+| gap-junction self-connections | 17, total weight 47 |
+
+**This is the dataset locomotion work needs.** Unlike Witvliet it contains the full
+ventral nerve cord — `DA1–9`, `DB1–7`, `VA1–12`, `VB1–11`, `VC1–6`, `DD1–6`, `VD1–13`,
+`AS1–11` — and all 95 body wall muscles, so the motor neuron → muscle chain is
+actually present:
+
+```
+$ python tools/inspect_connectome.py --dataset cook_2019_herm edges --pre VB7
+VB7  DD5    chemical  29
+VB7  MVL16  chemical   4      <- a real neuromuscular junction
+```
+
+### The two gap-junction sheets, and the odd published totals
+
+The workbook ships two sheets describing the same network, and the naming is
+actively misleading:
+
+| Sheet | What it actually is | Entries / weight |
+|---|---|---|
+| `hermaphrodite gap jn symmetric` | the full mirrored matrix — each junction twice | 2883 / 23313 |
+| `hermaphrodite gap jn asymmetric` | **not** asymmetric conductances; the *upper triangle*, each junction once | 1450 / 11680 |
+
+We read the second, because it is exactly our storage convention and removes any
+chance of double counting. The importer then **cross-checks it against the mirrored
+sheet** — the two are redundant, which makes them a free correctness check on our
+reading of the layout.
+
+The published figures being odd is explained by the 17 gap junctions a cell makes
+with itself (total weight 47), which lie on the matrix diagonal and are written once
+rather than twice:
+
+```
+entries: 2 × (1450 − 17) + 17 = 2883
+weight:  2 ×  11680      − 47 = 23313
+```
+
+Reading the mirrored sheet into once-per-pair storage would silently double every
+weight and still look plausible, so
+`worm/tests/test_cook_2019_import.py::TestGapJunctionSheetChoice` guards it.
+
+### A third muscle naming convention
+
+Cook writes body wall muscles as `dBWML1` … `vBWMR23`, where Witvliet writes
+`BWM-DL01` and WormAtlas writes `MDL01` — three spellings for the same 95 cells.
+The mapping is in `worm/importers/naming.py` and is verified to be exact (24 + 24 +
+23 + 24 = 95, nothing left over). Cook also lower-cases `g1p`, which WormAtlas
+writes `g1P`.
+
+### Which dataset for what
+
+| Task | Dataset |
+|---|---|
+| Locomotion, motor circuits, whole-animal graph | **`cook_2019_herm`** |
+| Head and sensory circuits, best modern EM | `witvliet_2021_7` |
+| Comparing two individuals | `witvliet_2021_7` vs `witvliet_2021_8` |
+| Development across stages | `witvliet_2021_1` … `_8` |
+
+Note the trade-off: Cook is whole-animal but is one older reconstruction; Witvliet is
+head-only but is eight individuals traced with modern methods. Neither dominates.
+
+---
+
 ## Annotation sources
 
 Applied at load time, never baked into the connectome files.
@@ -139,7 +215,6 @@ All eight datasets currently agree with their oracle on all eight checked fields
 
 | Dataset | Why it matters | Status |
 |---|---|---|
-| **Cook et al. 2019** (herm.) | Whole animal: 302 neurons, 135 muscles, full ventral cord. **Required for any locomotion work.** | Planned next. Adjacency-matrix format, so a different importer. Note its published electrical figures (2883 entries, 23313 weight) are both odd, so its gap-junction matrix is not a clean symmetric doubling — expect to spend time reconciling that. |
 | **White et al. 1986** | The original connectome. Historical baseline. | Available via the same mirror. |
 | **Randi et al. 2023** | *Functional* connectivity — which neurons actually influence which in a living animal, by optogenetics plus whole-brain imaging. A different kind of measurement from anatomy. | Would be a strong cross-check on any dynamics model. |
 | **Ripoll-Sánchez et al. 2023** | Neuropeptide signalling network — the communication layer invisible to EM. | In scope only if extrasynaptic signalling is modelled. |

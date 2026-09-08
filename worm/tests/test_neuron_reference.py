@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from tools.generate_neuron_reference import CURATED, main
+from tools.generate_neuron_reference import CURATED, main, render
 from worm.importers.naming import hermaphrodite_neuron_ids
 from worm.loader import load
 
@@ -49,21 +49,25 @@ class TestCuratedNotes:
             )
             assert note.summary.strip()
 
-    def test_curated_keys_are_real_neuron_classes(self) -> None:
-        c, _ = load("witvliet_2021_7")
+    def test_every_curated_class_is_a_real_neuron_class(self) -> None:
+        """Against the whole animal, every curated note must name a cell that exists."""
+        c, _ = load("cook_2019_herm")
         known = {x.class_name for x in c.cells if x.class_name}
-        # Curated on purpose despite being outside this dataset: PLM and PVD are
-        # posterior cells beyond the reconstructed volume, and NSM is pharyngeal
-        # (Witvliet reconstructed the somatic brain, not the pharyngeal system).
-        expected_absent = {"PLM", "PVD", "NSM"}
-        unknown = set(CURATED) - known - expected_absent
-        assert not unknown, f"curated notes for classes not in the dataset: {sorted(unknown)}"
+        unknown = set(CURATED) - known
+        assert not unknown, f"curated notes for classes that do not exist: {sorted(unknown)}"
 
-    def test_absent_classes_are_flagged_in_the_output(self) -> None:
-        """A note about a cell the dataset lacks must say so, not imply it is present."""
-        text = NEURONS_MD.read_text(encoding="utf-8")
+    def test_absent_classes_are_flagged_rather_than_implied_present(self) -> None:
+        """Rendered against a head-only dataset, missing cells must be marked missing.
+
+        The committed reference uses the whole animal, where nothing is missing — so
+        this exercises the mechanism directly rather than relying on it firing there.
+        """
+        head_only, _ = load("witvliet_2021_7")
+        text = render(head_only, "witvliet_2021_7")
         assert "_not in this dataset_" in text
         assert "Not present in `witvliet_2021_7`" in text
+        # PLM and PVD are posterior cells outside the Witvliet reconstruction volume.
+        assert "`PLM`" in text.split("Not present in")[1][:200]
 
 
 class TestDescriptionTable:

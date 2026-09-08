@@ -119,6 +119,24 @@ chemical_weight = 7467
 electrical_edges_directed = 576
 electrical_weight_directed = 794
 
+[cook_2019_herm]
+source = "https://openworm.org/ConnectomeToolbox/Cook2019Herm_data/"
+neurons = 302
+muscles = 135
+other_cells = 36
+cells = 473
+chemical_edges = 4879
+chemical_weight = 28113
+electrical_edges_directed = 2883
+electrical_weight_directed = 23313
+# Both electrical figures are odd, which a naive doubling cannot produce. They are
+# reconciled by the 17 gap junctions a cell makes with itself (total weight 47):
+#   entries: 2 * (1450 - 17) + 17 = 2883
+#   weight:  2 *  11680      - 47 = 23313
+electrical_self_loops = 17
+electrical_edges_undirected = 1450
+electrical_weight_undirected = 11680
+
 [witvliet_2021_8]
 source = "https://openworm.org/ConnectomeToolbox/Witvliet8_data/"
 neurons = 180

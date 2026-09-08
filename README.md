@@ -38,15 +38,17 @@ because a controller was handed the food's coordinates.
 
 Built and verified:
 
-- Importer for all eight [Witvliet et al. 2021](https://doi.org/10.1038/s41586-021-03778-8)
-  individual brain connectomes, with our own normalized schema.
+- Importers for all eight [Witvliet et al. 2021](https://doi.org/10.1038/s41586-021-03778-8)
+  individual brain connectomes **and** the whole-animal
+  [Cook et al. 2019](https://doi.org/10.1038/s41586-019-1352-7) hermaphrodite
+  connectome, in our own normalized schema.
 - Every dataset's totals checked against independently published figures —
-  8 datasets × 8 fields, all agreeing.
+  9 datasets, 75 field comparisons, all agreeing.
 - Annotation overlays (functional role, neurotransmitter, neuron class), each
   citing its own source per field.
 - Inspection CLI, circuit visualizer, and a generated
   [reference for all 302 neurons](docs/neurons.md).
-- 170 tests, running offline on a fresh clone.
+- 203 tests, running offline on a fresh clone.
 
 **Not built yet, deliberately:** neural dynamics, any body, any Isaac Sim
 integration, anything fly-related. Two biological decisions must be settled first
@@ -90,7 +92,8 @@ Two findings from building it that changed the design:
   ventral-cord motor neurons, and only the front eight body-wall muscle segments.
   The circuitry that generates the crawling gait is not in the file. Recorded in
   the data as `Scope.HEAD` so downstream code can refuse rather than silently
-  produce a paralysed worm.
+  produce a paralysed worm — which is why the whole-animal Cook 2019 dataset is
+  imported alongside it.
 - **No connectome contains synaptic sign.** Electron microscopy shows a synapse
   exists; it cannot show which receptor sits on the other side, and that receptor
   decides whether the synapse excites or inhibits. Sign can only be *predicted*.

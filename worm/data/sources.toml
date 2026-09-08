@@ -111,6 +111,25 @@ stage = "adult"
 scope = "head"
 
 # ---------------------------------------------------------------------------
+# Cook et al. 2019 - whole-animal connectome
+# ---------------------------------------------------------------------------
+# Unlike Witvliet, this covers the ENTIRE animal: ventral nerve cord motor
+# neurons and all 95 body wall muscles included. The first dataset here that can
+# support a locomotion model.
+
+[cook_2019_herm]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/SI%205%20Connectome%20adjacency%20matrices,%20corrected%20July%202020.xlsx"
+filename = "SI 5 Connectome adjacency matrices, corrected July 2020.xlsx"
+sha256 = "1f4fdbf84746b69b49a8da0816f52787860ce349b638dce37924ba80f90c70c9"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Cook SJ, Jarrell TA, Brittin CA, Wang Y, Bloniarz AE, Yakovlev MA, Nguyen KCQ, Tang LT-H, Bayer EA, Duerr JS, Bulow HE, Hobert O, Hall DH, Emmons SW. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019)."
+doi = "10.1038/s41586-019-1352-7"
+mirror_note = "Supplementary Information 5, July 2020 correction. Adjacency matrices, not an edge list. Only the hermaphrodite sheets are imported; the male sheets are present in the file but out of scope."
+stage = "adult"
+scope = "whole_animal"
+
+# ---------------------------------------------------------------------------
 # Supporting annotation sources
 # ---------------------------------------------------------------------------
 

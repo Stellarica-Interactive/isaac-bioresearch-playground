@@ -21,6 +21,7 @@ from common.data.overlay import OverlayReport, apply_overlays
 from common.data.registry import get_importer
 from common.data.schemas import Connectome
 from worm.annotations.overlays import DEFAULT_OVERLAYS, get_overlays
+from worm.importers import cook_2019 as _cook  # noqa: F401  (registers importer)
 from worm.importers import witvliet_2021 as _witvliet  # noqa: F401  (registers importers)
 from worm.importers.sources import normalized_path, raw_path
 

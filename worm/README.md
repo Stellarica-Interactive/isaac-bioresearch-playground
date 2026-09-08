@@ -31,8 +31,8 @@ worm/
 
 | | | Status |
 |---|---|---|
-| **W0** | Data inspection: import, verify, explore, visualize | ✅ done |
-| **W1** | Neural runtime: graded dynamics, checkpointing, stability tests | ⏸ blocked on [two decisions](../docs/model_assumptions.md#6-open-decisions-before-w1) |
+| **W0** | Data inspection: import, verify, explore, visualize | ✅ done — Witvliet ×8 and Cook 2019, all verified against published totals |
+| **W1** | Neural runtime: graded dynamics, checkpointing, stability tests | ⏸ blocked on the [neuron-model decision](../docs/model_assumptions.md#62-neuron-model); synaptic sign is [decided](../docs/model_assumptions.md#61-synaptic-sign--decided) |
 | **W2** | Isaac Sim body: segmented, articulated, muscle-driven | not started |
 | **W3** | Chemotaxis in a concentration field | not started |
 | **W4** | Touch and escape | not started |
@@ -42,20 +42,30 @@ W1 is deliberately not started. Choosing a neuron model and deciding what to do
 about synaptic sign are biological judgements, not implementation details, and
 writing code first would bury them.
 
-## The dataset trap, stated once more
+## Choosing a dataset — this matters more than it sounds
 
 **Witvliet #7 and #8 are brain-only reconstructions.** They contain no
 ventral-cord motor neurons (`DA`, `DB`, `VA`, `VB`, `VC`, `DD`, `VD`, `AS`) and
-only body-wall muscle segments 1–8 of each quadrant.
+only body-wall muscle segments 1–8 of each quadrant. The crawling gait is generated
+in the ventral cord, so a locomotion model built on them would be a worm that cannot
+move.
 
-The crawling gait is generated in the ventral cord. So:
+**Cook et al. 2019 is the whole animal**: 302 neurons, all 95 body wall muscles, the
+full ventral cord, and real neuromuscular junctions.
 
-- **Head circuits, sensory processing, individual comparison** → Witvliet, ideal.
-- **Locomotion (W2–W4)** → needs a whole-animal reconstruction. Cook et al. 2019
-  is the intended source and is **not yet imported**.
+| Task | Dataset |
+|---|---|
+| Locomotion, motor circuits, whole-animal graph | `cook_2019_herm` |
+| Head and sensory circuits, best modern EM | `witvliet_2021_7` |
+| Comparing two individuals | `witvliet_2021_7` vs `witvliet_2021_8` |
+| Development across larval stages | `witvliet_2021_1` … `_8` |
 
-`Connectome.scope` records this, and `worm/tests/test_witvliet_import.py::TestAnatomicalScope`
-asserts it, so the constraint fails loudly instead of producing a paralysed worm.
+Neither dominates: Cook is whole-animal but a single older reconstruction; Witvliet is
+head-only but eight individuals traced with modern methods.
+
+`Connectome.scope` records the anatomical extent in the data itself, and
+`test_witvliet_import.py::TestAnatomicalScope` asserts it, so the constraint fails
+loudly rather than silently producing a paralysed worm.
 
 ## Adding a dataset
 

@@ -451,7 +451,9 @@ def _nt_cell(cell: Cell, nt_ev: dict[str, dict[str, str]]) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--dataset", default="witvliet_2021_7")
+    # Defaults to the whole-animal dataset so the reference covers all 302 neurons,
+    # including the ventral cord and posterior cells the head-only datasets lack.
+    p.add_argument("--dataset", default="cook_2019_herm")
     p.add_argument("--out", type=Path, default=OUT)
     p.add_argument("--check", action="store_true", help="fail if the file is out of date")
     args = p.parse_args(argv)

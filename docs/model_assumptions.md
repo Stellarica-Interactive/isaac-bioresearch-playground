@@ -126,17 +126,46 @@ decision belongs in W1, not in the importer.
 
 ### 3.3 Cell-name canonicalization
 
+Three published sources spell the same 95 body wall muscles three different ways.
+
 | Rule | Applies to | Basis |
 |---|---|---|
 | `BWM-<quadrant><nn>` → `M<quadrant><nn>` | Witvliet muscle labels | Same cell, different convention (`BWM-VL01` = `MVL01`) |
+| `dBWML<n>` → `MDL<nn>`, `vBWMR<n>` → `MVR<nn>` | Cook 2019 muscle labels | A third convention; index zero-padded. Verified exact: 24 + 24 + 23 + 24 = 95, nothing left over |
 | `excgl` → `exc_gl` | Witvliet excretory gland | Spelling variant |
+| `g1p` → `g1P` | Cook 2019 pharyngeal glial cell | Case variant |
 | `VB01` → `VB1` | Leading-zero neuron indices | Applied **only** when stripping produces a known cell and the original is unknown, so `MDL01` is never touched |
 
-Derived empirically: every cell label in all eight datasets was checked against
-the canonical registry, and exactly these two patterns failed to resolve. The
-test suite asserts the rules are **idempotent** and **injective** — no two distinct
-source labels may collapse onto one id without an explicit alias, because that
-would silently merge two cells and sum their synapse counts.
+Derived empirically rather than guessed: every cell label in all nine datasets was
+checked against the canonical registry, and exactly these patterns failed to resolve.
+The test suite asserts the rules are **idempotent** and **injective** — no two
+distinct source labels may collapse onto one id without an explicit alias, because
+that would silently merge two cells and sum their synapse counts. The Cook importer
+additionally asserts that no cell ends up with two source labels.
+
+### 3.6 Which of Cook's two gap-junction sheets we read
+
+Cook et al. ship two sheets describing one network, and the naming misleads:
+`hermaphrodite gap jn symmetric` is the full mirrored matrix (each junction twice),
+while `hermaphrodite gap jn asymmetric` is **not** asymmetric conductances but the
+*upper triangle* — each junction once.
+
+We read the **upper-triangle sheet**, because it is exactly our storage convention
+and eliminates any chance of double counting at import. The importer then
+cross-checks it against the mirrored sheet; they are redundant, which makes them a
+free correctness check on our reading of the layout.
+
+This also explains why Cook's published electrical totals are both odd numbers,
+which no naive doubling can produce — 17 gap junctions join a cell to itself
+(total weight 47) and lie on the matrix diagonal, written once rather than twice:
+
+```
+entries: 2 × (1450 − 17) + 17 = 2883
+weight:  2 ×  11680      − 47 = 23313
+```
+
+Reading the mirrored sheet into once-per-pair storage would double every weight and
+still look entirely plausible. `TestGapJunctionSheetChoice` guards against it.
 
 ### 3.4 Synapse count is not conductance
 
@@ -161,7 +190,8 @@ Not our simplifications — limits of what exists.
 |---|---|
 | **Synaptic sign is not measured by anything** | Cannot build a signed network from measurement alone. §6.1. |
 | **No synaptic strength in physiological units** | The count→conductance mapping will be assumed. |
-| **Witvliet is head-only** | No ventral-cord motor neurons, only muscle segments 1–8. **Locomotion cannot be modelled from it.** Recorded as `Scope.HEAD`; asserted by `TestAnatomicalScope`. |
+| **Witvliet is head-only** | No ventral-cord motor neurons, only muscle segments 1–8. **Locomotion cannot be modelled from it** — use `cook_2019_herm`. Recorded as `Scope.HEAD`; asserted by `TestAnatomicalScope`. |
+| **Cook and Witvliet cannot be mixed** | They are different specimens reconstructed by different methods. Splicing Cook's ventral cord onto Witvliet's head would be a chimera with no biological referent. Each dataset is used whole or not at all. |
 | **Extrasynaptic signalling is invisible** | Neuropeptide and monoamine signalling leaves no ultrastructural trace and is in no connectome. Ripoll-Sánchez et al. 2023 show this layer is large. |
 | **No neural activity, no learned state** | The animals were fixed and dead. A connectome contains no memories and no ongoing dynamics. |
 | **Per-neuron biophysics barely exists** | See §5. |

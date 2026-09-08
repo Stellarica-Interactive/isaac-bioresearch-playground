@@ -29,11 +29,18 @@ from common.data.schemas import CellCategory
 KNOWN_ALIASES: dict[str, str] = {
     # Witvliet et al. 2021 spelling of the excretory gland cell.
     "excgl": "exc_gl",
+    # Cook et al. 2019 lower-cases the posterior pharyngeal glial cell.
+    "g1p": "g1P",
 }
 
 #: Witvliet body wall muscle labels: ``BWM-<quadrant><index>`` -> ``M<quadrant><index>``.
 #: The two-digit index is preserved: ``MDL01`` is the canonical spelling, not ``MDL1``.
 _BWM_RE = re.compile(r"^BWM-([DV][LR])(\d{2})$")
+
+#: Cook et al. 2019 body wall muscle labels: ``dBWML1`` -> ``MDL01``, ``vBWMR23`` -> ``MVR23``.
+#: A third convention for the same 95 cells; the index is one or two digits and is
+#: zero-padded on the way in.
+_COOK_BWM_RE = re.compile(r"^([dv])BWM([LR])(\d{1,2})$")
 
 #: Optional leading zero on a neuron index, e.g. ``VB01`` for ``VB1``. Applied only
 #: when stripping it produces a *known* cell and the original is unknown, so that
@@ -93,6 +100,11 @@ def canonical_cell_id(raw: str) -> str:
     m = _BWM_RE.match(name)
     if m:
         return f"M{m.group(1)}{m.group(2)}"
+
+    m = _COOK_BWM_RE.match(name)
+    if m:
+        side = "D" if m.group(1) == "d" else "V"
+        return f"M{side}{m.group(2)}{int(m.group(3)):02d}"
 
     registry = cell_registry()
     if name in registry:

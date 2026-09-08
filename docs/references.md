@@ -25,6 +25,23 @@ microscopy, L1 through adult. Datasets 7 and 8 are adults.
 - Original data also at [nemanode.org](http://nemanode.org) and [bossdb.org/project/witvliet2020](https://bossdb.org/project/witvliet2020).
 - **Brain-only reconstruction.** See [datasets.md](datasets.md).
 
+### `cook_2019_herm`
+
+Cook SJ, Jarrell TA, Brittin CA, Wang Y, Bloniarz AE, Yakovlev MA, Nguyen KCQ,
+Tang LT-H, Bayer EA, Duerr JS, Bülow HE, Hobert O, Hall DH, Emmons SW.
+**Whole-animal connectomes of both *Caenorhabditis elegans* sexes.** *Nature*
+571:63–71 (2019). doi:[10.1038/s41586-019-1352-7](https://doi.org/10.1038/s41586-019-1352-7)
+
+The whole-animal hermaphrodite connectome: 302 neurons, 135 muscles, 36 other
+cells, **including the ventral nerve cord** and all 95 body wall muscles. The first
+dataset here that could support a locomotion model.
+
+- Supplementary Information 5, July 2020 correction. Adjacency matrices rather than
+  an edge list, hence a separate importer.
+- Retrieved from the MIT-licensed [openworm/ConnectomeToolbox](https://github.com/openworm/ConnectomeToolbox) mirror.
+- Only the hermaphrodite sheets are imported; the male sheets are in the file but out
+  of scope.
+
 ### `openworm_cect_all_cell_info` / `wormatlas_cook_2019_via_cect`
 
 OpenWorm *C. elegans* Connectome Toolbox, `cect/data/all_cell_info.csv` — a

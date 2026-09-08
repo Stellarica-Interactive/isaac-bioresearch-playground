@@ -1,0 +1,69 @@
+{
+  "files": {
+    "cells.csv": {
+      "sha256": "95a8c9fa1827b466f517ed6d919e63a6ab911dd93855ae8d18748d43c1a5c2b7"
+    },
+    "connections.csv": {
+      "sha256": "7c5a8cfee467ef1110c8dbae43137285f78a550083db33c20a21a1dc38ebc861"
+    }
+  },
+  "id": "cook_2019_herm",
+  "organism": "Caenorhabditis elegans",
+  "provenance": {
+    "citation": "Cook SJ, Jarrell TA, Brittin CA, Wang Y, Bloniarz AE, Yakovlev MA, Nguyen KCQ, Tang LT-H, Bayer EA, Duerr JS, Bulow HE, Hobert O, Hall DH, Emmons SW. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019).",
+    "doi": "10.1038/s41586-019-1352-7",
+    "file_name": "SI 5 Connectome adjacency matrices, corrected July 2020.xlsx",
+    "kind": "connectome",
+    "license": "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)",
+    "notes": "Whole-animal reconstruction: includes the ventral nerve cord motor neurons and all 95 body wall muscles. Gap junctions read from the upper-triangle 'asymmetric' sheet, which stores each junction once.",
+    "retrieved": null,
+    "sha256": "1f4fdbf84746b69b49a8da0816f52787860ce349b638dce37924ba80f90c70c9",
+    "source_id": "cook_2019_herm",
+    "url": "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/SI%205%20Connectome%20adjacency%20matrices,%20corrected%20July%202020.xlsx"
+  },
+  "schema_version": "1.0",
+  "scope": "whole_animal",
+  "sex": "hermaphrodite",
+  "sources": {
+    "cook_2019_herm": {
+      "citation": "Cook SJ, Jarrell TA, Brittin CA, Wang Y, Bloniarz AE, Yakovlev MA, Nguyen KCQ, Tang LT-H, Bayer EA, Duerr JS, Bulow HE, Hobert O, Hall DH, Emmons SW. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019).",
+      "doi": "10.1038/s41586-019-1352-7",
+      "file_name": "SI 5 Connectome adjacency matrices, corrected July 2020.xlsx",
+      "kind": "connectome",
+      "license": "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)",
+      "notes": "Whole-animal reconstruction: includes the ventral nerve cord motor neurons and all 95 body wall muscles. Gap junctions read from the upper-triangle 'asymmetric' sheet, which stores each junction once.",
+      "retrieved": null,
+      "sha256": "1f4fdbf84746b69b49a8da0816f52787860ce349b638dce37924ba80f90c70c9",
+      "source_id": "cook_2019_herm",
+      "url": "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/SI%205%20Connectome%20adjacency%20matrices,%20corrected%20July%202020.xlsx"
+    },
+    "wormatlas_cook_2019_via_cect": {
+      "citation": "WormAtlas cell listings (wormatlas.org/NeuronNames.htm), with cell groupings from Cook SJ, Jarrell TA, Brittin CA, et al. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019). Compiled by the OpenWorm C. elegans Connectome Toolbox.",
+      "doi": "10.1038/s41586-019-1352-7",
+      "file_name": null,
+      "kind": "annotation",
+      "license": "See wormatlas.org terms; groupings from Cook et al. 2019 (Nature, subscription).",
+      "notes": "Cell category (neuron / muscle / glia / other) via worm/data/cells.csv.",
+      "retrieved": null,
+      "sha256": null,
+      "source_id": "wormatlas_cook_2019_via_cect",
+      "url": "https://www.wormatlas.org/NeuronNames.htm"
+    }
+  },
+  "stage": "adult",
+  "totals": {
+    "cells": 473,
+    "chemical_edges": 4879,
+    "chemical_weight": 28113,
+    "electrical_edges_directed": 2883,
+    "electrical_edges_undirected": 1450,
+    "electrical_self_loops": 17,
+    "electrical_weight_directed": 23313,
+    "electrical_weight_undirected": 11680,
+    "glia": 9,
+    "muscles": 135,
+    "neurons": 302,
+    "other": 27,
+    "other_cells": 36
+  }
+}
