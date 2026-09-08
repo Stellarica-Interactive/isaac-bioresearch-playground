@@ -1,0 +1,131 @@
+# Externally published totals, used as oracles for our importers.
+#
+# These numbers are NOT produced by our code. They are quoted from an independent
+# analysis of the same source files (the OpenWorm C. elegans Connectome Toolbox
+# dataset factsheets) so that our parser can be checked against something that did
+# not come from our parser. `worm/tests/` asserts agreement; the CLI command
+#
+#     python tools/inspect_connectome.py --dataset <id> verify
+#
+# reports it.
+#
+# CONVENTIONS -- these matter, and getting them wrong is the easiest way to
+# "verify" a broken parser:
+#
+#   chemical_edges / chemical_weight
+#       Directed. One entry per ordered (pre, post) pair.
+#
+#   electrical_edges_directed / electrical_weight_directed
+#       Gap junctions counted the way an adjacency matrix counts them: every
+#       non-self junction appears TWICE (once per direction) with the same weight;
+#       a self-junction appears ONCE.
+#
+#       We store gap junctions once, undirected. The relationship is
+#
+#           directed_entries = 2 * (stored - self_loops) + self_loops
+#           directed_weight  = 2 *  stored_weight - self_loop_weight
+#
+#       Note the asymmetry in the second formula: it is why dataset 8's published
+#       weight is 851 (odd) rather than 852. That dataset contains a weight-2 gap
+#       junction from AIZR to itself, and the diagonal of a symmetric matrix is
+#       written once, not twice. Every one of the eight datasets contains such
+#       self-junctions -- a gap junction between two processes of the same cell --
+#       so this is a systematic feature of the reconstruction, not an artefact.
+#
+#   other_cells
+#       Cells that are neither neurons nor muscles. Our schema splits these into
+#       `glia` (the CEPsh sheath cells) and `other` (the GLR mesodermal cells);
+#       the published figure is their sum.
+#
+# Source for every number below:
+#   OpenWorm C. elegans Connectome Toolbox dataset factsheets,
+#   https://openworm.org/ConnectomeToolbox/Witvliet<N>_data/ (retrieved 2026-09-08),
+#   derived from Witvliet D, et al., Nature 596:257-261 (2021).
+
+[witvliet_2021_1]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet1_data/"
+neurons = 161
+muscles = 17
+other_cells = 9
+cells = 187
+chemical_edges = 775
+chemical_weight = 1296
+electrical_edges_directed = 164
+electrical_weight_directed = 206
+
+[witvliet_2021_2]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet2_data/"
+neurons = 162
+muscles = 21
+other_cells = 11
+cells = 194
+chemical_edges = 986
+chemical_weight = 1895
+electrical_edges_directed = 246
+electrical_weight_directed = 264
+
+[witvliet_2021_3]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet3_data/"
+neurons = 162
+muscles = 27
+other_cells = 9
+cells = 198
+chemical_edges = 1012
+chemical_weight = 2128
+electrical_edges_directed = 186
+electrical_weight_directed = 216
+
+[witvliet_2021_4]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet4_data/"
+neurons = 168
+muscles = 26
+other_cells = 10
+cells = 204
+chemical_edges = 1136
+chemical_weight = 2777
+electrical_edges_directed = 415
+electrical_weight_directed = 483
+
+[witvliet_2021_5]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet5_data/"
+neurons = 174
+muscles = 28
+other_cells = 9
+cells = 211
+chemical_edges = 1515
+chemical_weight = 4116
+electrical_edges_directed = 578
+electrical_weight_directed = 832
+
+[witvliet_2021_6]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet6_data/"
+neurons = 175
+muscles = 32
+other_cells = 9
+cells = 216
+chemical_edges = 1525
+chemical_weight = 4456
+electrical_edges_directed = 426
+electrical_weight_directed = 532
+
+[witvliet_2021_7]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet7_data/"
+neurons = 181
+muscles = 32
+other_cells = 9
+cells = 222
+chemical_edges = 2202
+chemical_weight = 7467
+electrical_edges_directed = 576
+electrical_weight_directed = 794
+
+[witvliet_2021_8]
+source = "https://openworm.org/ConnectomeToolbox/Witvliet8_data/"
+neurons = 180
+muscles = 32
+other_cells = 7
+cells = 219
+chemical_edges = 2186
+chemical_weight = 7970
+electrical_edges_directed = 612
+electrical_weight_directed = 851

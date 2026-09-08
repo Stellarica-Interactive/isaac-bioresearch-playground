@@ -1,0 +1,46 @@
+{
+  "_comment": [
+    "Named circuits worth looking at, kept as data so that the visualizer stays",
+    "generic and the biology stays reviewable. Each entry lists SEED cells; the",
+    "tool expands outward by --hops.",
+    "",
+    "These groupings are conventional descriptions from the C. elegans literature.",
+    "Naming a set of cells 'the touch circuit' is a summary of many ablation and",
+    "imaging experiments, not something the connectome states. Treat each entry as",
+    "a starting point for looking, not as a claim about what the circuit does."
+  ],
+  "circuits": {
+    "gentle-touch": {
+      "description": "Gentle body touch mechanosensory neurons and the command interneurons they drive. Anterior touch (ALM, AVM) is associated with reversal; posterior touch (PLM) with forward acceleration.",
+      "seeds": ["ALML", "ALMR", "AVM", "PLML", "PLMR", "PVM"],
+      "source": "Chalfie M, Sulston JE, White JG, Southgate E, Thomson JN, Brenner S. The neural circuit for touch sensitivity in Caenorhabditis elegans. J Neurosci 5:956-964 (1985).",
+      "note": "PLML/PLMR and PVM are outside the Witvliet reconstruction volume in some datasets."
+    },
+    "nociception": {
+      "description": "ASH polymodal nociceptor and its immediate postsynaptic partners. ASH responds to noxious chemicals, high osmolarity and nose touch.",
+      "seeds": ["ASHL", "ASHR"],
+      "source": "Kaplan JM, Horvitz HR. A dual mechanosensory and chemosensory neuron in Caenorhabditis elegans. PNAS 90:2227-2231 (1993)."
+    },
+    "command-interneurons": {
+      "description": "The premotor command interneurons associated with backward (AVA, AVD, AVE) and forward (AVB, PVC) locomotion.",
+      "seeds": ["AVAL", "AVAR", "AVBL", "AVBR", "AVDL", "AVDR", "AVEL", "AVER", "PVCL", "PVCR"],
+      "source": "Chalfie M, et al. J Neurosci 5:956-964 (1985); Kawano T, et al. Neuron 72:572-586 (2011).",
+      "note": "These interneurons are present in the Witvliet datasets, but the ventral-cord motor neurons they drive are not."
+    },
+    "salt-chemotaxis": {
+      "description": "ASE left/right chemosensory pair, functionally asymmetric for salt sensing, and the first interneuron layer downstream.",
+      "seeds": ["ASEL", "ASER", "AIYL", "AIYR", "AIAL", "AIAR", "AIBL", "AIBR"],
+      "source": "Pierce-Shimomura JT, Morse TM, Lockery SR. The fundamental role of pirouettes in Caenorhabditis elegans chemotaxis. J Neurosci 19:9557-9569 (1999); Suzuki H, et al. Nature 454:114-117 (2008)."
+    },
+    "odour-sensing": {
+      "description": "AWA, AWB and AWC olfactory neurons and their downstream interneurons.",
+      "seeds": ["AWAL", "AWAR", "AWBL", "AWBR", "AWCL", "AWCR", "AIYL", "AIYR", "AIBL", "AIBR"],
+      "source": "Bargmann CI, Hartwieg E, Horvitz HR. Odorant-selective genes and neurons mediate olfaction in C. elegans. Cell 74:515-527 (1993)."
+    },
+    "oxygen-sensing": {
+      "description": "URX, AQR and BAG oxygen/carbon-dioxide sensors and the RMG hub they are gap-junctioned to.",
+      "seeds": ["URXL", "URXR", "AQR", "BAGL", "BAGR", "RMGL", "RMGR"],
+      "source": "Macosko EZ, et al. A hub-and-spoke circuit drives pheromone attraction and social behaviour in C. elegans. Nature 458:1171-1175 (2009)."
+    }
+  }
+}

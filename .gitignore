@@ -216,3 +216,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Project-specific
+# ---------------------------------------------------------------------------
+
+# Published source datasets. Not redistributed here; fetch with
+#   python tools/fetch_datasets.py --organism worm --all
+# Provenance, URLs, licences and SHA-256 hashes live in worm/data/sources.toml.
+worm/data/raw/
+fly/data/raw/
+
+# Experiment output
+runs/

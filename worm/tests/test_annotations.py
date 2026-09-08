@@ -1,0 +1,156 @@
+"""Annotation overlays: coverage, provenance, and the absence of silent defaults.
+
+The purpose of these tests is not only "does the overlay work" but "does it stay
+honest": an annotation must never be attributed to the connectome, and a cell the
+table does not cover must be *reported* rather than quietly filled in.
+"""
+
+from __future__ import annotations
+
+import csv
+from importlib.resources import files
+
+import pytest
+
+from common.data.schemas import CellCategory, Connectome, Neurotransmitter, SIMRole
+from worm.annotations.overlays import DEFAULT_OVERLAYS, OVERLAYS, get_overlays
+from worm.loader import load, load_anatomy
+
+DATASET = "witvliet_2021_7"
+
+
+def _table(name: str) -> list[dict[str, str]]:
+    text = (files("worm.data") / "annotations" / name).read_text(encoding="utf-8")
+    return list(csv.DictReader(text.splitlines()))
+
+
+@pytest.fixture(scope="module")
+def annotated() -> Connectome:
+    c, _ = load(DATASET)
+    return c
+
+
+@pytest.fixture(scope="module")
+def anatomy() -> Connectome:
+    return load_anatomy(DATASET)
+
+
+class TestSeparationOfConcerns:
+    def test_stored_anatomy_has_no_annotations(self, anatomy: Connectome) -> None:
+        """The committed connectome files must contain measurement only."""
+        assert all(not c.roles for c in anatomy.cells)
+        assert all(not c.neurotransmitters for c in anatomy.cells)
+        assert all(c.class_name is None for c in anatomy.cells)
+
+    def test_polarity_is_not_in_the_default_overlay_set(self) -> None:
+        """A predicted synapse sign must never arrive by default."""
+        assert "polarity" not in DEFAULT_OVERLAYS
+        assert "polarity" not in OVERLAYS
+
+    def test_annotations_are_attributed_to_their_own_sources(
+        self, annotated: Connectome
+    ) -> None:
+        cell = annotated.cell("AVAL")
+        for field in ("roles", "neurotransmitters", "class_name"):
+            assert cell.field_sources[field] != annotated.provenance.source_id
+
+    def test_every_cited_source_resolves(self, annotated: Connectome) -> None:
+        for cell in annotated.cells:
+            for src in cell.field_sources.values():
+                assert src in annotated.sources
+                assert annotated.sources[src].citation
+
+    def test_unknown_overlay_name_raises(self) -> None:
+        with pytest.raises(KeyError):
+            get_overlays(("nope",))
+
+
+class TestCoverage:
+    def test_all_reports_are_returned(self) -> None:
+        _, reports = load(DATASET)
+        assert [r.overlay_id for r in reports] == list(DEFAULT_OVERLAYS)
+
+    def test_every_neuron_is_annotated(self) -> None:
+        _, reports = load(DATASET)
+        for r in reports:
+            assert r.coverage == 1.0, f"{r.overlay_id}: unmatched {r.unmatched}"
+
+    def test_whole_animal_tables_over_a_head_dataset_report_the_excess(self) -> None:
+        """Expected and harmless in this direction; a red flag in the other."""
+        _, reports = load(DATASET)
+        assert all(r.unknown_in_source for r in reports)
+
+    def test_non_neurons_are_left_alone(self, annotated: Connectome) -> None:
+        muscles = [c for c in annotated.cells if c.category is CellCategory.MUSCLE]
+        assert muscles
+        assert all(not m.roles and not m.neurotransmitters for m in muscles)
+
+
+class TestSIMRoles:
+    def test_known_assignments(self, annotated: Connectome) -> None:
+        assert SIMRole.SENSORY in annotated.cell("ASHL").roles
+        assert SIMRole.INTER in annotated.cell("AVAL").roles
+        assert SIMRole.MOTOR in annotated.cell("RMDL").roles
+
+    def test_multi_role_cells_keep_both_roles(self) -> None:
+        """The published label for some cells records disagreement between studies."""
+        rows = _table("sim_roles.csv")
+        by_cell: dict[str, list[str]] = {}
+        for r in rows:
+            by_cell.setdefault(r["cell_id"], []).append(r["role"])
+        multi = {k: v for k, v in by_cell.items() if len(v) > 1}
+        assert multi, "expected some cells to carry two roles"
+        assert all("interneuron in White" in r["type_label"] or
+                   "motorneuron in White" in r["type_label"]
+                   for r in rows if r["cell_id"] in multi)
+
+    def test_cells_we_decline_to_classify_are_marked_unknown_not_guessed(self) -> None:
+        rows = _table("sim_roles.csv")
+        unknown = sorted({r["cell_id"] for r in rows if r["role"] == "unknown"})
+        assert unknown == ["CANL", "CANR", "MCL", "MCR", "MI", "NSML", "NSMR"]
+
+    def test_every_row_cites_a_source(self) -> None:
+        assert all(r["source_ref"] for r in _table("sim_roles.csv"))
+
+
+class TestNeurotransmitters:
+    def test_known_assignments(self, annotated: Connectome) -> None:
+        assert annotated.cell("ASHL").neurotransmitters == (Neurotransmitter.GLUTAMATE,)
+        assert annotated.cell("AVAL").neurotransmitters == (Neurotransmitter.ACETYLCHOLINE,)
+
+    def test_all_302_hermaphrodite_neurons_are_covered(self) -> None:
+        assert len({r["cell_id"] for r in _table("neurotransmitters.csv")}) == 302
+
+    def test_orphan_neurons_are_a_result_not_a_blank(self) -> None:
+        """16 neurons express no known transmitter pathway gene. That is a finding."""
+        rows = _table("neurotransmitters.csv")
+        orphans = [r for r in rows if r["neurotransmitter"] == "unknown"]
+        assert len(orphans) == 16
+        assert all(r["evidence"] == "orphan_no_pathway_gene_detected" for r in orphans)
+
+    def test_uptake_is_distinguished_from_synthesis(self) -> None:
+        """AVFL/R take up GABA from neighbours rather than making it."""
+        rows = {r["cell_id"]: r for r in _table("neurotransmitters.csv")}
+        assert rows["AVFL"]["evidence"] == "uptake_not_synthesis"
+        assert rows["AVFL"]["neurotransmitter"] == "gaba"
+        assert rows["CANL"]["evidence"] == "uptake_not_synthesis"
+
+    def test_dim_variable_expression_is_distinguished(self) -> None:
+        """Weaker evidence than a clean positive, and marked as such."""
+        rows = {r["cell_id"]: r for r in _table("neurotransmitters.csv")}
+        assert rows["AWAL"]["evidence"] == "reporter_expression_dim_variable"
+        assert rows["AWAL"]["neurotransmitter"] == "acetylcholine"
+
+    def test_every_row_keeps_its_source_row_number(self) -> None:
+        """So a disputed assignment can be checked in the original spreadsheet."""
+        assert all(r["source_row"].isdigit() for r in _table("neurotransmitters.csv"))
+
+
+class TestNeuronClasses:
+    def test_bilateral_pairs_share_a_class(self, annotated: Connectome) -> None:
+        assert annotated.cell("AVAL").class_name == annotated.cell("AVAR").class_name == "AVA"
+
+    def test_class_is_not_derivable_by_stripping_letters(self, annotated: Connectome) -> None:
+        """RMDDL and RMDL are both class RMD - a rule no string operation would find."""
+        assert annotated.cell("RMDDL").class_name == "RMD"
+        assert annotated.cell("RMDL").class_name == "RMD"

@@ -1,0 +1,406 @@
+cell_id,role,type_label,source_ref
+ADAL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+ADAR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+ADEL,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+ADER,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+ADFL,sensory,Amphid,wormatlas_cook_2019_via_cect
+ADFR,sensory,Amphid,wormatlas_cook_2019_via_cect
+ADLL,sensory,"Amphid, nociceptive",wormatlas_cook_2019_via_cect
+ADLR,sensory,"Amphid, nociceptive",wormatlas_cook_2019_via_cect
+AFDL,sensory,Amphid,wormatlas_cook_2019_via_cect
+AFDR,sensory,Amphid,wormatlas_cook_2019_via_cect
+AIAL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AIAR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AIBL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AIBR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AIML,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+AIMR,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+AINL,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+AINR,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+AIYL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AIYR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AIZL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AIZR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+ALA,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+ALML,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+ALMR,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+ALNL,sensory,Touch,wormatlas_cook_2019_via_cect
+ALNR,sensory,Touch,wormatlas_cook_2019_via_cect
+AQR,sensory,Touch,wormatlas_cook_2019_via_cect
+AS1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS10,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS11,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS7,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS8,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+AS9,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+ASEL,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASER,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASGL,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASGR,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASHL,sensory,"Amphid, nociceptive",wormatlas_cook_2019_via_cect
+ASHR,sensory,"Amphid, nociceptive",wormatlas_cook_2019_via_cect
+ASIL,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASIR,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASJL,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASJR,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASKL,sensory,Amphid,wormatlas_cook_2019_via_cect
+ASKR,sensory,Amphid,wormatlas_cook_2019_via_cect
+AUAL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AUAR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AVAL,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+AVAR,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+AVBL,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+AVBR,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+AVDL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVDR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVEL,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+AVER,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+AVFL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AVFR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AVG,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AVHL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AVHR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+AVJL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVJR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVKL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVKR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+AVM,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+AWAL,sensory,Amphid,wormatlas_cook_2019_via_cect
+AWAR,sensory,Amphid,wormatlas_cook_2019_via_cect
+AWBL,sensory,Amphid,wormatlas_cook_2019_via_cect
+AWBR,sensory,Amphid,wormatlas_cook_2019_via_cect
+AWCL,sensory,Amphid,wormatlas_cook_2019_via_cect
+AWCR,sensory,Amphid,wormatlas_cook_2019_via_cect
+BAGL,sensory,"O2, CO2, social signals, touch",wormatlas_cook_2019_via_cect
+BAGR,sensory,"O2, CO2, social signals, touch",wormatlas_cook_2019_via_cect
+BDUL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+BDUR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+CA01,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA02,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA03,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA04,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA05,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA06,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA07,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA08,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CA09,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CANL,unknown,Canal neuron,wormatlas_cook_2019_via_cect
+CANR,unknown,Canal neuron,wormatlas_cook_2019_via_cect
+CEMDL,sensory,Male head sensory neuron,wormatlas_cook_2019_via_cect
+CEMDR,sensory,Male head sensory neuron,wormatlas_cook_2019_via_cect
+CEMVL,sensory,Male head sensory neuron,wormatlas_cook_2019_via_cect
+CEMVR,sensory,Male head sensory neuron,wormatlas_cook_2019_via_cect
+CEPDL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+CEPDR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+CEPVL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+CEPVR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+CP01,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP02,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP03,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP04,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP05,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP06,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP07,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP08,inter,Male interneuron,wormatlas_cook_2019_via_cect
+CP09,inter,Male interneuron,wormatlas_cook_2019_via_cect
+DA1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA7,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA8,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DA9,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DB7,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DD1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DD2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DD3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DD4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DD5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DD6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+DVA,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+DVB,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+DVC,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+DVE,inter,Male interneuron,wormatlas_cook_2019_via_cect
+DVF,inter,Male interneuron,wormatlas_cook_2019_via_cect
+DX1,inter,Male interneuron,wormatlas_cook_2019_via_cect
+DX2,inter,Male interneuron,wormatlas_cook_2019_via_cect
+DX3,inter,Male interneuron,wormatlas_cook_2019_via_cect
+EF1,inter,Male interneuron,wormatlas_cook_2019_via_cect
+EF2,inter,Male interneuron,wormatlas_cook_2019_via_cect
+EF3,inter,Male interneuron,wormatlas_cook_2019_via_cect
+FLPL,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+FLPR,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+HOA,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+HOB,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+HSNL,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+HSNR,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+I1L,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I1R,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I2L,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I2R,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I3,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I4,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I5,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I6,inter,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+IL1DL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL1DR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL1L,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL1R,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL1VL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL1VR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL2DL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL2DR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL2L,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL2R,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL2VL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+IL2VR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+LUAL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+LUAR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+M1,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+M2L,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+M2R,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+M3L,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+M3R,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+M4,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+M5,motor,Pharyngeal motor neuron,wormatlas_cook_2019_via_cect
+MCL,unknown,Pharyngeal polymodal neuron,wormatlas_cook_2019_via_cect
+MCML,inter,Male head interneuron,wormatlas_cook_2019_via_cect
+MCMR,inter,Male head interneuron,wormatlas_cook_2019_via_cect
+MCR,unknown,Pharyngeal polymodal neuron,wormatlas_cook_2019_via_cect
+MI,unknown,Pharyngeal polymodal neuron,wormatlas_cook_2019_via_cect
+NSML,unknown,Pharyngeal polymodal neuron,wormatlas_cook_2019_via_cect
+NSMR,unknown,Pharyngeal polymodal neuron,wormatlas_cook_2019_via_cect
+OLLL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+OLLR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+OLQDL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+OLQDR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+OLQVL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+OLQVR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+PCAL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PCAR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PCBL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PCBR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PCCL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PCCR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PDA,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+PDB,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+PDC,inter,Male interneuron,wormatlas_cook_2019_via_cect
+PDEL,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PDER,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PGA,inter,Male interneuron,wormatlas_cook_2019_via_cect
+PHAL,sensory,Phasmid,wormatlas_cook_2019_via_cect
+PHAR,sensory,Phasmid,wormatlas_cook_2019_via_cect
+PHBL,sensory,Phasmid,wormatlas_cook_2019_via_cect
+PHBR,sensory,Phasmid,wormatlas_cook_2019_via_cect
+PHCL,sensory,Phasmid,wormatlas_cook_2019_via_cect
+PHCR,sensory,Phasmid,wormatlas_cook_2019_via_cect
+PHDL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PHDR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+PLML,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PLMR,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PLNL,sensory,Touch,wormatlas_cook_2019_via_cect
+PLNR,sensory,Touch,wormatlas_cook_2019_via_cect
+PQR,sensory,Touch,wormatlas_cook_2019_via_cect
+PVCL,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+PVCR,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+PVDL,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PVDR,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PVM,sensory,Mechanosensory,wormatlas_cook_2019_via_cect
+PVNL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVNR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVPL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVPR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVQL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVQR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+PVT,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+PVV,inter,Male interneuron,wormatlas_cook_2019_via_cect
+PVWL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+PVWR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+PVX,inter,Male interneuron,wormatlas_cook_2019_via_cect
+PVY,inter,Male interneuron,wormatlas_cook_2019_via_cect
+PVZ,inter,Male interneuron,wormatlas_cook_2019_via_cect
+R1AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R1AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R1BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R1BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R2AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R2AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R2BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R2BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R3AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R3AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R3BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R3BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R4AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R4AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R4BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R4BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R5AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R5AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R5BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R5BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R6AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R6AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R6BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R6BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R7AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R7AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R7BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R7BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R8AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R8AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R8BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R8BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R9AL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R9AR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R9BL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+R9BR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+RIAL,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+RIAR,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+RIBL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RIBR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RICL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RICR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RID,inter,Layer 1 interneuron,wormatlas_cook_2019_via_cect
+RIFL,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+RIFR,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+RIGL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RIGR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RIH,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+RIML,inter,"Layer 1 interneuron; motorneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+RIML,motor,"Layer 1 interneuron; motorneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+RIMR,inter,"Layer 1 interneuron; motorneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+RIMR,motor,"Layer 1 interneuron; motorneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+RIPL,inter,Linker to pharynx,wormatlas_cook_2019_via_cect
+RIPR,inter,Linker to pharynx,wormatlas_cook_2019_via_cect
+RIR,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+RIS,inter,Layer 3 interneuron,wormatlas_cook_2019_via_cect
+RIVL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RIVR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMDDL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMDDR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMDL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMDR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMDVL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMDVR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMED,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMEL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMER,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMEV,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMFL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RMFR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RMGL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RMGR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+RMHL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+RMHR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+SAADL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+SAADR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+SAAVL,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+SAAVR,inter,Layer 2 interneuron,wormatlas_cook_2019_via_cect
+SABD,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SABD,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SABVL,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SABVL,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SABVR,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SABVR,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SDQL,sensory,Touch,wormatlas_cook_2019_via_cect
+SDQR,sensory,Touch,wormatlas_cook_2019_via_cect
+SIADL,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIADL,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIADR,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIADR,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIAVL,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIAVL,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIAVR,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIAVR,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBDL,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBDL,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBDR,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBDR,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBVL,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBVL,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBVR,inter,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SIBVR,motor,"Sublateral motor neuron; interneuron in White et al., 1986",wormatlas_cook_2019_via_cect
+SMBDL,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMBDR,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMBVL,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMBVR,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMDDL,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMDDR,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMDVL,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SMDVR,motor,Sublateral motor neuron,wormatlas_cook_2019_via_cect
+SPCL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+SPCR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+SPDL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+SPDR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+SPVL,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+SPVR,sensory,Male sensory neuron,wormatlas_cook_2019_via_cect
+URADL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+URADR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+URAVL,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+URAVR,motor,Head motor neuron,wormatlas_cook_2019_via_cect
+URBL,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+URBR,inter,Category 4 interneuron,wormatlas_cook_2019_via_cect
+URXL,sensory,"O2, CO2, social signals, touch",wormatlas_cook_2019_via_cect
+URXR,sensory,"O2, CO2, social signals, touch",wormatlas_cook_2019_via_cect
+URYDL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+URYDR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+URYVL,sensory,Cephalic,wormatlas_cook_2019_via_cect
+URYVR,sensory,Cephalic,wormatlas_cook_2019_via_cect
+VA1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA10,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA11,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA12,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA7,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA8,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VA9,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB10,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB11,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB7,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB8,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VB9,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VC1,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+VC2,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+VC3,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+VC4,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+VC5,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+VC6,motor,Hermaphrodite specific motor neuron,wormatlas_cook_2019_via_cect
+VD1,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD10,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD11,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD12,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD13,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD2,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD3,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD4,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD5,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD6,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD7,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD8,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect
+VD9,motor,Ventral cord motor neuron,wormatlas_cook_2019_via_cect

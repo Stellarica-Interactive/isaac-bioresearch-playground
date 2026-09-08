@@ -1,0 +1,69 @@
+{
+  "files": {
+    "cells.csv": {
+      "sha256": "ae653b9b31b071e3f5a8d6b18bf4df79ee1215e886a870d4621e4b943a97ab4b"
+    },
+    "connections.csv": {
+      "sha256": "795d4b7ea459b835583e371ac620490be7ed76e9f9ad3508c0c04edd6e3bed67"
+    }
+  },
+  "id": "witvliet_2021_3",
+  "organism": "Caenorhabditis elegans",
+  "provenance": {
+    "citation": "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021).",
+    "doi": "10.1038/s41586-021-03778-8",
+    "file_name": "witvliet_2020_3 L1.xlsx",
+    "kind": "connectome",
+    "license": "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)",
+    "notes": "Brain-only reconstruction: no ventral-cord motor neurons, body wall muscles limited to the anterior eight segments per quadrant.",
+    "retrieved": null,
+    "sha256": "d94d522af2a64177ebef0dea0951b2a252eb973bbed01a85a19aaafe4ff0244b",
+    "source_id": "witvliet_2021_3",
+    "url": "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_3%20L1.xlsx"
+  },
+  "schema_version": "1.0",
+  "scope": "head",
+  "sex": "hermaphrodite",
+  "sources": {
+    "witvliet_2021_3": {
+      "citation": "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021).",
+      "doi": "10.1038/s41586-021-03778-8",
+      "file_name": "witvliet_2020_3 L1.xlsx",
+      "kind": "connectome",
+      "license": "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)",
+      "notes": "Brain-only reconstruction: no ventral-cord motor neurons, body wall muscles limited to the anterior eight segments per quadrant.",
+      "retrieved": null,
+      "sha256": "d94d522af2a64177ebef0dea0951b2a252eb973bbed01a85a19aaafe4ff0244b",
+      "source_id": "witvliet_2021_3",
+      "url": "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_3%20L1.xlsx"
+    },
+    "wormatlas_cook_2019_via_cect": {
+      "citation": "WormAtlas cell listings (wormatlas.org/NeuronNames.htm), with cell groupings from Cook SJ, Jarrell TA, Brittin CA, et al. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019). Compiled by the OpenWorm C. elegans Connectome Toolbox.",
+      "doi": "10.1038/s41586-019-1352-7",
+      "file_name": null,
+      "kind": "annotation",
+      "license": "See wormatlas.org terms; groupings from Cook et al. 2019 (Nature, subscription).",
+      "notes": "Cell category (neuron / muscle / glia / other) via worm/data/cells.csv.",
+      "retrieved": null,
+      "sha256": null,
+      "source_id": "wormatlas_cook_2019_via_cect",
+      "url": "https://www.wormatlas.org/NeuronNames.htm"
+    }
+  },
+  "stage": "L1",
+  "totals": {
+    "cells": 198,
+    "chemical_edges": 1012,
+    "chemical_weight": 2128,
+    "electrical_edges_directed": 186,
+    "electrical_edges_undirected": 94,
+    "electrical_self_loops": 2,
+    "electrical_weight_directed": 216,
+    "electrical_weight_undirected": 109,
+    "glia": 4,
+    "muscles": 27,
+    "neurons": 162,
+    "other": 5,
+    "other_cells": 9
+  }
+}

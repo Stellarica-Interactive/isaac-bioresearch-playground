@@ -1,0 +1,13 @@
+# Derived data files are compared byte-for-byte by the test suite and their
+# SHA-256 is recorded in meta.json. CRLF injection on Windows checkouts would
+# break every checksum and golden-file comparison, so pin them to LF.
+*.csv   text eol=lf
+*.json  text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.py    text eol=lf
+
+# Published source data is binary and must never be touched by filters.
+*.xlsx  binary
+*.xls   binary
+*.png   binary

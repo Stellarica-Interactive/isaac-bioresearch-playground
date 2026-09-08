@@ -1,0 +1,151 @@
+# Published source datasets for Caenorhabditis elegans.
+#
+# These files are NOT redistributed in this repository. Fetch them with:
+#
+#     python tools/fetch_datasets.py --organism worm --all
+#
+# Every entry records the exact retrieval URL, a SHA-256 of the bytes we parsed,
+# the licence under which the file is distributed, and the citation for the work
+# that produced the data. If a hash stops matching, the upstream file changed and
+# our committed derived data must be rebuilt and re-reviewed, not silently accepted.
+#
+# `mirror_note` records that we download from the OpenWorm Connectome Toolbox's
+# MIT-licensed vendored copy rather than the publisher's site, because the
+# publisher-hosted supplementary files are behind redirects that are not stable
+# to script. The scientific citation is always the original paper.
+
+# ---------------------------------------------------------------------------
+# Witvliet et al. 2021 - eight individual brains across development
+# ---------------------------------------------------------------------------
+# IMPORTANT: these are BRAIN (nerve ring and adjacent ganglia) reconstructions.
+# They contain no ventral-cord motor neurons and only the anterior eight body
+# wall muscle segments. They cannot support a model of crawling locomotion.
+
+[witvliet_2021_1]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_1%20L1.xlsx"
+filename = "witvliet_2020_1 L1.xlsx"
+sha256 = "e988deaa25d290786434a23131c1bf3f144e3ca07980233a6edbfcfb8d4d30be"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, Mulcahy B, Mitchell JK, Meirovitch Y, Berger DR, Wu Y, Liu Y, Koh WX, Parvathala R, Holmyard D, Schalek RL, Shavit N, Chisholm AD, Lichtman JW, Samuel ADT, Zhen M. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+mirror_note = "Original data also at nemanode.org and bossdb.org/project/witvliet2020"
+stage = "L1"
+scope = "head"
+
+[witvliet_2021_2]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_2%20L1.xlsx"
+filename = "witvliet_2020_2 L1.xlsx"
+sha256 = "b365bdd96dea52c261c748232dd5d333671721865be1282f3b7efa806d010e2a"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "L1"
+scope = "head"
+
+[witvliet_2021_3]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_3%20L1.xlsx"
+filename = "witvliet_2020_3 L1.xlsx"
+sha256 = "d94d522af2a64177ebef0dea0951b2a252eb973bbed01a85a19aaafe4ff0244b"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "L1"
+scope = "head"
+
+[witvliet_2021_4]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_4%20L1.xlsx"
+filename = "witvliet_2020_4 L1.xlsx"
+sha256 = "10f16bd1f122288e9111acabccbf3fbd4811b861ce6e3293600d4eb5e42e4fbe"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "L1"
+scope = "head"
+
+[witvliet_2021_5]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_5%20L2.xlsx"
+filename = "witvliet_2020_5 L2.xlsx"
+sha256 = "011ebda64c379fa066254ddd5c8ff0ab89621e1e85e8d31ffc0b37b9602fc163"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "L2"
+scope = "head"
+
+[witvliet_2021_6]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_6%20L3.xlsx"
+filename = "witvliet_2020_6 L3.xlsx"
+sha256 = "9b342751812bf42733ae7c0de8b40f41ea0af0c5c560215d59525631b220b177"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "L3"
+scope = "head"
+
+[witvliet_2021_7]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_7%20adult.xlsx"
+filename = "witvliet_2020_7 adult.xlsx"
+sha256 = "d0fd2dd32adbe5f04ce90a2e5b74c01c9a831876527b0a2b8bd5b94edc86b037"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "adult"
+scope = "head"
+
+[witvliet_2021_8]
+kind = "connectome"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/witvliet_2020_8%20adult.xlsx"
+filename = "witvliet_2020_8 adult.xlsx"
+sha256 = "fdead89606257c1b26e57069fbe1de14c7696633b75b59b79e74c0bcc3497e62"
+license = "MIT (openworm/ConnectomeToolbox redistribution of published supplementary data)"
+citation = "Witvliet D, et al. Connectomes across development reveal principles of brain maturation. Nature 596:257-261 (2021)."
+doi = "10.1038/s41586-021-03778-8"
+stage = "adult"
+scope = "head"
+
+# ---------------------------------------------------------------------------
+# Supporting annotation sources
+# ---------------------------------------------------------------------------
+
+[openworm_cect_all_cell_info]
+kind = "annotation"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/all_cell_info.csv"
+filename = "all_cell_info.csv"
+sha256 = ""
+license = "MIT (openworm/ConnectomeToolbox)"
+citation = "OpenWorm C. elegans Connectome Toolbox, compiling cell listings from WormAtlas (wormatlas.org/NeuronNames.htm) with the cell groupings of Cook SJ, et al. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019)."
+doi = "10.1038/s41586-019-1352-7"
+mirror_note = "Feeds tools/extract_annotations.py, which produces worm/data/cells.csv and worm/data/annotations/sim_roles.csv. Hash intentionally unpinned: this file is a living compilation, and its derived tables are committed and diff-reviewed instead."
+
+[wang_2024_nt_atlas]
+kind = "annotation"
+url = "https://raw.githubusercontent.com/openworm/ConnectomeToolbox/main/cect/data/elife-95402-supp2-v1.xlsx"
+filename = "elife-95402-supp2-v1.xlsx"
+sha256 = "0013e4b5f366b82a6b0ec0d682c3bace4027545c957823841293de93feafc0e2"
+license = "CC BY 4.0"
+citation = "Wang C, Vidal B, Sural S, Loer C, Aguilar GR, Merritt DM, Toker IA, Vogt MC, Cros CC, Hobert O. A neurotransmitter atlas of C. elegans males and hermaphrodites. eLife 12:RP95402 (2024)."
+doi = "10.7554/eLife.95402"
+mirror_note = "Supplementary File 2 (hermaphrodite). Feeds tools/extract_annotations.py, which produces worm/data/annotations/neurotransmitters.csv and neuron_classes.csv."
+
+# ---------------------------------------------------------------------------
+# Reference-only source IDs
+# ---------------------------------------------------------------------------
+# These are not files we download. They exist so that a `field_sources` entry can
+# cite them, and so docs/references.md can be checked against this manifest.
+
+[wormatlas_cook_2019_via_cect]
+kind = "annotation"
+url = "https://www.wormatlas.org/NeuronNames.htm"
+filename = ""
+sha256 = ""
+license = "See wormatlas.org terms; groupings from Cook et al. 2019 (Nature, subscription)."
+citation = "WormAtlas cell listings (wormatlas.org/NeuronNames.htm), with cell groupings from Cook SJ, Jarrell TA, Brittin CA, et al. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019). Compiled by the OpenWorm C. elegans Connectome Toolbox."
+doi = "10.1038/s41586-019-1352-7"
+mirror_note = "Derived tables live in worm/data/cells.csv and worm/data/annotations/sim_roles.csv."

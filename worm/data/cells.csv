@@ -1,0 +1,630 @@
+cell_id,category,type_label,sex_specific,source_ref
+ADAL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+ADAR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+ADEL,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+ADER,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+ADFL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ADFR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ADLL,neuron,"Amphid, nociceptive",,wormatlas_cook_2019_via_cect
+ADLR,neuron,"Amphid, nociceptive",,wormatlas_cook_2019_via_cect
+AFDL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AFDR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AIAL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AIAR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AIBL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AIBR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AIML,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+AIMR,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+AINL,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+AINR,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+AIYL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AIYR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AIZL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AIZR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+ALA,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+ALML,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+ALMR,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+ALNL,neuron,Touch,,wormatlas_cook_2019_via_cect
+ALNR,neuron,Touch,,wormatlas_cook_2019_via_cect
+AQR,neuron,Touch,,wormatlas_cook_2019_via_cect
+AS1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS10,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS11,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS7,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS8,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+AS9,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+ASEL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASER,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASGL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASGR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASHL,neuron,"Amphid, nociceptive",,wormatlas_cook_2019_via_cect
+ASHR,neuron,"Amphid, nociceptive",,wormatlas_cook_2019_via_cect
+ASIL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASIR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASJL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASJR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASKL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+ASKR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AUAL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AUAR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AVAL,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+AVAR,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+AVBL,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+AVBR,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+AVDL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVDR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVEL,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+AVER,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+AVFL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AVFR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AVG,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AVHL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AVHR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+AVJL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVJR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVKL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVKR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+AVM,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+AWAL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AWAR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AWBL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AWBR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AWCL,neuron,Amphid,,wormatlas_cook_2019_via_cect
+AWCR,neuron,Amphid,,wormatlas_cook_2019_via_cect
+BAGL,neuron,"O2, CO2, social signals, touch",,wormatlas_cook_2019_via_cect
+BAGR,neuron,"O2, CO2, social signals, touch",,wormatlas_cook_2019_via_cect
+BDUL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+BDUR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+BWM,muscle,Unspecified body wall muscle,,wormatlas_cook_2019_via_cect
+CA01,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA02,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA03,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA04,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA05,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA06,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA07,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA08,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CA09,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CANL,neuron,Canal neuron,,wormatlas_cook_2019_via_cect
+CANR,neuron,Canal neuron,,wormatlas_cook_2019_via_cect
+CEMDL,neuron,Male head sensory neuron,male,wormatlas_cook_2019_via_cect
+CEMDR,neuron,Male head sensory neuron,male,wormatlas_cook_2019_via_cect
+CEMVL,neuron,Male head sensory neuron,male,wormatlas_cook_2019_via_cect
+CEMVR,neuron,Male head sensory neuron,male,wormatlas_cook_2019_via_cect
+CEPDL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+CEPDR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+CEPVL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+CEPVR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+CEPshDL,glia,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CEPshDR,glia,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CEPshVL,glia,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CEPshVR,glia,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CP01,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP02,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP03,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP04,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP05,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP06,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP07,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP08,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+CP09,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+DA1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA7,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA8,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DA9,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DB7,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DD1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DD2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DD3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DD4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DD5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DD6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+DVA,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+DVB,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+DVC,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+DVE,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+DVF,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+DX1,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+DX2,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+DX3,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+EF1,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+EF2,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+EF3,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+FLPL,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+FLPR,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+GLRDL,other,GLR cell,,wormatlas_cook_2019_via_cect
+GLRDR,other,GLR cell,,wormatlas_cook_2019_via_cect
+GLRL,other,GLR cell,,wormatlas_cook_2019_via_cect
+GLRR,other,GLR cell,,wormatlas_cook_2019_via_cect
+GLRVL,other,GLR cell,,wormatlas_cook_2019_via_cect
+GLRVR,other,GLR cell,,wormatlas_cook_2019_via_cect
+HOA,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+HOB,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+HSNL,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+HSNR,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+I1L,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I1R,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I2L,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I2R,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I3,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I4,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I5,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+I6,neuron,Pharyngeal interneuron,,wormatlas_cook_2019_via_cect
+IL1DL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL1DR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL1L,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL1R,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL1VL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL1VR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL2DL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL2DR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL2L,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL2R,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL2VL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+IL2VR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+LUAL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+LUAR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+M1,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+M2L,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+M2R,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+M3L,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+M3R,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+M4,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+M5,neuron,Pharyngeal motor neuron,,wormatlas_cook_2019_via_cect
+MANAL,muscle,Anal/sphincter muscle,,wormatlas_cook_2019_via_cect
+MCL,neuron,Pharyngeal polymodal neuron,,wormatlas_cook_2019_via_cect
+MCML,neuron,Male head interneuron,male,wormatlas_cook_2019_via_cect
+MCMR,neuron,Male head interneuron,male,wormatlas_cook_2019_via_cect
+MCR,neuron,Pharyngeal polymodal neuron,,wormatlas_cook_2019_via_cect
+MDL01,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL02,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL03,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL04,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL05,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL06,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL07,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDL08,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL09,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL10,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL11,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL12,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL13,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL14,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL15,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL16,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL17,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL18,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL19,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL20,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL21,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL22,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL23,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL24,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR01,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR02,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR03,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR04,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR05,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR06,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR07,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MDR08,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR09,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR10,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR11,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR12,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR13,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR14,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR15,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR16,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR17,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR18,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR19,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR20,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR21,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR22,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR23,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR24,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MI,neuron,Pharyngeal polymodal neuron,,wormatlas_cook_2019_via_cect
+MVL01,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL02,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL03,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL04,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL05,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL06,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL07,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVL08,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL09,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL10,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL11,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL12,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL13,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL14,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL15,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL16,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL17,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL18,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL19,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL20,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL21,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL22,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL23,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR01,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR02,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR03,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR04,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR05,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR06,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR07,muscle,Head muscle,,wormatlas_cook_2019_via_cect
+MVR08,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR09,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR10,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR11,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR12,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR13,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR14,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR15,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR16,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR17,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR18,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR19,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR20,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR21,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR22,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR23,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR24,muscle,Main body muscle,,wormatlas_cook_2019_via_cect
+MVULVA,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+NSML,neuron,Pharyngeal polymodal neuron,,wormatlas_cook_2019_via_cect
+NSMR,neuron,Pharyngeal polymodal neuron,,wormatlas_cook_2019_via_cect
+OLLL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+OLLR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+OLQDL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+OLQDR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+OLQVL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+OLQVR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+PCAL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PCAR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PCBL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PCBR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PCCL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PCCR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PDA,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+PDB,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+PDC,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+PDEL,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PDER,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PGA,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+PHAL,neuron,Phasmid,,wormatlas_cook_2019_via_cect
+PHAR,neuron,Phasmid,,wormatlas_cook_2019_via_cect
+PHBL,neuron,Phasmid,,wormatlas_cook_2019_via_cect
+PHBR,neuron,Phasmid,,wormatlas_cook_2019_via_cect
+PHCL,neuron,Phasmid,,wormatlas_cook_2019_via_cect
+PHCR,neuron,Phasmid,,wormatlas_cook_2019_via_cect
+PHDL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PHDR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+PLML,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PLMR,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PLNL,neuron,Touch,,wormatlas_cook_2019_via_cect
+PLNR,neuron,Touch,,wormatlas_cook_2019_via_cect
+PQR,neuron,Touch,,wormatlas_cook_2019_via_cect
+PVCL,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+PVCR,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+PVDL,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PVDR,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PVM,neuron,Mechanosensory,,wormatlas_cook_2019_via_cect
+PVNL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVNR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVPL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVPR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVQL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVQR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+PVT,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+PVV,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+PVWL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+PVWR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+PVX,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+PVY,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+PVZ,neuron,Male interneuron,male,wormatlas_cook_2019_via_cect
+R1AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R1AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R1BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R1BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R1stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R1stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R2AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R2AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R2BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R2BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R2stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R2stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R3AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R3AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R3BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R3BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R3stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R3stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R4AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R4AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R4BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R4BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R4stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R4stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R5AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R5AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R5BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R5BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R5stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R5stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R6AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R6AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R6BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R6BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R6stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R6stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R7AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R7AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R7BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R7BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R7stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R7stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R8AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R8AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R8BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R8BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R8stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R8stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R9AL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R9AR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R9BL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R9BR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+R9stL,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+R9stR,other,Male ray structural cell,male,wormatlas_cook_2019_via_cect
+RIAL,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+RIAR,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+RIBL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RIBR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RICL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RICR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RID,neuron,Layer 1 interneuron,,wormatlas_cook_2019_via_cect
+RIFL,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+RIFR,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+RIGL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RIGR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RIH,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+RIML,neuron,"Layer 1 interneuron; motorneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+RIMR,neuron,"Layer 1 interneuron; motorneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+RIPL,neuron,Linker to pharynx,,wormatlas_cook_2019_via_cect
+RIPR,neuron,Linker to pharynx,,wormatlas_cook_2019_via_cect
+RIR,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+RIS,neuron,Layer 3 interneuron,,wormatlas_cook_2019_via_cect
+RIVL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RIVR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMDDL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMDDR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMDL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMDR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMDVL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMDVR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMED,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMEL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMER,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMEV,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMFL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RMFR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RMGL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RMGR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+RMHL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+RMHR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+SAADL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+SAADR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+SAAVL,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+SAAVR,neuron,Layer 2 interneuron,,wormatlas_cook_2019_via_cect
+SABD,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SABVL,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SABVR,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SDQL,neuron,Touch,,wormatlas_cook_2019_via_cect
+SDQR,neuron,Touch,,wormatlas_cook_2019_via_cect
+SIADL,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIADR,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIAVL,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIAVR,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIBDL,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIBDR,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIBVL,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SIBVR,neuron,"Sublateral motor neuron; interneuron in White et al., 1986",,wormatlas_cook_2019_via_cect
+SMBDL,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMBDR,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMBVL,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMBVR,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMDDL,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMDDR,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMDVL,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SMDVR,neuron,Sublateral motor neuron,,wormatlas_cook_2019_via_cect
+SPCL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+SPCR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+SPDL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+SPDR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+SPVL,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+SPVR,neuron,Male sensory neuron,male,wormatlas_cook_2019_via_cect
+URADL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+URADR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+URAVL,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+URAVR,neuron,Head motor neuron,,wormatlas_cook_2019_via_cect
+URBL,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+URBR,neuron,Category 4 interneuron,,wormatlas_cook_2019_via_cect
+URXL,neuron,"O2, CO2, social signals, touch",,wormatlas_cook_2019_via_cect
+URXR,neuron,"O2, CO2, social signals, touch",,wormatlas_cook_2019_via_cect
+URYDL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+URYDR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+URYVL,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+URYVR,neuron,Cephalic,,wormatlas_cook_2019_via_cect
+VA1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA10,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA11,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA12,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA7,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA8,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VA9,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB10,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB11,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB7,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB8,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VB9,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VC1,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+VC2,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+VC3,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+VC4,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+VC5,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+VC6,neuron,Hermaphrodite specific motor neuron,,wormatlas_cook_2019_via_cect
+VD1,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD10,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD11,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD12,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD13,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD2,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD3,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD4,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD5,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD6,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD7,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD8,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+VD9,neuron,Ventral cord motor neuron,,wormatlas_cook_2019_via_cect
+ailL,muscle,Anterior inner longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+ailR,muscle,Anterior inner longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+aobL,muscle,Anterior oblique (male specific),male,wormatlas_cook_2019_via_cect
+aobR,muscle,Anterior oblique (male specific),male,wormatlas_cook_2019_via_cect
+bm,other,Pharyngeal basement membrane,,wormatlas_cook_2019_via_cect
+cdlL,muscle,Caudal longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+cdlR,muscle,Caudal longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL1,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL2,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL3,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL4,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL5,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL6,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglL7,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR1,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR2,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR3,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR4,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR5,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR6,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR7,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dglR8,muscle,Diagonal muscle (male specific),male,wormatlas_cook_2019_via_cect
+dspL,muscle,Dorsal spicule protractor (male specific),male,wormatlas_cook_2019_via_cect
+dspR,muscle,Dorsal spicule protractor (male specific),male,wormatlas_cook_2019_via_cect
+dsrL,muscle,Dorsal spicule retractor (male specific),male,wormatlas_cook_2019_via_cect
+dsrR,muscle,Dorsal spicule retractor (male specific),male,wormatlas_cook_2019_via_cect
+e2D,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2DL,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2DR,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2V,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2VL,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2VR,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e3D,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e3VL,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e3VR,other,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+exc_cell,other,Excretory cell,,wormatlas_cook_2019_via_cect
+exc_gl,other,Excretory gland,,wormatlas_cook_2019_via_cect
+g1AL,glia,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g1AR,glia,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g1P,glia,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g2L,glia,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g2R,glia,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+gecL,muscle,Gubernacular erector (male specific),male,wormatlas_cook_2019_via_cect
+gecR,muscle,Gubernacular erector (male specific),male,wormatlas_cook_2019_via_cect
+gonad,other,Gonad (male specific),male,wormatlas_cook_2019_via_cect
+grtL,muscle,Gubernacular retractor (male specific),male,wormatlas_cook_2019_via_cect
+grtR,muscle,Gubernacular retractor (male specific),male,wormatlas_cook_2019_via_cect
+hmc,other,Head mesodermal cell,,wormatlas_cook_2019_via_cect
+hyp,other,Hypodermis,,wormatlas_cook_2019_via_cect
+int,other,Intestine,,wormatlas_cook_2019_via_cect
+mc1DL,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc1DR,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc1V,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc2DL,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc2DR,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc2V,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc3DL,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc3DR,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc3V,other,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mu_anal,muscle,Anal/sphincter muscle,,wormatlas_cook_2019_via_cect
+mu_intL,muscle,Intestinal muscles,,wormatlas_cook_2019_via_cect
+mu_intR,muscle,Intestinal muscles,,wormatlas_cook_2019_via_cect
+mu_sph,muscle,Anal/sphincter muscle,,wormatlas_cook_2019_via_cect
+pilL,muscle,Posterior inner longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+pilR,muscle,Posterior inner longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+pm1,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm2D,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm2VL,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm2VR,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm3D,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm3VL,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm3VR,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4D,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4VL,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4VR,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4_UNSPECIFIED,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm5D,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm5VL,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm5VR,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm6D,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm6VL,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm6VR,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm7D,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm7VL,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm7VR,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm8,muscle,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pobL,muscle,Posterior oblique (male specific),male,wormatlas_cook_2019_via_cect
+pobR,muscle,Posterior oblique (male specific),male,wormatlas_cook_2019_via_cect
+polL,muscle,Posterior outer longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+polR,muscle,Posterior outer longitudinal muscle (male specific),male,wormatlas_cook_2019_via_cect
+proctodeum,other,Proctodeum (male specific),male,wormatlas_cook_2019_via_cect
+um1AL,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um1AR,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um1PL,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um1PR,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2AL,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2AR,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2PL,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2PR,muscle,Uterine muscle,,wormatlas_cook_2019_via_cect
+vm1AL,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm1AR,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm1PL,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm1PR,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2AL,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2AR,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2PL,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2PR,muscle,Vulval muscle,,wormatlas_cook_2019_via_cect
+vspL,muscle,Ventral spicule protractor (male specific),male,wormatlas_cook_2019_via_cect
+vspR,muscle,Ventral spicule protractor (male specific),male,wormatlas_cook_2019_via_cect
+vsrL,muscle,Ventral spicule retractor (male specific),male,wormatlas_cook_2019_via_cect
+vsrR,muscle,Ventral spicule retractor (male specific),male,wormatlas_cook_2019_via_cect
