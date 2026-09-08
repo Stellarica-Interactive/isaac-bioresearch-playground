@@ -198,9 +198,18 @@ order of magnitude, applied identically to every neuron. In that lineage
 
 ## 6. Open decisions before W1
 
-### 6.1 Synaptic sign — decide before writing any dynamics
+### 6.1 Synaptic sign — DECIDED
 
-No overlay is applied and none is offered by default. Options:
+**Decision (2026-09-08): option A plus option D.** Fenyves et al. 2020 predictions
+will be implemented as an **opt-in** overlay, never in the default set, with every
+row tagged `PREDICTED`. Additionally, **every experiment whose result could depend on
+polarity is to be run both with and without the overlay**, and the comparison
+reported. The point is to *measure* how load-bearing the assumption is rather than
+hope it is not.
+
+Not yet implemented; this records the decision so W1 does not have to relitigate it.
+
+Options as considered:
 
 | Option | What it gives | Cost |
 |---|---|---|

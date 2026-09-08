@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (${{ matrix.os }}, py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev,viz]"
+
+      # No network and no raw source files: this proves a fresh clone is usable.
+      # The eight tests that re-parse published spreadsheets skip here by design.
+      - name: Tests
+        run: python -m pytest -v
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Types
+        run: python -m mypy common worm tools --ignore-missing-imports
+
+      - name: Generated docs are up to date
+        run: python tools/generate_neuron_reference.py --check
+
+  verify-against-published-figures:
+    name: verify against published totals
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      # Downloads the published spreadsheets and checks their SHA-256 against
+      # worm/data/sources.toml, so upstream changing a file under us is loud.
+      - name: Fetch source datasets
+        run: python tools/fetch_datasets.py --organism worm --all
+
+      # Rebuilds the committed derived data from those bytes. Any diff means the
+      # committed data no longer matches what the importer produces.
+      - name: Rebuild derived data
+        run: python tools/build_datasets.py --organism worm
+
+      - name: Committed derived data is reproducible
+        run: git diff --exit-code -- worm/data/normalized
+
+      # Compares our parse against totals published independently of this project.
+      - name: Verify every dataset against its published totals
+        run: |
+          set -e
+          for n in 1 2 3 4 5 6 7 8; do
+            python tools/inspect_connectome.py --dataset "witvliet_2021_$n" verify
+            python tools/inspect_connectome.py --dataset "witvliet_2021_$n" validate
+          done
+
+      - name: Full test suite, including tests that need raw sources
+        run: python -m pytest -v

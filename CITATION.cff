@@ -1,0 +1,132 @@
+cff-version: 1.2.0
+title: >-
+  isaac-bioresearch: embodied, biologically derived nervous systems
+  in NVIDIA Isaac Sim
+message: >-
+  If you use this software, please cite it using the metadata below.
+  Please also cite the underlying connectome and annotation datasets
+  directly — see DATA_LICENSES.md. The scientific data is other
+  people's work and this repository does not replace it.
+type: software
+authors:
+  - family-names: Bacsi
+    given-names: Gabor
+repository-code: https://github.com/BacheyG/isaac-bioresearch-playground
+abstract: >-
+  A research and engineering project asking what happens when the
+  controller of a simulated animal is derived from the reconstructed
+  nervous system of a real one, rather than designed. Provides a
+  normalized schema and verified importers for published
+  Caenorhabditis elegans connectomes, keeping directly measured
+  anatomy strictly separate from published annotations and from
+  modelling assumptions, with per-field provenance throughout.
+  Long-term goal is a closed sensorimotor loop inside NVIDIA Isaac
+  Sim, first for C. elegans and later for Drosophila melanogaster.
+keywords:
+  - connectomics
+  - computational neuroscience
+  - Caenorhabditis elegans
+  - Drosophila melanogaster
+  - embodied simulation
+  - robotics simulation
+  - NVIDIA Isaac Sim
+  - reproducible research
+license: MIT
+version: 0.1.0
+references:
+  - type: article
+    title: >-
+      Connectomes across development reveal principles of brain
+      maturation
+    authors:
+      - family-names: Witvliet
+        given-names: Daniel
+      - family-names: Mulcahy
+        given-names: Ben
+      - family-names: Mitchell
+        given-names: James K.
+      - family-names: Meirovitch
+        given-names: Yaron
+      - family-names: Berger
+        given-names: Daniel R.
+      - family-names: Wu
+        given-names: Yuelong
+      - family-names: Liu
+        given-names: Yufang
+      - family-names: Koh
+        given-names: Wan Xian
+      - family-names: Parvathala
+        given-names: Rajeev
+      - family-names: Holmyard
+        given-names: Douglas
+      - family-names: Schalek
+        given-names: Richard L.
+      - family-names: Shavit
+        given-names: Nir
+      - family-names: Chisholm
+        given-names: Andrew D.
+      - family-names: Lichtman
+        given-names: Jeff W.
+      - family-names: Samuel
+        given-names: Aravinthan D. T.
+      - family-names: Zhen
+        given-names: Mei
+    journal: Nature
+    volume: 596
+    start: 257
+    end: 261
+    year: 2021
+    doi: 10.1038/s41586-021-03778-8
+    notes: Source of every connectome dataset currently imported.
+  - type: article
+    title: >-
+      A neurotransmitter atlas of C. elegans males and hermaphrodites
+    authors:
+      - family-names: Wang
+        given-names: Chen
+      - family-names: Vidal
+        given-names: Berta
+      - family-names: Sural
+        given-names: Surojit
+      - family-names: Loer
+        given-names: Curtis
+      - family-names: Aguilar
+        given-names: G. Robert
+      - family-names: Merritt
+        given-names: Daniel M.
+      - family-names: Toker
+        given-names: Itai Antoine
+      - family-names: Vogt
+        given-names: Merly C.
+      - family-names: Cros
+        given-names: Cyril C.
+      - family-names: Hobert
+        given-names: Oliver
+    journal: eLife
+    volume: 12
+    year: 2024
+    doi: 10.7554/eLife.95402
+    notes: Source of neurotransmitter and neuron class annotations.
+  - type: article
+    title: >-
+      Whole-animal connectomes of both Caenorhabditis elegans sexes
+    authors:
+      - family-names: Cook
+        given-names: Steven J.
+      - family-names: Jarrell
+        given-names: Travis A.
+      - family-names: Brittin
+        given-names: Christopher A.
+      - family-names: Hall
+        given-names: David H.
+      - family-names: Emmons
+        given-names: Scott W.
+    journal: Nature
+    volume: 571
+    start: 63
+    end: 71
+    year: 2019
+    doi: 10.1038/s41586-019-1352-7
+    notes: >-
+      Source of the cell groupings behind our functional role
+      annotations.

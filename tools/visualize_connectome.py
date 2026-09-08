@@ -1,21 +1,32 @@
-"""Draw a readable subnetwork of a connectome.
+"""Draw a readable view of a connectome.
 
     python tools/visualize_connectome.py --circuit gentle-touch --hops 1 -o out.png
     python tools/visualize_connectome.py --cells ASHL,ASHR --hops 2 -o out.png
+    python tools/visualize_connectome.py --whole -o out.png
     python tools/visualize_connectome.py --list-circuits
 
-Drawing all 222 cells at once produces a hairball that conveys nothing, so this
-tool always works on a neighbourhood: seed cells plus everything within ``--hops``
-of them. Named circuits live in ``worm/data/circuits/circuits.json`` as data, with
-a citation each, so the biology stays reviewable and the tool stays generic.
+Two modes, because "show me the connectome" and "show me this circuit" want
+completely different pictures.
 
-Encoding:
+**Circuit mode** (``--circuit`` / ``--cells``). Drawing all 222 cells with a force
+layout produces a hairball, so this mode works on a neighbourhood: seed cells plus
+everything within ``--hops`` of them. Named circuits live in
+``worm/data/circuits/circuits.json`` as data, with a citation each, so the biology
+stays reviewable and the tool stays generic.
 
-* node colour  -- functional role (sensory / interneuron / motor)
-* node shape   -- cell category (neuron = circle, muscle = square, other = diamond)
-* solid arrow  -- chemical synapse, pointing from pre- to postsynaptic
-* dashed line  -- gap junction, undirected
+**Whole-network mode** (``--whole``). Concentric rings by functional role -- motor
+innermost, then interneurons, sensory, and body wall muscles outermost -- so the
+sensory-to-muscle organisation is visible at a glance. Radius encodes role;
+*angular* position is taken from a force layout of the real graph, so neighbours on
+a ring really are wiring neighbours rather than alphabetical accidents.
+
+Encoding, both modes:
+
+* node colour  -- functional role (sensory / interneuron / motor / muscle)
+* solid line   -- chemical synapse (circuit mode draws the arrowhead)
+* gold line    -- gap junction, undirected
 * line width   -- synapse count
+* node size    -- number of partners
 
 Note what is **not** encoded: whether a chemical synapse excites or inhibits. That
 is not in the data, so it is not in the picture.
@@ -60,6 +71,14 @@ def circuits() -> dict[str, dict]:
     return json.loads(text)["circuits"]
 
 
+def _has_matplotlib() -> bool:
+    try:
+        import matplotlib  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def _colour(cell: Cell) -> str:
     for role in (SIMRole.SENSORY, SIMRole.MOTOR, SIMRole.INTER, SIMRole.MODULATORY):
         if role in cell.roles:
@@ -100,6 +119,179 @@ def _layout(g: nx.DiGraph, nx: Any) -> dict[str, tuple[float, float]]:
         if not moved:
             break
     return pos
+
+
+# --- whole-network ring view ------------------------------------------------
+# Ring 0 sensory, 1 interneuron, 2 motor, 3 muscle, 4 glia/other. A cell that is
+# both sensory and motor lands on the sensory ring; the ambiguity is real and is
+# reported in docs/neurons.md rather than resolved here.
+RING_OF_ROLE = {SIMRole.SENSORY: 0, SIMRole.MOTOR: 2}
+RING_RADIUS = {0: 1.00, 1: 0.64, 2: 0.30, 3: 1.36, 4: 1.36}
+RING_LABEL = {0: "SENSORY NEURONS", 1: "INTERNEURONS", 2: "MOTOR NEURONS", 3: "BODY WALL MUSCLES"}
+RING_COLOUR = {
+    0: "#3FBF7F",
+    1: "#4C8FD6",
+    2: "#E4643C",
+    3: "#A879D0",
+    4: "#9AA3AE",
+}
+
+
+def _ring_of(cell: Cell) -> int:
+    if cell.category is CellCategory.MUSCLE:
+        return 3
+    if cell.category is not CellCategory.NEURON:
+        return 4
+    for role, ring in RING_OF_ROLE.items():
+        if role in cell.roles:
+            return ring
+    return 1
+
+
+def _ring_positions(
+    c: Connectome, nx: Any
+) -> tuple[dict[str, tuple[float, float]], dict[int, list[str]]]:
+    """Radius from functional role, angle from a force layout of the real graph.
+
+    Placing cells alphabetically around each ring would scatter every circuit; taking
+    the angle from a force layout keeps wiring neighbours adjacent. Spacing each ring
+    evenly afterwards is what stops the whole thing collapsing onto one side, which a
+    naive "point each node at the mean angle of its partners" relaxation does.
+    """
+    g = nx.Graph()
+    g.add_nodes_from(c.cell_ids())
+    for e in c.connections:
+        if e.pre == e.post:
+            continue
+        prev = g.get_edge_data(e.pre, e.post, {}).get("weight", 0)
+        g.add_edge(e.pre, e.post, weight=prev + e.weight)
+    force = nx.spring_layout(g, seed=11, iterations=600, weight="weight")
+    angle0 = {n: math.atan2(force[n][1], force[n][0]) for n in g}
+
+    members: dict[int, list[str]] = {r: [] for r in RING_RADIUS}
+    for cell in c.cells:
+        members[_ring_of(cell)].append(cell.id)
+
+    pos: dict[str, tuple[float, float]] = {}
+    for ring, ids in members.items():
+        ids.sort(key=lambda n: angle0[n])
+        for k, n in enumerate(ids):
+            # Inner rings get a small offset so bilateral pairs do not line up
+            # radially with the ring outside them and hide each other's labels.
+            a = 2 * math.pi * k / max(len(ids), 1) + (0.35 if ring in (1, 2) else 0.0)
+            pos[n] = (RING_RADIUS[ring] * math.cos(a), RING_RADIUS[ring] * math.sin(a))
+    return pos, members
+
+
+def _curve(
+    p: tuple[float, float], q: tuple[float, float], bend: float = 0.22
+) -> tuple[list[float], list[float]]:
+    """Bow an edge toward the centre so long chords do not slice across the figure."""
+    mx, my = (p[0] + q[0]) / 2, (p[1] + q[1]) / 2
+    cx, cy = mx * (1 - bend), my * (1 - bend)
+    ts = [i / 18 for i in range(19)]
+    xs = [(1 - t) ** 2 * p[0] + 2 * (1 - t) * t * cx + t * t * q[0] for t in ts]
+    ys = [(1 - t) ** 2 * p[1] + 2 * (1 - t) * t * cy + t * t * q[1] for t in ts]
+    return xs, ys
+
+
+def draw_whole(c: Connectome, out: Path, *, label_top: int = 34) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
+    import networkx as nx
+
+    pos, members = _ring_positions(c, nx)
+
+    partners: dict[str, set[str]] = {i: set() for i in c.cell_ids()}
+    for e in c.connections:
+        partners[e.pre].add(e.post)
+        partners[e.post].add(e.pre)
+    deg = {n: len(p) for n, p in partners.items()}
+
+    fig, ax = plt.subplots(figsize=(13, 13), facecolor="#0b0c10")
+    ax.set_facecolor("#0b0c10")
+    for r in (3, 0, 1, 2):
+        ax.add_patch(plt.Circle((0, 0), RING_RADIUS[r], fill=False, color="#20232d", lw=1.0))
+
+    chem = c.chemical()
+    wmax = max((e.weight for e in chem), default=1)
+    for e in chem:
+        if e.pre == e.post:
+            continue
+        w = e.weight / wmax
+        xs, ys = _curve(pos[e.pre], pos[e.post])
+        ax.plot(xs, ys, color="#7396c4", lw=0.12 + 2.0 * w**0.55,
+                alpha=0.09 + 0.5 * w**0.5, solid_capstyle="round", zorder=1)
+
+    elec = [e for e in c.electrical() if e.pre != e.post]
+    ewmax = max((e.weight for e in elec), default=1)
+    for e in elec:
+        xs, ys = _curve(pos[e.pre], pos[e.post])
+        ax.plot(xs, ys, color="#F0C04A", lw=0.5 + 2.6 * (e.weight / ewmax) ** 0.55,
+                alpha=0.55, solid_capstyle="round", zorder=2)
+
+    for ring, ids in members.items():
+        if not ids:
+            continue
+        ax.scatter([pos[n][0] for n in ids], [pos[n][1] for n in ids],
+                   s=[16 + 8.0 * deg[n] for n in ids], c=RING_COLOUR[ring],
+                   edgecolors="#0b0c10", linewidths=0.8, zorder=3)
+
+    for n in sorted(c.cell_ids(), key=lambda n: -deg[n])[:label_top]:
+        x, y = pos[n]
+        norm = math.hypot(x, y) or 1.0
+        ax.text(x + 0.055 * x / norm, y + 0.055 * y / norm, n, fontsize=7.0,
+                color="#e8ebf0", ha="center", va="center", zorder=4)
+
+    for ring, lbl in RING_LABEL.items():
+        if members.get(ring):
+            ax.text(0, RING_RADIUS[ring] + 0.05, lbl, color=RING_COLOUR[ring],
+                    fontsize=10, ha="center", va="bottom", alpha=0.9, zorder=5)
+
+    t = c.totals()
+    ax.set_title(
+        f"{c.organism} nervous system, arranged by function\n"
+        f"{c.id}  ·  {t.cells} cells  ·  {t.chemical_edges} chemical synapses  ·  "
+        f"{t.electrical_edges_undirected} gap junctions",
+        color="#f4f5f7", fontsize=15, pad=22,
+    )
+    counts = {r: len(ids) for r, ids in members.items()}
+    ax.legend(
+        handles=[
+            mpatches.Patch(color=RING_COLOUR[0], label=f"sensory neuron  ({counts.get(0, 0)})"),
+            mpatches.Patch(color=RING_COLOUR[1], label=f"interneuron  ({counts.get(1, 0)})"),
+            mpatches.Patch(color=RING_COLOUR[2], label=f"motor neuron  ({counts.get(2, 0)})"),
+            mpatches.Patch(color=RING_COLOUR[3], label=f"body wall muscle  ({counts.get(3, 0)})"),
+            mpatches.Patch(color=RING_COLOUR[4], label=f"glia / other  ({counts.get(4, 0)})"),
+            mpatches.Patch(color="#7396c4", label="chemical synapse"),
+            mpatches.Patch(color="#F0C04A", label="gap junction"),
+        ],
+        loc="lower left", fontsize=9.5, frameon=False, labelcolor="#cfd4dc",
+        bbox_to_anchor=(-0.03, -0.02),
+    )
+    ax.text(
+        0.5, -0.035,
+        "Rings are functional role, not physical position.  Angular order preserves "
+        "wiring neighbourhood.  Node size = number of partners.\n"
+        "Synaptic sign is not drawn, because no connectome measures it.",
+        transform=ax.transAxes, ha="center", va="top", fontsize=9.5, color="#7d8695",
+    )
+    ax.set_xlim(-1.6, 1.6)
+    ax.set_ylim(-1.6, 1.6)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(
+        out,
+        dpi=100,
+        facecolor=fig.get_facecolor(),
+        bbox_inches="tight",
+        pil_kwargs={"optimize": True},
+    )
+    plt.close(fig)
 
 
 def draw(sub: Connectome, out: Path, title: str, *, seeds: set[str]) -> None:
@@ -211,6 +403,11 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--dataset", default="witvliet_2021_7")
     p.add_argument("--circuit", help="named circuit from worm/data/circuits/circuits.json")
     p.add_argument("--cells", help="comma-separated seed cell ids")
+    p.add_argument(
+        "--whole",
+        action="store_true",
+        help="draw the entire network as concentric rings by functional role",
+    )
     p.add_argument("--hops", type=int, default=1)
     p.add_argument("--max-cells", type=int, default=90, help="refuse to draw a hairball")
     p.add_argument("-o", "--out", type=Path, default=Path("docs/img/circuit.png"))
@@ -227,8 +424,24 @@ def main(argv: list[str] | None = None) -> int:
             print()
         return 0
 
+    if not _has_matplotlib():
+        print('matplotlib not installed. Run: pip install -e ".[viz]"', file=sys.stderr)
+        return 1
+
+    if args.whole:
+        if args.circuit or args.cells:
+            p.error("--whole draws the entire network; do not also give --circuit or --cells")
+        c, _ = load(args.dataset)
+        draw_whole(c, args.out)
+        t = c.totals()
+        print(
+            f"wrote {args.out}  ({t.cells} cells, {t.chemical_edges} chemical, "
+            f"{t.electrical_edges_undirected} gap junctions)"
+        )
+        return 0
+
     if bool(args.circuit) == bool(args.cells):
-        p.error("give exactly one of --circuit or --cells (or --list-circuits)")
+        p.error("give exactly one of --circuit, --cells or --whole (or --list-circuits)")
 
     if args.circuit:
         if args.circuit not in known:
@@ -260,11 +473,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    try:
-        import matplotlib  # noqa: F401
-    except ImportError:
-        print('matplotlib not installed. Run: pip install -e ".[viz]"', file=sys.stderr)
-        return 1
     draw(sub, args.out, title, seeds=set(present))
 
     t = sub.totals()

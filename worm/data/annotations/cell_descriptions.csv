@@ -1,0 +1,630 @@
+cell_id,name_expansion,lineage,classification,source_ref
+ADAL,Anterior Process from Deirid Commissure A Left,AB plapaaaapp,Ring interneuron,wormatlas_cook_2019_via_cect
+ADAR,Anterior Process from Deirid Commissure A Right,AB prapaaaapp,Ring interneuron,wormatlas_cook_2019_via_cect
+ADEL,Anterior DEirid Neuron Left,AB plapaaaapa,"Anterior deirid, sensory neuron",wormatlas_cook_2019_via_cect
+ADER,Anterior DEirid Neuron Right,AB prapaaaapa,"Anterior deirid, sensory neuron",wormatlas_cook_2019_via_cect
+ADFL,Amphid Dual Ciliated Ending F Left,AB alpppppaa,Amphid neuron,wormatlas_cook_2019_via_cect
+ADFR,Amphid Dual Ciliated Ending F Right,AB praaappaa,Amphid neuron,wormatlas_cook_2019_via_cect
+ADLL,Amphid Dual Ciliated Ending L Left,AB alppppaad,Amphid neuron,wormatlas_cook_2019_via_cect
+ADLR,Amphid Dual Ciliated Ending L Right,AB praaapaad,Amphid neuron,wormatlas_cook_2019_via_cect
+AFDL,Amphid Finger-like Endings D Left,AB alpppapav,Amphid finger cell,wormatlas_cook_2019_via_cect
+AFDR,Amphid Finger-like Endings D Right,AB praaaapav,Amphid finger cell,wormatlas_cook_2019_via_cect
+AIAL,Anterior Interneuron A Left,AB plppaappa,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIAR,Anterior Interneuron A Right,AB prppaappa,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIBL,Anterior Interneuron B Left,AB plaapappa,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIBR,Anterior Interneuron B Right,AB praapappa,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIML,Anterior Interneuron M Left,AB plpaapppa,Ring interneuron,wormatlas_cook_2019_via_cect
+AIMR,Anterior Interneuron M Right,AB prpaapppa,Ring interneuron,wormatlas_cook_2019_via_cect
+AINL,Anterior Interneuron N Left,AB alaaaalal,Ring interneuron,wormatlas_cook_2019_via_cect
+AINR,Anterior Interneuron N Right,AB alaapaaar,Ring interneuron,wormatlas_cook_2019_via_cect
+AIYL,Anterior Interneuron Y Left,AB plpapaaap,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIYR,Anterior Interneuron Y Right,AB prpapaaap,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIZL,Anterior Interneuron Z Left,AB plapaaapav,Amphid interneuron,wormatlas_cook_2019_via_cect
+AIZR,Anterior Interneuron Z Right,AB prapaaapav,Amphid interneuron,wormatlas_cook_2019_via_cect
+ALA,Anterior Lateral Neuron A,AB alapppaaa,"Neuron, sends processes laterally and along dorsal cord",wormatlas_cook_2019_via_cect
+ALML,Anterior Lateral Microtubule Neuron Left,AB arppaappa,Anterior lateral microtubule cell,wormatlas_cook_2019_via_cect
+ALMR,Anterior Lateral Microtubule Neuron Right,AB arpppappa,Anterior lateral microtubule cell,wormatlas_cook_2019_via_cect
+ALNL,Anterior Lateral Neuron N Left,AB plapappppap,Neuron associated with ALM,wormatlas_cook_2019_via_cect
+ALNR,Anterior Lateral Neuron N Right,AB prapappppap,Neuron associated with ALM,wormatlas_cook_2019_via_cect
+AQR,"Anterior, Q-cell Derived Receptor",QR.ap,"Neuron, basal body. Not part of a sensillum, projects into ring",wormatlas_cook_2019_via_cect
+AS1,A-type Short Motor Neuron 1,P1.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS10,A-type Short Motor Neuron 10,P10.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS11,A-type Short Motor Neuron 11,P11.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS2,A-type Short Motor Neuron 2,P2.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS3,A-type Short Motor Neuron 3,P3.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS4,A-type Short Motor Neuron 4,P4.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS5,A-type Short Motor Neuron 5,P5.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS6,A-type Short Motor Neuron 6,P6.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS7,A-type Short Motor Neuron 7,P7.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS8,A-type Short Motor Neuron 8,P8.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+AS9,A-type Short Motor Neuron 9,P9.apa,"Ventral cord motor neuron, innervates dorsal muscles, no ventral counterpart",wormatlas_cook_2019_via_cect
+ASEL,Amphid Single Cilium E Left,AB alppppppaa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASER,Amphid Single Cilium E Right,AB praaapppaa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASGL,Amphid Single Cilium G Left,AB plaapapap,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASGR,Amphid Single Cilium G Right,AB praapapap,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASHL,Amphid Single Cilium H Left,AB plpaappaa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASHR,Amphid Single Cilium H Right,AB prpaappaa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASIL,Amphid Single Cilium I Left,AB plaapapppa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASIR,Amphid Single Cilium I Right,AB praapapppa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASJL,Amphid Single Cilium J Left,AB alpppppppa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASJR,Amphid Single Cilium J Right,AB praaappppa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASKL,Amphid Single Cilium K Left,AB alpppapppa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+ASKR,Amphid Single Cilium K Right,AB praaaapppa,"Amphid neurons, single ciliated endings",wormatlas_cook_2019_via_cect
+AUAL,Amphid-associated Unknown Receptor A Left,AB alpppppppp,"Neuron, process runs with amphid processes but lacks ciliated ending",wormatlas_cook_2019_via_cect
+AUAR,Amphid-associated Unknown Receptor A Right,AB praaappppp,"Neuron, process runs with amphid processes but lacks ciliated ending",wormatlas_cook_2019_via_cect
+AVAL,Anterior Ventral Process A Left,AB alppaaapa,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVAR,Anterior Ventral Process A Right,AB alaappapa,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVBL,Anterior Ventral Process B Left,AB plpaapaap,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVBR,Anterior Ventral Process B Right,AB prpaapaap,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVDL,Anterior Ventral Process D Left,AB alaaapalr,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVDR,Anterior Ventral Process D Right,AB alaaapprl,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVEL,Anterior Ventral Process E Left,AB alpppaaaa,"Ventral cord interneuron, like AVD but outputs restricted to anterior cord",wormatlas_cook_2019_via_cect
+AVER,Anterior Ventral Process E Right,AB praaaaaaa,"Ventral cord interneuron, like AVD but outputs restricted to anterior cord",wormatlas_cook_2019_via_cect
+AVFL,Anterior Ventral Process F Left,P1.aaaa/ W.aaa,Interneuron,wormatlas_cook_2019_via_cect
+AVFR,Anterior Ventral Process F Right,P1.aaaa/ W.aaa,Interneuron,wormatlas_cook_2019_via_cect
+AVG,Anterior Ventral Process G,AB prpapppap,Ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVHL,Anterior Ventral Process H Left,AB alapaaaaa,"Neuron, mainly postsynaptic in ventral cord and presynaptic in the ring",wormatlas_cook_2019_via_cect
+AVHR,Anterior Ventral Process H Right,AB alappapaa,"Neuron, mainly postsynaptic in ventral cord and presynaptic in the ring",wormatlas_cook_2019_via_cect
+AVJL,Anterior Ventral Process J Left,AB alapapppa,"Neuron, synapses like AVHL/R",wormatlas_cook_2019_via_cect
+AVJR,Anterior Ventral Process J Right,AB alapppppa,"Neuron, synapses like AVHL/R",wormatlas_cook_2019_via_cect
+AVKL,Anterior Ventral Process K Left,AB plpapapap,Ring and ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVKR,Anterior Ventral Process K Right,AB prpapapap,Ring and ventral cord interneuron,wormatlas_cook_2019_via_cect
+AVL,Anterior Ventral Process L,AB prpappaap,Ring and ventral cord interneuron and an excitatory GABAergic motor neuron for rectal muscles. Few synapses,wormatlas_cook_2019_via_cect
+AVM,Anterior Ventral Microtubule Neuron,QR.paa,"Anterior ventral microtubule cell, touch receptor",wormatlas_cook_2019_via_cect
+AWAL,Amphid Wing Neuron A Left,AB plaapapaa,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",wormatlas_cook_2019_via_cect
+AWAR,Amphid Wing Neuron A Right,AB praapapaa,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",wormatlas_cook_2019_via_cect
+AWBL,Amphid Wing Neuron B Left,AB alpppppap,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",wormatlas_cook_2019_via_cect
+AWBR,Amphid Wing Neuron B Right,AB praaappap,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",wormatlas_cook_2019_via_cect
+AWCL,Amphid Wing Neuron C Left,AB plpaaaaap,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",wormatlas_cook_2019_via_cect
+AWCR,Amphid Wing Neuron C Right,AB prpaaaaap,"Amphid wing cells, neurons having ciliated sheet-like sensory endings closely associated with amphid sheath",wormatlas_cook_2019_via_cect
+BAGL,BAG-like Dendritic Ending Left,AB alppappap,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",wormatlas_cook_2019_via_cect
+BAGR,BAG-like Dendritic Ending Right,AB arappppap,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",wormatlas_cook_2019_via_cect
+BDUL,"Black Vesicles, Deirid Locale, Unknown Function Left",AB arppaappp,"Neuron, process runs along excretory canal and into ring, unique darkly staining synaptic vesicles",wormatlas_cook_2019_via_cect
+BDUR,"Black Vesicles, Deirid Locale, Unknown Function Right",AB arpppappp,"Neuron, process runs along excretory canal and into ring, unique darkly staining synaptic vesicles",wormatlas_cook_2019_via_cect
+BWM,,Unspecified body wall muscle,,wormatlas_cook_2019_via_cect
+CA01,"C-type Neuron, Anterior Daughter after Division 1",P3.aapa,"Male specific cells, ventral cord, not constructed",wormatlas_cook_2019_via_cect
+CA02,"C-type Neuron, Anterior Daughter after Division 2",P4.aapa,"Male specific cells, ventral cord, not constructed",wormatlas_cook_2019_via_cect
+CA03,"C-type Neuron, Anterior Daughter after Division 3",P5.aapa,"Male specific cells, ventral cord, not constructed",wormatlas_cook_2019_via_cect
+CA04,"C-type Neuron, Anterior Daughter after Division 4",P6.aapa,"Male specific neuron, ventral cord, innervates dorsal muscles",wormatlas_cook_2019_via_cect
+CA05,"C-type Neuron, Anterior Daughter after Division 5",P7.aapa,"Male specific neuron, ventral cord, innervates dorsal muscles",wormatlas_cook_2019_via_cect
+CA06,"C-type Neuron, Anterior Daughter after Division 6",P8.aapa,"Male specific neuron, ventral cord, innervates dorsal muscles",wormatlas_cook_2019_via_cect
+CA07,"C-type Neuron, Anterior Daughter after Division 7",P9.aapa,"Male specific neuron, ventral cord, innervates dorsal muscles",wormatlas_cook_2019_via_cect
+CA08,"C-type Neuron, Anterior Daughter after Division 8",P10.aapa,"Male specific cell, ventral cord, neuron-like but lacks synapses",wormatlas_cook_2019_via_cect
+CA09,"C-type Neuron, Anterior Daughter after Division 9",P11.aapa,"Male specific cell, ventral cord, neuron-like but lacks synapses",wormatlas_cook_2019_via_cect
+CANL,Excretory CANal-associated Neuron Left,AB alapaaapa,"Process runs along excretory canal, no synapses, essential for survival",wormatlas_cook_2019_via_cect
+CANR,Excretory CANal-associated Neuron Right,AB alappappa,"Process runs along excretory canal, no synapses, essential for survival",wormatlas_cook_2019_via_cect
+CEMDL,CEphalic Male Sensory Neuron Dorsal Left,AB plaaaaaap,"Male specific cephalic neurons (programmed cell death in hermaphrodite embryo) open to outside, possible function in male chemotaxis toward hermaphrodite",wormatlas_cook_2019_via_cect
+CEMDR,CEphalic Male Sensory Neuron Dorsal Right,AB arpapaaap,"Male specific cephalic neurons (programmed cell death in hermaphrodite embryo) open to outside, possible function in male chemotaxis toward hermaphrodite",wormatlas_cook_2019_via_cect
+CEMVL,CEphalic Male Sensory Neuron Ventral Left,AB plpaapapp,"Male specific cephalic neurons (programmed cell death in hermaphrodite embryo) open to outside, possible function in male chemotaxis toward hermaphrodite",wormatlas_cook_2019_via_cect
+CEMVR,CEphalic Male Sensory Neuron Ventral Right,AB prpaapapp,"Male specific cephalic neurons (programmed cell death in hermaphrodite embryo) open to outside, possible function in male chemotaxis toward hermaphrodite",wormatlas_cook_2019_via_cect
+CEPDL,CEPhalic Sensory Neuron Dorsal Left,AB plaaaaappa,"Cephalic neurons, contain dopamine",wormatlas_cook_2019_via_cect
+CEPDR,CEPhalic Sensory Neuron Dorsal Right,AB arpapaappa,"Cephalic neurons, contain dopamine",wormatlas_cook_2019_via_cect
+CEPVL,CEPhalic Sensory Neuron Ventral Left,AB plpaappppa,"Cephalic neurons, contain dopamine",wormatlas_cook_2019_via_cect
+CEPVR,CEPhalic Sensory Neuron Ventral Right,AB prpaappppa,"Cephalic neurons, contain dopamine",wormatlas_cook_2019_via_cect
+CEPshDL,,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CEPshDR,,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CEPshVL,,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CEPshVR,,Sheath cell other than amphid sheath and phasmid,,wormatlas_cook_2019_via_cect
+CP01,"C-type Neuron, Posterior Daughter after Division 1",P3.aapp,Male specific neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP02,"C-type Neuron, Posterior Daughter after Division 2",P4.aapp,Male specific neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP03,"C-type Neuron, Posterior Daughter after Division 3",P5.aapp,Male specific neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP04,"C-type Neuron, Posterior Daughter after Division 4",P6.aapp,Male specific motor neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP05,"C-type Neuron, Posterior Daughter after Division 5",P7.aapp,Male specific motor neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP06,"C-type Neuron, Posterior Daughter after Division 6",P8.aapp,Male specific motor neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP07,"C-type Neuron, Posterior Daughter after Division 7",P9.aapp,Male specific motor neuron in ventral cord,wormatlas_cook_2019_via_cect
+CP08,"C-type Neuron, Posterior Daughter after Division 8",P10.aapp,"Male specific interneuron, projects into preanal ganglion",wormatlas_cook_2019_via_cect
+CP09,"C-type Neuron, Posterior Daughter after Division 9",P11.aapp,"Male specific interneuron, projects into preanal ganglion",wormatlas_cook_2019_via_cect
+DA1,Dorsal A-type Motor Neuron 1,AB prppapaap,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA2,Dorsal A-type Motor Neuron 2,AB plppapapa,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA3,Dorsal A-type Motor Neuron 3,AB prppapapa,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA4,Dorsal A-type Motor Neuron 4,AB plppapapp,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA5,Dorsal A-type Motor Neuron 5,AB prppapapp,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA6,Dorsal A-type Motor Neuron 6,AB plpppaaap,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA7,Dorsal A-type Motor Neuron 7,AB prpppaaap,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA8,Dorsal A-type Motor Neuron 8,AB prpapappp,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DA9,Dorsal A-type Motor Neuron 9,AB plpppaaaa,"Ventral cord motor neurons, innervate dorsal muscles",wormatlas_cook_2019_via_cect
+DB1,Dorsal B-type Motor Neuron 1,AB plpaaaapp,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor (aka DB1/3)",wormatlas_cook_2019_via_cect
+DB2,Dorsal B-type Motor Neuron 2,AB arappappa,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor (aka DB3/1)",wormatlas_cook_2019_via_cect
+DB3,Dorsal B-type Motor Neuron 3/1,AB prpaaaapp,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+DB4,Dorsal B-type Motor Neuron 4,AB prpappapp,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+DB5,Dorsal B-type Motor Neuron 5,AB plpapappp,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+DB6,Dorsal B-type Motor Neuron 6,AB plppaappp,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+DB7,Dorsal B-type Motor Neuron 7,AB prppaappp,"Ventral cord motor neurons, innervate dorsal muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+DD1,Dorsal D-type Motor Neuron 1,AB plppappap,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",wormatlas_cook_2019_via_cect
+DD2,Dorsal D-type Motor Neuron 2,AB prppappap,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",wormatlas_cook_2019_via_cect
+DD3,Dorsal D-type Motor Neuron 3,AB plppapppa,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",wormatlas_cook_2019_via_cect
+DD4,Dorsal D-type Motor Neuron 4,AB prppapppa,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",wormatlas_cook_2019_via_cect
+DD5,Dorsal D-type Motor Neuron 5,AB plppapppp,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",wormatlas_cook_2019_via_cect
+DD6,Dorsal D-type Motor Neuron 6,AB prppapppp,"Ventral cord motor neurons, reciprocal inhibitors, change synaptic pattern during L1",wormatlas_cook_2019_via_cect
+DVA,Dorsorectal Ganglion Ventral Process A,AB prppppapp,"Ring interneurons, cell bodies in dorsorectal ganglion",wormatlas_cook_2019_via_cect
+DVB,Dorsorectal Ganglion Ventral Process B,K.p,An excitatory GABAergic motor neuron/interneuron located in dorso-rectal ganglion. Innervates rectal muscles,wormatlas_cook_2019_via_cect
+DVC,Dorsorectal Ganglion Ventral Process C,C aapaa,"Ring interneurons, cell bodies in dorsorectal ganglion",wormatlas_cook_2019_via_cect
+DVE,Dorsorectal Ventral Process E,B.ppap,"Male specific interneuron, cell body in dorsorectal ganglion",wormatlas_cook_2019_via_cect
+DVF,Dorsorectal Ventral Process F,B.ppppa,"Male specific interneuron, cell body in dorsorectal ganglion",wormatlas_cook_2019_via_cect
+DX1,,Male interneuron,,wormatlas_cook_2019_via_cect
+DX2,,Male interneuron,,wormatlas_cook_2019_via_cect
+DX3,,Male interneuron,,wormatlas_cook_2019_via_cect
+EF1,,Male interneuron,,wormatlas_cook_2019_via_cect
+EF2,,Male interneuron,,wormatlas_cook_2019_via_cect
+EF3,,Male interneuron,,wormatlas_cook_2019_via_cect
+FLPL,FLaP-like Dendritic Ending Left,AB plapaaapad,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",wormatlas_cook_2019_via_cect
+FLPR,FLaP-like Dendritic Ending Right,AB prapaaapad,"Neuron, ciliated ending in head, no supporting cells, associated with ILso",wormatlas_cook_2019_via_cect
+GLRDL,,GLR cell,,wormatlas_cook_2019_via_cect
+GLRDR,,GLR cell,,wormatlas_cook_2019_via_cect
+GLRL,,GLR cell,,wormatlas_cook_2019_via_cect
+GLRR,,GLR cell,,wormatlas_cook_2019_via_cect
+GLRVL,,GLR cell,,wormatlas_cook_2019_via_cect
+GLRVR,,GLR cell,,wormatlas_cook_2019_via_cect
+HOA,HOok Neuron A,P10.pppa,"Male specific neuron, sensory ending in male hook sensillum, cell body in pre-anal ganglion",wormatlas_cook_2019_via_cect
+HOB,HOok Neuron B,P10.ppap,"Male specific neuron, sensory ending in male hook sensillum, cell body in pre-anal ganglion",wormatlas_cook_2019_via_cect
+HSNL,Hermaphrodite-Specific Neuron Left,AB plapppappa,"Hermaphrodite specific motor neurons (die in male embryo), innervate vulval muscles, serotonergic",wormatlas_cook_2019_via_cect
+HSNR,Hermaphrodite-Specific Neuron Right,AB prapppappa,"Hermaphrodite specific motor neurons (die in male embryo), innervate vulval muscles, serotonergic",wormatlas_cook_2019_via_cect
+I1L,Interneuron 1 (pharynx) Left,AB alpapppaa,"Pharyngeal interneurons: ant sensory, input from RIP",wormatlas_cook_2019_via_cect
+I1R,Interneuron 1 (pharynx) Right,AB arapappaa,"Pharyngeal interneurons: ant sensory, input from RIP",wormatlas_cook_2019_via_cect
+I2L,Interneuron 2 (pharynx) Left,AB alpappaapa,"Pharyngeal interneurons, ant sensory",wormatlas_cook_2019_via_cect
+I2R,Interneuron 2 (pharynx) Right,AB arapapaapa,"Pharyngeal interneurons, ant sensory",wormatlas_cook_2019_via_cect
+I3,Interneuron 3 (pharynx),MS aaaaapaa,"Pharyngeal interneuron, ant sensory",wormatlas_cook_2019_via_cect
+I4,Interneuron 4 (pharynx),MS aaaapaa,Pharyngeal interneuron,wormatlas_cook_2019_via_cect
+I5,Interneuron 5 (pharynx),AB arapapapp,"Pharyngeal interneuron, post sensory",wormatlas_cook_2019_via_cect
+I6,Interneuron 6 (pharynx),MS paaapaa,"Pharyngeal interneuron, post sensory",wormatlas_cook_2019_via_cect
+IL1DL,Inner Labial 1 Dorsal Left,AB alapappaaa,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL1DR,Inner Labial 1 Dorsal Right,AB alappppaaa,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL1L,Inner Labial 1 Left,AB alapaappaa,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL1R,Inner Labial 1 Right,AB alaappppaa,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL1VL,Inner Labial 1 Ventral Left,AB alppapppaa,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL1VR,Inner Labial 1 Ventral Right,AB arapppppaa,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL2DL,Inner Labial 2 Dorsal Left,AB alapappap,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL2DR,Inner Labial 2 Dorsal Right,AB alappppap,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL2L,Inner Labial 2 Left,AB alapaappp,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL2R,Inner Labial 2 Right,AB alaappppp,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL2VL,Inner Labial 2 Ventral Left,AB alppapppp,Inner labial neuron,wormatlas_cook_2019_via_cect
+IL2VR,Inner Labial 2 Ventral Right,AB arapppppp,Inner labial neuron,wormatlas_cook_2019_via_cect
+LUAL,LUmbar Ganglion A Left,AB plpppaapap,"Interneuron, short process in post ventral cord",wormatlas_cook_2019_via_cect
+LUAR,LUmbar Ganglion A Right,AB prpppaapap,"Interneuron, short process in post ventral cord",wormatlas_cook_2019_via_cect
+M1,Motor Neuron 1 (pharynx),MS paapaaa,Pharyngeal motorneuron,wormatlas_cook_2019_via_cect
+M2L,Motor Neuron 2 (pharynx) Left,AB araapappa,Pharyngeal motorneurons,wormatlas_cook_2019_via_cect
+M2R,Motor Neuron 2 (pharynx) Right,AB araappppa,Pharyngeal motorneurons,wormatlas_cook_2019_via_cect
+M3L,Motor Neuron 3 (pharynx) Left,AB araapappp,Pharyngeal sensory-motorneurons,wormatlas_cook_2019_via_cect
+M3R,Motor Neuron 3 (pharynx) Right,AB araappppp,Pharyngeal sensory-motorneurons,wormatlas_cook_2019_via_cect
+M4,Motor Neuron 4 (pharynx),MS paaaaaa,Pharyngeal motorneuron,wormatlas_cook_2019_via_cect
+M5,Motor Neuron 5 (pharynx),MS paaapap,Pharyngeal motorneuron,wormatlas_cook_2019_via_cect
+MANAL,,Anal/sphincter muscle,,wormatlas_cook_2019_via_cect
+MCL,Marginal Cell Neuron (pharynx) Left,AB alpaaappp,Pharyngeal neurons that synapse onto marginal cells,wormatlas_cook_2019_via_cect
+MCML,Mystery Cell of the Male Left,AmsoL,Male specific interneuron,wormatlas_cook_2019_via_cect
+MCMR,Mystery Cell of the Male Right,AmsoR,Male specific interneuron,wormatlas_cook_2019_via_cect
+MCR,Marginal Cell Neuron (pharynx) Right,AB arapaappp,Pharyngeal neurons that synapse onto marginal cells,wormatlas_cook_2019_via_cect
+MDL01,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL02,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL03,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL04,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL05,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL06,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL07,,Head muscle,,wormatlas_cook_2019_via_cect
+MDL08,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL09,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL10,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL11,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL12,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL13,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL14,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL15,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL16,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL17,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL18,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL19,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL20,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL21,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL22,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL23,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDL24,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR01,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR02,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR03,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR04,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR05,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR06,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR07,,Head muscle,,wormatlas_cook_2019_via_cect
+MDR08,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR09,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR10,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR11,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR12,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR13,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR14,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR15,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR16,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR17,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR18,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR19,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR20,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR21,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR22,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR23,,Main body muscle,,wormatlas_cook_2019_via_cect
+MDR24,,Main body muscle,,wormatlas_cook_2019_via_cect
+MI,Motor/Interneuron (pharynx),AB araappaaa,Pharyngeal motor neuron/interneuron,wormatlas_cook_2019_via_cect
+MVL01,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL02,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL03,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL04,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL05,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL06,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL07,,Head muscle,,wormatlas_cook_2019_via_cect
+MVL08,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL09,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL10,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL11,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL12,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL13,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL14,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL15,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL16,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL17,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL18,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL19,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL20,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL21,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL22,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVL23,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR01,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR02,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR03,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR04,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR05,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR06,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR07,,Head muscle,,wormatlas_cook_2019_via_cect
+MVR08,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR09,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR10,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR11,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR12,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR13,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR14,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR15,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR16,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR17,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR18,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR19,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR20,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR21,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR22,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR23,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVR24,,Main body muscle,,wormatlas_cook_2019_via_cect
+MVULVA,,Vulval muscle,,wormatlas_cook_2019_via_cect
+NSML,NeuroSecretory Motor Neuron (pharynx) Left,AB araapapaav,"Pharyngeal neurosecretory motorneuron, contain serotonin",wormatlas_cook_2019_via_cect
+NSMR,NeuroSecretory Motor Neuron (pharynx) Right,AB araapppaav,"Pharyngeal neurosecretory motorneuron, contain serotonin",wormatlas_cook_2019_via_cect
+OLLL,Outer Labial Lateral Dendrite Left,AB alppppapaa,Lateral outer labial neurons,wormatlas_cook_2019_via_cect
+OLLR,Outer Labial Lateral Dendrite Right,AB praaapapaa,Lateral outer labial neurons,wormatlas_cook_2019_via_cect
+OLQDL,Outer Labial Quadrant Dendrite Dorsal Left,AB alapapapaa,Quadrant outer labial neuron,wormatlas_cook_2019_via_cect
+OLQDR,Outer Labial Quadrant Dendrite Dorsal Right,AB alapppapaa,Quadrant outer labial neuron,wormatlas_cook_2019_via_cect
+OLQVL,Outer Labial Quadrant Dendrite Ventral Left,AB plpaaappaa,Quadrant outer labial neuron,wormatlas_cook_2019_via_cect
+OLQVR,Outer Labial Quadrant Dendrite Ventral Right,AB prpaaappaa,Quadrant outer labial neuron,wormatlas_cook_2019_via_cect
+PCAL,PostCloacal Sensilla Neuron A Left,Y.plppd,"Male specific sensory-motor neuron, sensory ending in male postcloacal sensilla, cell body in left cloacal ganglion",wormatlas_cook_2019_via_cect
+PCAR,PostCloacal Sensilla Neuron A Right,Y.prppd,"Male specific sensory-motor neuron, sensory ending in male postcloacal sensilla, cell body in right cloacal ganglion",wormatlas_cook_2019_via_cect
+PCBL,PostCloacal Sensilla Neuron B Left,Y.plpa,"Male specific sensory-motor neuron, sensory ending in male postcloacal sensilla, cell body in left cloacal ganglion",wormatlas_cook_2019_via_cect
+PCBR,PostCloacal Sensilla Neuron B Right,Y.prpa,"Male specific sensory-motor neuron, sensory ending in male postcloacal sensilla, cell body in right cloacal ganglion",wormatlas_cook_2019_via_cect
+PCCL,PostCloacal Sensilla Neuron C Left,B.arpaaa,"Male specific sensory-motor neuron, sensory ending in male postcloacal sensilla, cell body in left cloacal ganglion",wormatlas_cook_2019_via_cect
+PCCR,PostCloacal Sensilla Neuron C Right,B.alpaaa,"Male specific sensory-motor neuron, sensory ending in male postcloacal sensilla, cell body in right cloacal ganglion",wormatlas_cook_2019_via_cect
+PDA,Preanal Cell Body Dorsal Axon A,AB prpppaaaa,"Motor neuron, process in dorsal cord, same as Y cell in hermaphrodite, Y.a in male",wormatlas_cook_2019_via_cect
+PDB,Preanal Cell Body Dorsal Axon B,P12.apa,"Motor neuron, process in dorsal cord, cell body in pre-anal ganglion",wormatlas_cook_2019_via_cect
+PDC,Preanal Cell with Dorsal Process C,P11.papa,"Male specific interneuron, pre-anal ganglion",wormatlas_cook_2019_via_cect
+PDEL,Posterior DEirid Left,V5L.paaa,"Neuron, dopaminergic of postderid sensillum",wormatlas_cook_2019_via_cect
+PDER,Posterior DEirid Right,V5R.paaa,"Neuron, dopaminergic of postderid sensillum",wormatlas_cook_2019_via_cect
+PGA,Preanal Ganglion Cell A,P11.papp,"Male specific interneuron, pre-anal ganglion",wormatlas_cook_2019_via_cect
+PHAL,PHasmid Neuron A Left,AB plpppaapp,"Phasmid neurons, chemosensory",wormatlas_cook_2019_via_cect
+PHAR,PHasmid Neuron A Right,AB prpppaapp,"Phasmid neurons, chemosensory",wormatlas_cook_2019_via_cect
+PHBL,PHasmid Neuron B Left,AB plapppappp,"Phasmid neurons, chemosensory",wormatlas_cook_2019_via_cect
+PHBR,PHasmid Neuron B Right,AB prapppappp,"Phasmid neurons, chemosensory",wormatlas_cook_2019_via_cect
+PHCL,PHasmid Neuron C Left,TL.pppaa,"Neuron, striated rootlet in male, possibly sensory in tail spike",wormatlas_cook_2019_via_cect
+PHCR,PHasmid Neuron C Right,TR.pppaa,"Neuron, striated rootlet in male, possibly sensory in tail spike",wormatlas_cook_2019_via_cect
+PHDL,PHasmid Neuron D Left,TL.paa (PHsoL),Male specific sensory neuron,wormatlas_cook_2019_via_cect
+PHDR,PHasmid Neuron D Right,TR.paa (PHsoR),Male specific sensory neuron,wormatlas_cook_2019_via_cect
+PLML,Posterior Lateral Microtubule Neuron Left,AB plapappppaa,"Posterior lateral microtubule cells, touch receptor neurons",wormatlas_cook_2019_via_cect
+PLMR,Posterior Lateral Microtubule Neuron Right,AB prapappppaa,"Posterior lateral microtubule cells, touch receptor neurons",wormatlas_cook_2019_via_cect
+PLNL,Posterior Lateral N Left,TL.pppap,"Interneuron, associated with PLM",wormatlas_cook_2019_via_cect
+PLNR,Posterior Lateral N Right,TR.pppap,"Interneuron, associated with PLM",wormatlas_cook_2019_via_cect
+PQR,Posterior Q-cell Derived Receptor,QL.ap,"Neuron, basal body, not part of a sensillum, projects into preanal ganglion",wormatlas_cook_2019_via_cect
+PVCL,Posterior Ventral Process C Left,AB plpppaapaa,"Ventral cord interneuron, cell body in lumbar ganglion, synapses onto VB and DB motor neurons, formerly called delta",wormatlas_cook_2019_via_cect
+PVCR,Posterior Ventral Process C Right,AB prpppaapaa,"Ventral cord interneuron, cell body in lumbar ganglion, synapses onto VB and DB motor neurons, formerly called delta",wormatlas_cook_2019_via_cect
+PVDL,Posterior Ventral Process D Left,V5L.paapa,"Neuron, lateral process adjacent to excretory canal",wormatlas_cook_2019_via_cect
+PVDR,Posterior Ventral Process D Right,V5R.paapa,"Neuron, lateral process adjacent to excretory canal",wormatlas_cook_2019_via_cect
+PVM,Posterior Ventral Microtubule Neuron,QL.paa,"Posterior ventral microtubule cell, touch receptor",wormatlas_cook_2019_via_cect
+PVNL,Posterior Ventral Process N Left,TL.appp,"Interneuron/motor neuron, post. vent. cord, few synapses",wormatlas_cook_2019_via_cect
+PVNR,Posterior Ventral Process N Right,TR.appp,"Interneuron/motor neuron, post. vent. cord, few synapses",wormatlas_cook_2019_via_cect
+PVPL,Posterior Ventral Process P Left,AB plppppaaa,"Interneuron, cell body in preanal ganglion, projects along ventral cord to nerve ring",wormatlas_cook_2019_via_cect
+PVPR,Posterior Ventral Process P Right,AB prppppaaa,"Interneuron, cell body in preanal ganglion, projects along ventral cord to nerve ring",wormatlas_cook_2019_via_cect
+PVQL,Posterior Ventral Process Q Left,AB plapppaaa,"Interneuron, projects along ventral cord to ring",wormatlas_cook_2019_via_cect
+PVQR,Posterior Ventral Process Q Right,AB prapppaaa,"Interneuron, projects along ventral cord to ring",wormatlas_cook_2019_via_cect
+PVR,Posterior Ventral Process R,C aappa,"Interneuron, projects along ventral cord to ring",wormatlas_cook_2019_via_cect
+PVT,Posterior Ventral Process T,AB plpappppa,"Interneuron, projects along ventral cord to ring",wormatlas_cook_2019_via_cect
+PVV,Posterior Ventral Process V,P11.paaa,"Male specific motor neuron, pre-anal ganglion",wormatlas_cook_2019_via_cect
+PVWL,Posterior Ventral Process W Left,TL.ppa,"Interneuron, posterior ventral cord, few synapses",wormatlas_cook_2019_via_cect
+PVWR,Posterior Ventral Process W Right,TR.ppa,"Interneuron, posterior ventral cord, few synapses",wormatlas_cook_2019_via_cect
+PVX,Posterior Ventral Process X,P12.aap,"Male specific interneuron, cell body in pre-anal ganglion, postsynaptic in ring and ventral cord",wormatlas_cook_2019_via_cect
+PVY,Posterior Ventral Process Y,P11.paap,"Male specific interneuron, cell body in pre-anal ganglion",wormatlas_cook_2019_via_cect
+PVZ,Posterior Ventral Process Z,P10.ppppa,"Male specific motor neuron, cell body in pre-anal ganglion",wormatlas_cook_2019_via_cect
+R1AL,Ray 1 Neuron A Left,"V5L.pppppaaa, (R1.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R1AR,Ray 1 Neuron A Right,"V5R.pppppaaa, (R1.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R1BL,Ray 1 Neuron B Left,"V5L.pppppapa, (R1.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R1BR,Ray 1 Neuron B Right,"V5R.pppppapa, (R1.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R1stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R1stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R2AL,Ray 2 Neuron A Left,"V6L.papapaaa, (R2.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R2AR,Ray 2 Neuron A Right,"V6R.papapaaa, (R2.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R2BL,Ray 2 Neuron B Left,"V6L.papapapa, (R2.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside,cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R2BR,Ray 2 Neuron B Right,"V6R.papapapa, (R2.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R2stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R2stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R3AL,Ray 3 Neuron A Left,"V6L.papppaaa, (R3.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R3AR,Ray 3 Neuron A Right,"V6R.papppaaa, (R3.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R3BL,Ray 3 Neuron B Left,"V6L.papppapa, (R3.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R3BR,Ray 3 Neuron B Right,"V6R.papppapa, (R3.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R3stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R3stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R4AL,Ray 4 Neuron A Left,"V6L.pppapaaa, (R4.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R4AR,Ray 4 Neuron A Right,"V6R.pppapaaa, (R4.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R4BL,Ray 4 Neuron B Left,"V6L.pppapapa, (R4.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R4BR,Ray 4 Neuron B Right,"V6R.pppapapa, (R4.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R4stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R4stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R5AL,Ray 5 Neuron A Left,"V6L.pppppaaa, (R5.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R5AR,Ray 5 Neuron A Right,"V6R.pppppaaa, (R5.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R5BL,Ray 5 Neuron B Left,"V6L.pppppapa, (R5.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R5BR,Ray 5 Neuron B Right,"V6R.pppppapa, (R5.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R5stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R5stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R6AL,Ray 6 Neuron A Left,"V6L.ppppaaaa, (R6.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R6AR,Ray 6 Neuron A Right,"V6R.ppppaaaa, (R6.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R6BL,Ray 6 Neuron B Left,"V6L.ppppaapa, (R6.apaL)","Male sensory rays, neuron, not darkly staining nor open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R6BR,Ray 6 Neuron B Right,"V6R.ppppaapa, (R6.apaR)","Male sensory rays, neuron, not darkly staining nor open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R6stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R6stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R7AL,Ray 7 Neuron A Left,"TL.apappaaa, (R7.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R7AR,Ray 7 Neuron A Right,"TR.apappaaa, (R7.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R7BL,Ray 7 Neuron B Left,"TL.apappapa, (R7.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R7BR,Ray 7 Neuron B Right,"TR.apappapa, (R7.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R7stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R7stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R8AL,Ray 8 Neuron A Left,"TL.appaaaaa, (R8.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R8AR,Ray 8 Neuron A Right,"TR.appaaaaa, (R8.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R8BL,Ray 8 Neuron B Left,"TL.appaaapa, (R8.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R8BR,Ray 8 Neuron B Right,"TR.appaaapa, (R8.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R8stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R8stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R9AL,Ray 9 Neuron A Left,"TL.appapaaa, (R9.aaaL)","Male sensory rays, neuron, striated rootlet, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R9AR,Ray 9 Neuron A Right,"TR.appapaaa, (R9.aaaR)","Male sensory rays, neuron, striated rootlet, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R9BL,Ray 9 Neuron B Left,"TL.appapapa, (R9.apaL)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in left lumbar ganglion",wormatlas_cook_2019_via_cect
+R9BR,Ray 9 Neuron B Right,"TR.appapapa, (R9.apaR)","Male sensory rays, neuron, darkly staining tip, open to outside, cell body in right lumbar ganglion",wormatlas_cook_2019_via_cect
+R9stL,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+R9stR,,Male ray structural cell,,wormatlas_cook_2019_via_cect
+RIAL,Ring Interneuron A Left,AB alapaapaa,"Ring interneuron, many synapses",wormatlas_cook_2019_via_cect
+RIAR,Ring Interneuron A Right,AB alaapppaa,"Ring interneuron, many synapses",wormatlas_cook_2019_via_cect
+RIBL,Ring Interneuron B Left,AB plpaappap,Ring interneuron,wormatlas_cook_2019_via_cect
+RIBR,Ring Interneuron B Right,AB prpaappap,Ring interneuron,wormatlas_cook_2019_via_cect
+RICL,Ring Interneuron C Left,AB plppaaaapp,Ring interneuron,wormatlas_cook_2019_via_cect
+RICR,Ring Interneuron C Right,AB prppaaaapp,Ring interneuron,wormatlas_cook_2019_via_cect
+RID,Ring Interneuron D,AB alappaapa,"Ring interneuron, projects along dorsal cord",wormatlas_cook_2019_via_cect
+RIFL,Ring Interneuron F Left,AB plppapaaap,Ring interneuron,wormatlas_cook_2019_via_cect
+RIFR,Ring Interneuron F Right,AB prppapaaap,Ring interneuron,wormatlas_cook_2019_via_cect
+RIGL,Ring Interneuron G Left,AB plppappaa,Ring interneuron,wormatlas_cook_2019_via_cect
+RIGR,Ring Interneuron G Right,AB prppappaa,Ring interneuron,wormatlas_cook_2019_via_cect
+RIH,Ring Interneuron H,AB prpappaaa,Ring interneuron,wormatlas_cook_2019_via_cect
+RIML,Ring Interneuron M Left,AB plppaapap,Ring motor neuron,wormatlas_cook_2019_via_cect
+RIMR,Ring Interneuron M Right,AB prppaapap,Ring motor neuron,wormatlas_cook_2019_via_cect
+RIPL,Ring Interneuron P Left,AB alpapaaaa,"Ring/pharynx interneuron, only direct connection between pharynx and ring",wormatlas_cook_2019_via_cect
+RIPR,Ring Interneuron P Right,AB arappaaaa,"Ring/pharynx interneuron, only direct connection between pharynx and ring",wormatlas_cook_2019_via_cect
+RIR,Ring Interneuron R,AB prpapppaa,Ring interneuron,wormatlas_cook_2019_via_cect
+RIS,Ring Interneuron S,AB prpappapa,Ring interneuron,wormatlas_cook_2019_via_cect
+RIVL,Ring Interneuron V Left,AB plpaapaaa,Ring interneuron,wormatlas_cook_2019_via_cect
+RIVR,Ring Interneuron V Right,AB prpaapaaa,Ring interneuron,wormatlas_cook_2019_via_cect
+RMDDL,Ring Motor Neuron D Dorsal Left,AB alpapapaa,"Ring motor neuron/interneuron, many synapses",wormatlas_cook_2019_via_cect
+RMDDR,Ring Motor Neuron D Dorsal Right,AB arappapaa,"Ring motor neuron/interneuron, many synapses",wormatlas_cook_2019_via_cect
+RMDL,Ring Motor Neuron D Left,AB alpppapad,"Ring motor neuron/interneuron, many synapses",wormatlas_cook_2019_via_cect
+RMDR,Ring Motor Neuron D Right,AB praaaapad,"Ring motor neuron/interneuron, many synapses",wormatlas_cook_2019_via_cect
+RMDVL,Ring Motor Neuron D Ventral Left,AB alppapaaa,"Ring motor neuron/interneuron, many synapses",wormatlas_cook_2019_via_cect
+RMDVR,Ring Motor Neuron D Ventral Right,AB arapppaaa,"Ring motor neuron/interneuron, many synapses",wormatlas_cook_2019_via_cect
+RMED,Ring Motor Neuron E Dorsal,AB alapppaap,Ring motor neuron,wormatlas_cook_2019_via_cect
+RMEL,Ring Motor Neuron E Left,AB alaaaarlp,Ring motor neuron,wormatlas_cook_2019_via_cect
+RMER,Ring Motor Neuron E Right,AB alaaaarrp,Ring motor neuron,wormatlas_cook_2019_via_cect
+RMEV,Ring Motor Neuron E Ventral,AB plpappaaa,Ring motor neuron,wormatlas_cook_2019_via_cect
+RMFL,Ring Motor Neuron F Left,G2.al,Ring motor neuron/interneuron,wormatlas_cook_2019_via_cect
+RMFR,Ring Motor Neuron F Right,G2.ar,Ring motor neuron/interneuron,wormatlas_cook_2019_via_cect
+RMGL,Ring Motor Neuron G Left,AB plapaaapp,Ring interneuron,wormatlas_cook_2019_via_cect
+RMGR,Ring Motor Neuron G Right,AB prapaaapp,Ring interneuron,wormatlas_cook_2019_via_cect
+RMHL,Ring Motor Neuron H Left,G1.l,Ring motor neuron/interneuron,wormatlas_cook_2019_via_cect
+RMHR,Ring Motor Neuron H Right,G1.r,Ring motor neuron/interneuron,wormatlas_cook_2019_via_cect
+SAADL,Sublateral Anterior A Dorsal Left,AB alppapapa,"Ring interneuron, anteriorly projecting process that runs sublaterally",wormatlas_cook_2019_via_cect
+SAADR,Sublateral Anterior A Dorsal Right,AB arapppapa,"Ring interneuron, anteriorly projecting process that runs sublaterally",wormatlas_cook_2019_via_cect
+SAAVL,Sublateral Anterior A Ventral Left,AB plpaaaaaa,"Ring interneuron, anteriorly projecting process that runs sublaterally",wormatlas_cook_2019_via_cect
+SAAVR,Sublateral Anterior A Ventral Right,AB prpaaaaaa,"Ring interneuron, anteriorly projecting process that runs sublaterally",wormatlas_cook_2019_via_cect
+SABD,Sublateral Anterior B Dorsal,AB plppapaap,"Ring interneuron, anteriorly projecting process that runs sublaterally, synapses to anterior body muscles in L1",wormatlas_cook_2019_via_cect
+SABVL,Sublateral Anterior B Ventral Left,AB plppapaaaa,"Ring interneuron, anteriorly projecting process that runs sublaterally, synapses to anterior body muscles in L1",wormatlas_cook_2019_via_cect
+SABVR,Sublateral Anterior B Ventral Right,AB prppapaaaa,"Ring interneuron, anteriorly projecting process that runs sublaterally, synapses to anterior body muscles in L1",wormatlas_cook_2019_via_cect
+SDQL,Sublateral Dorsal Q-cell Derived Left,QL.pap,"Post. lateral interneuron, process projects into ring",wormatlas_cook_2019_via_cect
+SDQR,Sublateral Dorsal Q-cell Derived Right,QR.pap,"Ant. lateral interneuron, process projects into ring",wormatlas_cook_2019_via_cect
+SIADL,Sublateral Interneuron A Dorsal Left,AB plpapaapa,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",wormatlas_cook_2019_via_cect
+SIADR,Sublateral Interneuron A Dorsal Right,AB prpapaapa,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",wormatlas_cook_2019_via_cect
+SIAVL,Sublateral Interneuron A Ventral Left,AB plpapappa,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",wormatlas_cook_2019_via_cect
+SIAVR,Sublateral Interneuron A Ventral Right,AB prpapappa,"Receive a few synapses in the ring, have posteriorly directed processes that run sublaterally",wormatlas_cook_2019_via_cect
+SIBDL,Sublateral Interneuron B Dorsal Left,AB plppaaaaa,Similar to SIA,wormatlas_cook_2019_via_cect
+SIBDR,Sublateral Interneuron B Dorsal Right,AB prppaaaaa,Similar to SIA,wormatlas_cook_2019_via_cect
+SIBVL,Sublateral Interneuron B Ventral Left,AB plpapaapp,Similar to SIA,wormatlas_cook_2019_via_cect
+SIBVR,Sublateral Interneuron B Ventral Right,AB prpapaapp,Similar to SIA,wormatlas_cook_2019_via_cect
+SMBDL,Sublateral Motor Neuron B Dorsal Left,AB alpapapapp,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMBDR,Sublateral Motor Neuron B Dorsal Right,AB arappapapp,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMBVL,Sublateral Motor Neuron B Ventral Left,AB alpapappp,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMBVR,Sublateral Motor Neuron B Ventral Right,AB arappappp,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMDDL,Sublateral Motor Neuron D Dorsal Left,AB plpapaaaa,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMDDR,Sublateral Motor Neuron D Dorsal Right,AB prpapaaaa,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMDVL,Sublateral Motor Neuron D Ventral Left,AB alppappaa,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SMDVR,Sublateral Motor Neuron D Ventral Right,AB arappppaa,"Ring motor neuron/interneuron, has a posteriorly directed process that runs sublaterally",wormatlas_cook_2019_via_cect
+SPCL,SPicule Neuron C Left,B.alpaap,"Male specific sensory/motor neuron, innervates spicule protractor muscle, cell body in left cloacal ganglion",wormatlas_cook_2019_via_cect
+SPCR,SPicule Neuron C Right,B.arpaap,"Male specific sensory/motor neuron, innervates spicule protractor muscle, cell body in right cloacal ganglion",wormatlas_cook_2019_via_cect
+SPDL,SPicule Neuron D Left,B.alpapaa,"Male specific sensory neuron of male copulatory spicules, ciliated, open to outside at tip of spicule, cell body in left cloacal ganglion",wormatlas_cook_2019_via_cect
+SPDR,SPicule Neuron D Right,B.arpapaa,"Male specific sensory neuron of male copulatory spicules, ciliated, open to outside at tip of spicule, cell body in right cloacal ganglion",wormatlas_cook_2019_via_cect
+SPVL,SPicule Neuron V Left,B.al/raalda,"Male specific sensory neuron of male copulatory spicules, ciliated, open to outside at tip of spicule, cell body in left cloacal ganglion",wormatlas_cook_2019_via_cect
+SPVR,SPicule Neuron V Right,B.al/raarda,"Male specific sensory neuron of male copulatory spicules, ciliated, open to outside at tip of spicule, cell body in right cloacal ganglion",wormatlas_cook_2019_via_cect
+URADL,"Unknown Receptor, not Ciliated A Dorsal Left",AB plaaaaaaa,Ring motor neuron,wormatlas_cook_2019_via_cect
+URADR,"Unknown Receptor, not Ciliated A Dorsal Right",AB arpapaaaa,Ring motor neuron,wormatlas_cook_2019_via_cect
+URAVL,"Unknown Receptor, not Ciliated A Ventral Left",AB plpaaapaa,Ring motor neuron,wormatlas_cook_2019_via_cect
+URAVR,"Unknown Receptor, not Ciliated A Ventral Right",AB prpaaapaa,Ring motor neuron,wormatlas_cook_2019_via_cect
+URBL,"Unknown Receptor, not Ciliated B Left",AB plaapaapa,"Neuron, presynaptic in ring, ending in head",wormatlas_cook_2019_via_cect
+URBR,"Unknown Receptor, not Ciliated B Right",AB praapaapa,"Neuron, presynaptic in ring, ending in head",wormatlas_cook_2019_via_cect
+URXL,"Unknown Receptor, not Ciliated X Left",AB plaaaaappp,Ring interneuron,wormatlas_cook_2019_via_cect
+URXR,"Unknown Receptor, not Ciliated X Right",AB arpapaappp,Ring interneuron,wormatlas_cook_2019_via_cect
+URYDL,"Unknown Receptor, not Ciliated Y Dorsal Left",AB alapapapp,"Neuron, presynaptic in ring, ending in head",wormatlas_cook_2019_via_cect
+URYDR,"Unknown Receptor, not Ciliated Y Dorsal Right",AB alapppapp,"Neuron, presynaptic in ring, ending in head",wormatlas_cook_2019_via_cect
+URYVL,"Unknown Receptor, not Ciliated Y Ventral Left",AB plpaaappp,"Neuron, presynaptic in ring, ending in head",wormatlas_cook_2019_via_cect
+URYVR,"Unknown Receptor, not Ciliated Y Ventral Right",AB prpaaappp,"Neuron, presynaptic in ring, ending in head",wormatlas_cook_2019_via_cect
+VA1,Ventral A-type Motor Neuron 1,W.pa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA10,Ventral A-type Motor Neuron 10,P10.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA11,Ventral A-type Motor Neuron 11,P11.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA12,Ventral A-type Motor Neuron 12,P12.aaaa,"Ventral cord motor neuron, innervates vent. body muscles, but also interneuron in preanal ganglion",wormatlas_cook_2019_via_cect
+VA2,Ventral A-type Motor Neuron 2,P2.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA3,Ventral A-type Motor Neuron 3,P3.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA4,Ventral A-type Motor Neuron 4,P4.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA5,Ventral A-type Motor Neuron 5,P5.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA6,Ventral A-type Motor Neuron 6,P6.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA7,Ventral A-type Motor Neuron 7,P7.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA8,Ventral A-type Motor Neuron 8,P8.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VA9,Ventral A-type Motor Neuron 9,P9.aaaa,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB1,Ventral B-type Motor Neuron 1,P1.aaap,"Ventral cord motor neuron, innervates vent. body muscles, also interneuron in ring",wormatlas_cook_2019_via_cect
+VB10,Ventral B-type Motor Neuron 10,P9.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB11,Ventral B-type Motor Neuron 11,P10.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB2,Ventral B-type Motor Neuron 2,W.aap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB3,Ventral B-type Motor Neuron 3,P2.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB4,Ventral B-type Motor Neuron 4,P3.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB5,Ventral B-type Motor Neuron 5,P4.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB6,Ventral B-type Motor Neuron 6,P5.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB7,Ventral B-type Motor Neuron 7,P6.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB8,Ventral B-type Motor Neuron 8,P7.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VB9,Ventral B-type Motor Neuron 9,P8.aaap,"Ventral cord motor neuron, innervates vent. body muscles",wormatlas_cook_2019_via_cect
+VC1,Ventral C-type Motor Neuron 1,P3.aap,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,wormatlas_cook_2019_via_cect
+VC2,Ventral C-type Motor Neuron 2,P4.aap,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,wormatlas_cook_2019_via_cect
+VC3,Ventral C-type Motor Neuron 3,P5.aap,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,wormatlas_cook_2019_via_cect
+VC4,Ventral C-type Motor Neuron 4,P6.aap,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,wormatlas_cook_2019_via_cect
+VC5,Ventral C-type Motor Neuron 5,P7.aap,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,wormatlas_cook_2019_via_cect
+VC6,Ventral C-type Motor Neuron 6,P8.aap,Hermaphrodite specific ventral cord motor neuron innervates vulval muscles and ventral body muscles,wormatlas_cook_2019_via_cect
+VD1,Ventral D-type Motor Neuron 1,W.pp,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD10,Ventral D-type Motor Neuron 10,P9.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD11,Ventral D-type Motor Neuron 11,P10.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD12,Ventral D-type Motor Neuron 12,P11.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD13,Ventral D-type Motor Neuron 13,P12.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD2,Ventral D-type Motor Neuron 2,P1.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD3,Ventral D-type Motor Neuron 3,P2.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD4,Ventral D-type Motor Neuron 4,P3.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD5,Ventral D-type Motor Neuron 5,P4.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD6,Ventral D-type Motor Neuron 6,P5.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD7,Ventral D-type Motor Neuron 7,P6.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD8,Ventral D-type Motor Neuron 8,P7.app,"Ventralcord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+VD9,Ventral D-type Motor Neuron 9,P8.app,"Ventral cord motor neuron, innervates vent body muscles, reciprocal inhibitor",wormatlas_cook_2019_via_cect
+ailL,,Anterior inner longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+ailR,,Anterior inner longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+aobL,,Anterior oblique (male specific),,wormatlas_cook_2019_via_cect
+aobR,,Anterior oblique (male specific),,wormatlas_cook_2019_via_cect
+bm,,Pharyngeal basement membrane,,wormatlas_cook_2019_via_cect
+cdlL,,Caudal longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+cdlR,,Caudal longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL1,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL2,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL3,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL4,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL5,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL6,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglL7,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR1,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR2,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR3,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR4,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR5,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR6,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR7,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dglR8,,Diagonal muscle (male specific),,wormatlas_cook_2019_via_cect
+dspL,,Dorsal spicule protractor (male specific),,wormatlas_cook_2019_via_cect
+dspR,,Dorsal spicule protractor (male specific),,wormatlas_cook_2019_via_cect
+dsrL,,Dorsal spicule retractor (male specific),,wormatlas_cook_2019_via_cect
+dsrR,,Dorsal spicule retractor (male specific),,wormatlas_cook_2019_via_cect
+e2D,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2DL,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2DR,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2V,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2VL,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e2VR,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e3D,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e3VL,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+e3VR,,Pharyngeal epithelium,,wormatlas_cook_2019_via_cect
+exc_cell,,Excretory cell,,wormatlas_cook_2019_via_cect
+exc_gl,,Excretory gland,,wormatlas_cook_2019_via_cect
+g1AL,,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g1AR,,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g1P,,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g2L,,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+g2R,,Pharyngeal glial cell,,wormatlas_cook_2019_via_cect
+gecL,,Gubernacular erector (male specific),,wormatlas_cook_2019_via_cect
+gecR,,Gubernacular erector (male specific),,wormatlas_cook_2019_via_cect
+gonad,,Gonad (male specific),,wormatlas_cook_2019_via_cect
+grtL,,Gubernacular retractor (male specific),,wormatlas_cook_2019_via_cect
+grtR,,Gubernacular retractor (male specific),,wormatlas_cook_2019_via_cect
+hmc,,Head mesodermal cell,,wormatlas_cook_2019_via_cect
+hyp,,Hypodermis,,wormatlas_cook_2019_via_cect
+int,,Intestine,,wormatlas_cook_2019_via_cect
+mc1DL,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc1DR,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc1V,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc2DL,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc2DR,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc2V,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc3DL,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc3DR,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mc3V,,Marginal cell of the pharynx,,wormatlas_cook_2019_via_cect
+mu_anal,,Anal/sphincter muscle,,wormatlas_cook_2019_via_cect
+mu_intL,,Intestinal muscles,,wormatlas_cook_2019_via_cect
+mu_intR,,Intestinal muscles,,wormatlas_cook_2019_via_cect
+mu_sph,,Anal/sphincter muscle,,wormatlas_cook_2019_via_cect
+pilL,,Posterior inner longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+pilR,,Posterior inner longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+pm1,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm2D,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm2VL,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm2VR,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm3D,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm3VL,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm3VR,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4D,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4VL,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4VR,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm4_UNSPECIFIED,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm5D,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm5VL,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm5VR,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm6D,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm6VL,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm6VR,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm7D,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm7VL,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm7VR,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pm8,,Pharyngeal muscle,,wormatlas_cook_2019_via_cect
+pobL,,Posterior oblique (male specific),,wormatlas_cook_2019_via_cect
+pobR,,Posterior oblique (male specific),,wormatlas_cook_2019_via_cect
+polL,,Posterior outer longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+polR,,Posterior outer longitudinal muscle (male specific),,wormatlas_cook_2019_via_cect
+proctodeum,,Proctodeum (male specific),,wormatlas_cook_2019_via_cect
+um1AL,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um1AR,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um1PL,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um1PR,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2AL,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2AR,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2PL,,Uterine muscle,,wormatlas_cook_2019_via_cect
+um2PR,,Uterine muscle,,wormatlas_cook_2019_via_cect
+vm1AL,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm1AR,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm1PL,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm1PR,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2AL,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2AR,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2PL,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vm2PR,,Vulval muscle,,wormatlas_cook_2019_via_cect
+vspL,,Ventral spicule protractor (male specific),,wormatlas_cook_2019_via_cect
+vspR,,Ventral spicule protractor (male specific),,wormatlas_cook_2019_via_cect
+vsrL,,Ventral spicule retractor (male specific),,wormatlas_cook_2019_via_cect
+vsrR,,Ventral spicule retractor (male specific),,wormatlas_cook_2019_via_cect

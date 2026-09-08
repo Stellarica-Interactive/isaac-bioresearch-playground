@@ -187,6 +187,11 @@ LABEL_MAP: dict[str, LabelMapping] = {
 
 CELLS_COLUMNS = ("cell_id", "category", "type_label", "sex_specific", "source_ref")
 SIM_ROLES_COLUMNS = ("cell_id", "role", "type_label", "source_ref")
+DESCRIPTIONS_COLUMNS = ("cell_id", "name_expansion", "lineage", "classification", "source_ref")
+
+#: WormAtlas leaves unfilled fields as this literal string. It means "not recorded",
+#: which is different from an empty description, so it is dropped rather than stored.
+_PLACEHOLDER = "To be added"
 NT_COLUMNS = ("cell_id", "neurotransmitter", "evidence", "source_label", "source_row", "source_ref")
 CLASS_COLUMNS = ("cell_id", "class_name", "source_row", "source_ref")
 
@@ -316,6 +321,12 @@ def fetch_text(url: str, cache: Path | None) -> str:
     return text
 
 
+def _clean(value: str | None) -> str:
+    """Normalize a WormAtlas free-text field, dropping its 'not recorded' placeholder."""
+    text = (value or "").strip().strip("-").strip()
+    return "" if not text or _PLACEHOLDER in text else " ".join(text.split())
+
+
 def parse_all_cell_info(text: str) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     seen: set[str] = set()
@@ -327,8 +338,43 @@ def parse_all_cell_info(text: str) -> list[dict[str, str]]:
         if cell_id in seen:
             raise ValueError(f"duplicate cell id in source: {cell_id!r}")
         seen.add(cell_id)
-        rows.append({"cell_id": cell_id, "type_label": label})
+        rows.append(
+            {
+                "cell_id": cell_id,
+                "type_label": label,
+                "name_expansion": _clean(row.get("Name details")),
+                "lineage": _clean(row.get("Lineage")),
+                "classification": _clean(row.get("Classification")),
+            }
+        )
     return rows
+
+
+def build_descriptions(rows: list[dict[str, str]]) -> list[tuple[str, ...]]:
+    """Name etymology, embryonic lineage and functional description, per cell.
+
+    *C. elegans* neuron names are acronyms — ``ADEL`` is "Anterior DEirid neuron
+    Left" — so the expansion is genuinely informative rather than decorative.
+    The lineage string is the invariant cell-division path from the zygote, which
+    is why every hermaphrodite has the same named cells at all.
+
+    Rows with no recorded text are omitted rather than stored blank: a missing
+    description is a gap in WormAtlas, and should read as one.
+    """
+    out: list[tuple[str, ...]] = []
+    for r in sorted(rows, key=lambda r: r["cell_id"]):
+        if not any((r["name_expansion"], r["lineage"], r["classification"])):
+            continue
+        out.append(
+            (
+                r["cell_id"],
+                r["name_expansion"],
+                r["lineage"],
+                r["classification"],
+                SOURCE_REF,
+            )
+        )
+    return out
 
 
 def build_tables(rows: list[dict[str, str]]) -> tuple[list[tuple[str, ...]], list[tuple[str, ...]]]:
@@ -378,6 +424,11 @@ def main(argv: list[str] | None = None) -> int:
 
     write_csv(WORM_DATA / "cells.csv", CELLS_COLUMNS, cells)
     write_csv(WORM_DATA / "annotations" / "sim_roles.csv", SIM_ROLES_COLUMNS, sim_roles)
+    write_csv(
+        WORM_DATA / "annotations" / "cell_descriptions.csv",
+        DESCRIPTIONS_COLUMNS,
+        build_descriptions(rows),
+    )
 
     nt_path = WORM_DATA / "raw" / "elife-95402-supp2-v1.xlsx"
     if not nt_path.exists():
