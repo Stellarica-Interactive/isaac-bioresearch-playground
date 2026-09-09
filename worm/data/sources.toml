@@ -169,6 +169,35 @@ citation = "Fenyves BG, Szilagyi GS, Vassy Z, Soti C, Csermely P. Synaptic polar
 doi = "10.1371/journal.pcbi.1007974"
 mirror_note = "S1 Data, the NT+R (neurotransmitter plus receptor) prediction. PREDICTED, never measured: no experiment measures synaptic sign across the connectome. Covers interneuronal connections ONLY - it contains no neuromuscular junctions, so it gives no polarity for the synapses that drive muscle."
 
+# ---------------------------------------------------------------------------
+# Neuromuscular junction polarity
+# ---------------------------------------------------------------------------
+# No connectome or prediction dataset gives a sign for neuron-to-muscle synapses,
+# and those are the synapses that actually drive movement. The biology here is
+# better evidenced than the interneuron sign predictions: it rests on direct
+# electrophysiology and mutant analysis rather than gene-expression inference.
+# Each sign cites the paper that establishes it, so nothing is attributed loosely.
+
+[richmond_1999_nmj_receptors]
+kind = "annotation"
+url = "https://doi.org/10.1038/12160"
+filename = ""
+sha256 = ""
+license = "Subscription (Nature Neuroscience). No data redistributed; the finding is cited, not copied."
+citation = "Richmond JE, Jorgensen EM. One GABA and two acetylcholine receptors function at the C. elegans neuromuscular junction. Nature Neuroscience 2:791-797 (1999)."
+doi = "10.1038/12160"
+mirror_note = "Patch-clamp of body wall muscle: two nicotinic acetylcholine receptors (a levamisole-sensitive UNC-29/UNC-38 receptor and a nicotine-sensitive one) plus one GABA receptor. Basis for treating acetylcholine as EXCITATORY at the body wall neuromuscular junction."
+
+[mcintire_1993_gaba_inhibitory]
+kind = "annotation"
+url = "https://doi.org/10.1038/364337a0"
+filename = ""
+sha256 = ""
+license = "Subscription (Nature). No data redistributed; the finding is cited, not copied."
+citation = "McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. The GABAergic nervous system of Caenorhabditis elegans. Nature 364:337-341 (1993)."
+doi = "10.1038/364337a0"
+mirror_note = "Identifies the 26 GABAergic neurons and reports that unc-49 is required postsynaptically for the inhibitory effect of GABA on the body muscles. Basis for treating GABA as INHIBITORY at the body wall neuromuscular junction."
+
 [wormatlas_cook_2019_via_cect]
 kind = "annotation"
 url = "https://www.wormatlas.org/NeuronNames.htm"

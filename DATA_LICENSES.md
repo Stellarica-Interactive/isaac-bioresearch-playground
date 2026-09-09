@@ -62,6 +62,21 @@ file records them. Machine-readable equivalents live in
 - These are **predictions**, never measurements. They reach a simulation only
   through an opt-in overlay, and every row is tagged `PREDICTED`.
 
+### Neuromuscular junction polarity — cited findings, no data
+
+> Richmond JE, Jorgensen EM. **One GABA and two acetylcholine receptors function at
+> the *C. elegans* neuromuscular junction.** *Nature Neuroscience* 2:791–797 (1999).
+> doi:10.1038/12160
+
+> McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. **The GABAergic nervous system of
+> *Caenorhabditis elegans*.** *Nature* 364:337–341 (1993). doi:10.1038/364337a0
+
+Both are subscription articles. **No data from either is redistributed here.** The
+`nmj` overlay encodes two facts each paper established — acetylcholine is excitatory
+and GABA inhibitory at the body wall neuromuscular junction — applied to synapses we
+already have from the connectome. Facts are not copyrightable; the papers are cited
+because they are what makes the assignment defensible.
+
 ### WormAtlas cell listings, with Cook et al. 2019 groupings
 
 > Cook SJ, Jarrell TA, Brittin CA, Wang Y, Bloniarz AE, Yakovlev MA, Nguyen KCQ,

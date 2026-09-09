@@ -24,10 +24,15 @@ from worm.loader import load
 
 CONFIG_FILE = "parameters.toml"
 
-#: Overlays needed for a meaningful simulation. ``polarity`` is included here and
-#: nowhere else by default: the runtime is the one place synaptic sign is actually
-#: used, so this is where the opt-in belongs and where it must be reported.
-RUNTIME_OVERLAYS = ("classes", "sim", "nt", "polarity")
+#: Overlays needed for a meaningful simulation. The two sign overlays are included
+#: here and nowhere else by default: the runtime is the one place synaptic sign is
+#: actually used, so this is where the opt-in belongs and where it gets reported.
+#:
+#: They are not equivalent. ``polarity`` is *predicted* from gene expression and
+#: covers interneuronal connections; ``nmj`` is *measured* physiology and covers the
+#: body wall neuromuscular junctions that drive movement. The reports keep them
+#: separate so a result can say which it leaned on.
+RUNTIME_OVERLAYS = ("classes", "sim", "nt", "polarity", "nmj")
 
 
 @dataclass(frozen=True)
@@ -174,8 +179,12 @@ def build_runtime(
 
     if connectome is None:
         connectome, reports = load(dataset_id, annotations=RUNTIME_OVERLAYS)
-        polarity = next(
-            (r.summary() for r in reports if r.overlay_id == "polarity"), "not applied"
+        # Both sign overlays are reported, and separately: 'polarity' is predicted
+        # from gene expression, 'nmj' is measured physiology. Collapsing them into
+        # one number would hide which kind of evidence a result leaned on.
+        by_id = {r.overlay_id: r.summary() for r in reports}
+        polarity = "; ".join(
+            by_id.get(name, f"{name}: not applied") for name in ("polarity", "nmj")
         )
     else:
         polarity = "supplied by caller"

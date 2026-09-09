@@ -285,26 +285,44 @@ Options as considered:
 is chosen, `sign_confidence` is `PREDICTED` and never `MEASURED` — `validate()`
 already rejects a connection claiming a measured sign.
 
-### 6.1b Neuromuscular junction sign — OPEN, and blocking W2
+### 6.1b Neuromuscular junction sign — RESOLVED
 
-Fenyves et al. covers **interneuronal connections only**. Every one of Cook 2019's
-1051 neuron→muscle synapses is unsigned — that is, the synapses that actually drive
-muscle have no polarity in any dataset here. Locomotion cannot be modelled until
-this is resolved.
+Fenyves et al. covers **interneuronal connections only**, so every one of Cook
+2019's 1051 neuron→muscle synapses was unsigned — the synapses that actually drive
+muscle had no polarity in any dataset here, which blocked locomotion entirely.
 
-The biology is unusually solid, which makes this tractable: at the *C. elegans*
-body-wall neuromuscular junction, acetylcholine is excitatory and GABA is
-inhibitory. Muscle expresses two nicotinic ACh receptors and one GABA receptor,
-UNC-49, and UNC-49 is required postsynaptically for "the inhibitory effect of GABA
-on the body muscles".
+**Implemented as the opt-in `nmj` overlay.** Sign is assigned from the presynaptic
+transmitter, for **body wall muscle only**:
 
-- Richmond JE, Jorgensen EM. *Nat Neurosci* 2:791–797 (1999).
-- McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. *Nature* 364:337–341 (1993).
+| Transmitter | Sign | Source |
+|---|---|---|
+| acetylcholine | excitatory | Richmond JE, Jorgensen EM. *Nat Neurosci* 2:791–797 (1999) |
+| GABA | inhibitory | McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. *Nature* 364:337–341 (1993) |
 
-Proposed for W2: a separate `nmj` overlay assigning sign from the presynaptic
-transmitter for neuron→body-wall-muscle synapses only, tagged
-`PUBLISHED_ANNOTATION` — better-evidenced than the Fenyves predictions, and kept
-as its own overlay with its own citations rather than folded into them.
+Tagged `PUBLISHED_ANNOTATION`, not `PREDICTED`: this rests on patch-clamp recording
+and mutant analysis, not on inference from gene expression. Muscle expresses two
+nicotinic acetylcholine receptors and one GABA receptor, and `unc-49` is required
+postsynaptically for "the inhibitory effect of GABA on the body muscles".
+
+Deliberately narrow, and the limits are the interesting part:
+
+- **Body wall muscle only.** Pharyngeal muscle has different pharmacology —
+  glutamate is *inhibitory* there, via a glutamate-gated chloride channel — so
+  applying the body-wall rule to it would be actively wrong. Vulval, uterine, anal
+  and intestinal muscle are left alone too.
+- **Acetylcholine and GABA only**, which covers **892 of 956** body wall junctions
+  (93.3%). The remaining 7% stay unsigned: glutamate from IL1 and RIM, dopamine
+  from ADE and CEP, and a handful of cells with no known transmitter. Dopamine
+  especially is left alone on purpose — it acts through G-protein-coupled receptors
+  on a slow modulatory timescale, so assigning it a reversal potential would not be
+  a cautious guess but the wrong kind of model.
+
+**An unplanned cross-check.** The cholinergic cells innervating body wall muscle
+turn out to be exactly the `AS`, `DA`, `DB`, `VA`, `VB` and `VC` classes, and the
+GABAergic ones exactly `DD` and `VD`. That is the textbook division of *C. elegans*
+motor neurons into excitatory and inhibitory — recovered here from two independent
+datasets (Cook's connectome and Wang's transmitter atlas) that were never
+reconciled against each other. Nothing in our code arranges this.
 
 ### 6.2 Neuron model — DECIDED
 

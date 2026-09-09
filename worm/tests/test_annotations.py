@@ -8,15 +8,28 @@ table does not cover must be *reported* rather than quietly filled in.
 from __future__ import annotations
 
 import csv
+import re
 from importlib.resources import files
 
 import pytest
 
-from common.data.schemas import CellCategory, Connectome, Neurotransmitter, SIMRole
+from common.data.schemas import (
+    CellCategory,
+    Confidence,
+    Connectome,
+    Neurotransmitter,
+    Sign,
+    SIMRole,
+)
 from worm.annotations.overlays import DEFAULT_OVERLAYS, OVERLAYS, get_overlays
+from worm.importers.naming import body_wall_muscle_ids
 from worm.loader import load, load_anatomy
 
 DATASET = "witvliet_2021_7"
+
+#: The neuromuscular tests need the ventral cord and all 95 body wall muscles, so
+#: they use the whole-animal dataset rather than the head-only one.
+WHOLE_ANIMAL = "cook_2019_herm"
 
 
 def _table(name: str) -> list[dict[str, str]]:
@@ -162,3 +175,106 @@ class TestNeuronClasses:
         """RMDDL and RMDL are both class RMD - a rule no string operation would find."""
         assert annotated.cell("RMDDL").class_name == "RMD"
         assert annotated.cell("RMDL").class_name == "RMD"
+
+
+@pytest.fixture(scope="module")
+def signed() -> Connectome:
+    c, _ = load(WHOLE_ANIMAL, annotations=("classes", "sim", "nt", "nmj"))
+    return c
+
+
+class TestNeuromuscularPolarity:
+    """The overlay that unblocks locomotion, and the limits it keeps.
+
+    These synapses are what actually move the animal. No connectome or prediction
+    dataset signs them, so this overlay is the only thing standing between the
+    connectome and a motor output.
+    """
+
+    def test_it_is_opt_in(self) -> None:
+        assert "nmj" in OVERLAYS
+        assert "nmj" not in DEFAULT_OVERLAYS
+
+    def test_requesting_it_without_transmitters_is_refused(self) -> None:
+        """It reads the presynaptic transmitter, so 'nt' is not optional."""
+        with pytest.raises(ValueError, match="presynaptic transmitter"):
+            get_overlays(("nmj",))
+
+    def test_dependency_order_is_enforced_not_assumed(self) -> None:
+        """Asking in the wrong order must still run 'nt' first, not annotate nothing."""
+        ids = [o.overlay_id for o in get_overlays(("nmj", "nt"))]
+        assert ids.index("nt") < ids.index("nmj")
+
+    def test_cholinergic_motor_neurons_excite_muscle(self, signed: Connectome) -> None:
+        edges = [e for e in signed.chemical() if e.pre == "VB7" and e.post.startswith("M")]
+        assert edges
+        assert all(e.sign is Sign.EXCITATORY for e in edges)
+
+    def test_gabaergic_motor_neurons_inhibit_muscle(self, signed: Connectome) -> None:
+        for cell in ("DD3", "VD5"):
+            edges = [e for e in signed.chemical() if e.pre == cell and e.post.startswith("M")]
+            assert edges, cell
+            assert all(e.sign is Sign.INHIBITORY for e in edges), cell
+
+    def test_signs_are_measured_physiology_not_prediction(self, signed: Connectome) -> None:
+        """This is the one sign source in the project that is not a guess."""
+        nmj = [
+            e
+            for e in signed.chemical()
+            if e.post in body_wall_muscle_ids() and e.sign is not Sign.UNKNOWN
+        ]
+        assert nmj
+        assert all(e.sign_confidence is Confidence.PUBLISHED_ANNOTATION for e in nmj)
+        assert {e.field_sources["sign"] for e in nmj} == {
+            "richmond_1999_nmj_receptors",
+            "mcintire_1993_gaba_inhibitory",
+        }
+
+    def test_coverage_matches_the_documented_figure(self) -> None:
+        _, reports = load(WHOLE_ANIMAL, annotations=("classes", "sim", "nt", "nmj"))
+        report = next(r for r in reports if r.overlay_id == "nmj")
+        assert (report.matched, report.eligible) == (892, 956)
+
+    def test_non_body_wall_muscle_is_left_alone(self, signed: Connectome) -> None:
+        """Pharyngeal pharmacology differs: glutamate is inhibitory there."""
+        muscles = {x.id for x in signed.cells if x.category is CellCategory.MUSCLE}
+        other = muscles - body_wall_muscle_ids()
+        assert other
+        edges = [e for e in signed.chemical() if e.post in other]
+        assert edges
+        assert all(e.sign is Sign.UNKNOWN for e in edges)
+
+    def test_modulatory_transmitters_are_left_unsigned(self, signed: Connectome) -> None:
+        """Dopamine acts through GPCRs; a reversal potential is the wrong model."""
+        dopaminergic = {
+            x.id for x in signed.cells if Neurotransmitter.DOPAMINE in x.neurotransmitters
+        }
+        edges = [
+            e
+            for e in signed.chemical()
+            if e.pre in dopaminergic and e.post in body_wall_muscle_ids()
+        ]
+        assert edges
+        assert all(e.sign is Sign.UNKNOWN for e in edges)
+
+    def test_the_motor_classes_recovered_match_textbook_biology(
+        self, signed: Connectome
+    ) -> None:
+        """A cross-check nothing in our code arranges.
+
+        Which cells excite muscle and which inhibit it falls out of two independent
+        datasets -- Cook's connectome and Wang's transmitter atlas -- that were never
+        reconciled against each other. It lands on the textbook division exactly.
+        """
+        bwm = body_wall_muscle_ids()
+        vnc = re.compile(r"^(VA|VB|VC|VD|DA|DB|DD|AS)\d+$")
+
+        def classes(sign: Sign) -> set[str]:
+            return {
+                vnc.match(e.pre).group(1)  # type: ignore[union-attr]
+                for e in signed.chemical()
+                if e.post in bwm and e.sign is sign and vnc.match(e.pre)
+            }
+
+        assert classes(Sign.EXCITATORY) == {"AS", "DA", "DB", "VA", "VB", "VC"}
+        assert classes(Sign.INHIBITORY) == {"DD", "VD"}

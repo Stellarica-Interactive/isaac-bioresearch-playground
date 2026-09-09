@@ -217,20 +217,34 @@ doi:[10.1016/j.neuron.2011.09.005](https://doi.org/10.1016/j.neuron.2011.09.005)
 
 ## The neuromuscular junction
 
-Needed for W2: no dataset here supplies a sign for neuron→muscle synapses, but the
-biology is well established. See [model_assumptions.md](model_assumptions.md) §6.1b.
+No connectome or prediction dataset supplies a sign for neuron→muscle synapses, and
+those are the synapses that drive movement. These two papers are the basis of the
+`nmj` overlay, and each sign cites the one that establishes it.
 
-**Richmond JE, Jorgensen EM. One GABA and two acetylcholine receptors function at
+### `richmond_1999_nmj_receptors`
+
+Richmond JE, Jorgensen EM. **One GABA and two acetylcholine receptors function at
 the *C. elegans* neuromuscular junction.** *Nature Neuroscience* 2:791–797 (1999).
 doi:[10.1038/12160](https://doi.org/10.1038/12160)
-Body wall muscle expresses two nicotinic acetylcholine receptors and one GABA
-receptor.
 
-**McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. The GABAergic nervous system of
+Patch-clamp of body wall muscle: two nicotinic acetylcholine receptors — a
+levamisole-sensitive UNC-29/UNC-38 receptor and a nicotine-sensitive one — plus one
+GABA receptor. The basis for treating acetylcholine as **excitatory** at the body
+wall neuromuscular junction.
+
+### `mcintire_1993_gaba_inhibitory`
+
+McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. **The GABAergic nervous system of
 *Caenorhabditis elegans*.** *Nature* 364:337–341 (1993).
 doi:[10.1038/364337a0](https://doi.org/10.1038/364337a0)
+
 Identifies the 26 GABAergic neurons, and reports that `unc-49` is required
-postsynaptically for the inhibitory effect of GABA on the body muscles.
+postsynaptically for the inhibitory effect of GABA on the body muscles. The basis
+for treating GABA as **inhibitory** there.
+
+Unlike the Fenyves predictions these rest on direct electrophysiology and mutant
+analysis, so the `nmj` overlay is tagged `PUBLISHED_ANNOTATION` rather than
+`PREDICTED`. See [model_assumptions.md](model_assumptions.md) §6.1b.
 
 ---
 

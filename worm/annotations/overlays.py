@@ -280,6 +280,117 @@ class PolarityOverlay:
         return replace(c, connections=tuple(updated)), report
 
 
+#: Sign of a fast chemical synapse onto **body wall muscle**, by presynaptic
+#: transmitter, with the paper that establishes each. Deliberately short: it covers
+#: only the two transmitters whose effect on body muscle has been measured directly.
+#:
+#: Glutamate, dopamine and unknown-transmitter synapses onto muscle are left
+#: unsigned. Dopamine in particular acts through G-protein-coupled receptors on a
+#: slow, modulatory timescale, so giving it a reversal potential would not be a
+#: cautious guess -- it would be the wrong kind of model.
+NMJ_SIGN_BY_TRANSMITTER: dict[Neurotransmitter, tuple[Sign, str]] = {
+    Neurotransmitter.ACETYLCHOLINE: (Sign.EXCITATORY, "richmond_1999_nmj_receptors"),
+    Neurotransmitter.GABA: (Sign.INHIBITORY, "mcintire_1993_gaba_inhibitory"),
+}
+
+
+@dataclass(frozen=True)
+class NeuromuscularPolarityOverlay:
+    """Sign for the synapses that actually drive muscle. **Opt-in.**
+
+    Why this exists separately from :class:`PolarityOverlay`: the Fenyves
+    predictions cover interneuronal connections only, so every one of the ~1000
+    neuron-to-muscle synapses is unsigned. Those are precisely the synapses a
+    locomotion model depends on, so without this there is no motor output at all.
+
+    Why it is better evidence than the interneuron predictions, rather than more
+    of the same guessing: acetylcholine and GABA at the *C. elegans* body wall
+    neuromuscular junction were established by direct patch-clamp recording and
+    mutant analysis, not by inference from gene expression. Muscle expresses two
+    nicotinic acetylcholine receptors and one GABA receptor, and ``unc-49`` is
+    required postsynaptically for GABA's inhibitory effect on body muscle. So
+    these carry :attr:`~common.data.schemas.Confidence.PUBLISHED_ANNOTATION`
+    rather than ``PREDICTED``.
+
+    Scope, deliberately narrow:
+
+    * **Body wall muscle only.** Pharyngeal muscle has different pharmacology --
+      glutamate is inhibitory there, through a glutamate-gated chloride channel --
+      so applying a body-wall rule to it would be wrong. Vulval, uterine, anal and
+      intestinal muscle are likewise left alone.
+    * **Acetylcholine and GABA only**, covering 93% of body wall neuromuscular
+      junctions in Cook 2019. The remaining 7% (glutamate from IL1 and RIM,
+      dopamine from ADE and CEP, and a handful with no known transmitter) stay
+      unsigned and are reported.
+
+    Requires the ``nt`` overlay to have run first, since it reads the presynaptic
+    transmitter. :func:`get_overlays` orders them correctly.
+
+    A satisfying check that falls out of this: the cholinergic cells innervating
+    body wall muscle turn out to be exactly the AS, DA, DB, VA, VB and VC classes,
+    and the GABAergic ones exactly DD and VD -- which is the textbook division into
+    excitatory and inhibitory motor neurons, arrived at from two independent
+    datasets rather than assumed.
+    """
+
+    overlay_id: str = "nmj"
+    source_id: str = "richmond_1999_nmj_receptors"
+
+    def provenance(self) -> Provenance:
+        return _provenance(
+            self.source_id,
+            "Sign of body wall neuromuscular junctions from presynaptic transmitter "
+            "identity. Measured physiology, not a gene-expression prediction.",
+        )
+
+    def apply(self, c: Connectome) -> tuple[Connectome, OverlayReport]:
+        from worm.importers.naming import body_wall_muscle_ids
+
+        muscles = body_wall_muscle_ids()
+        transmitters = {cell.id: cell.neurotransmitters for cell in c.cells}
+
+        updated: list[Connection] = []
+        matched = 0
+        eligible = 0
+        unmatched: list[str] = []
+
+        for e in c.connections:
+            if e.synapse_type is not SynapseType.CHEMICAL or e.post not in muscles:
+                updated.append(e)
+                continue
+            eligible += 1
+
+            pre_nt = transmitters.get(e.pre, ())
+            assignment = next(
+                (NMJ_SIGN_BY_TRANSMITTER[n] for n in pre_nt if n in NMJ_SIGN_BY_TRANSMITTER),
+                None,
+            )
+            if assignment is None:
+                unmatched.append(f"{e.pre}->{e.post}")
+                updated.append(e)
+                continue
+
+            sign, source = assignment
+            matched += 1
+            updated.append(
+                replace(
+                    e,
+                    sign=sign,
+                    sign_confidence=Confidence.PUBLISHED_ANNOTATION,
+                    field_sources={**e.field_sources, "sign": source},
+                )
+            )
+
+        report = OverlayReport(
+            overlay_id=self.overlay_id,
+            matched=matched,
+            eligible=eligible,
+            unmatched=tuple(sorted(unmatched)),
+            unknown_in_source=(),
+        )
+        return replace(c, connections=tuple(updated)), report
+
+
 def polarity_evidence() -> Iterator[Mapping[str, str]]:
     """Full polarity table including the basis string and source row."""
     yield from _rows("polarity_fenyves2020.csv")
@@ -294,16 +405,34 @@ OVERLAYS: dict[str, AnnotationOverlay] = {
     "classes": NeuronClassOverlay(),
     "sim": SIMRoleOverlay(),
     "nt": NeurotransmitterOverlay(),
-    # Opt-in only. Never add this to DEFAULT_OVERLAYS: synaptic sign is predicted,
-    # never measured, and a simulation is extremely sensitive to it.
+    # Both opt-in. Never add either to DEFAULT_OVERLAYS: a simulation is extremely
+    # sensitive to synaptic sign, so it should never arrive without being asked for.
     "polarity": PolarityOverlay(),
+    "nmj": NeuromuscularPolarityOverlay(),
 }
+
+#: Overlays that must run after others. ``nmj`` reads the presynaptic transmitter,
+#: so the ``nt`` overlay has to have populated it first.
+_OVERLAY_ORDER = ("classes", "sim", "nt", "polarity", "nmj")
 
 DEFAULT_OVERLAYS = ("classes", "sim", "nt")
 
 
 def get_overlays(names: tuple[str, ...] = DEFAULT_OVERLAYS) -> list[AnnotationOverlay]:
+    """Resolve overlay names, applying dependency order.
+
+    Order matters: ``nmj`` derives a synapse's sign from its presynaptic
+    transmitter, so ``nt`` must have run first. Sorting here rather than trusting
+    the caller means a plausible-looking argument order cannot silently produce an
+    overlay that matches nothing.
+    """
     unknown = [n for n in names if n not in OVERLAYS]
     if unknown:
         raise KeyError(f"unknown overlay(s) {unknown}; known: {sorted(OVERLAYS)}")
-    return [OVERLAYS[n] for n in names]
+    if "nmj" in names and "nt" not in names:
+        raise ValueError(
+            "the 'nmj' overlay reads each synapse's presynaptic transmitter, so it "
+            "needs the 'nt' overlay as well; requesting it alone would silently "
+            "annotate nothing"
+        )
+    return [OVERLAYS[n] for n in sorted(names, key=_OVERLAY_ORDER.index)]
