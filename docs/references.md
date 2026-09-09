@@ -213,6 +213,25 @@ junctions reduce the backward motor circuit activity to bias *C. elegans* for
 forward locomotion.** *Neuron* 72:572–586 (2011).
 doi:[10.1016/j.neuron.2011.09.005](https://doi.org/10.1016/j.neuron.2011.09.005)
 
+**Wen Q, Po MD, Hulme E, Chen S, Liu X, Kwok SW, Gershow M, Leifer AM, Butler V,
+Fang-Yen C, Kawano T, Schafer WR, Whitesides G, Wyart M, Chklovskii DB, Zhen M,
+Samuel ADT. Proprioceptive coupling within motor neurons drives *C. elegans*
+forward locomotion.** *Neuron* 76:750–761 (2012).
+doi:[10.1016/j.neuron.2012.08.039](https://doi.org/10.1016/j.neuron.2012.08.039)
+B-type motor neurons are themselves stretch sensitive, and that feedback — not a
+central pattern generator — propagates the bend posteriorly. The basis for the
+proprioceptive half of `worm/body/neural_bridge.py`; see §5C of
+[model_assumptions.md](model_assumptions.md) for exactly which part of this is
+measurement and which part is our inference.
+
+**Fouad AD, Teng S, Mark JR, Liu A, Alvarez-Illera P, Ji H, Du A, Bhirgoo PD,
+Cornblath E, Guan SA, Fang-Yen C. Distributed rhythm generators underlie
+*Caenorhabditis elegans* forward locomotion.** *eLife* 7:e29913 (2018).
+doi:[10.7554/eLife.29913](https://doi.org/10.7554/eLife.29913)
+Oscillator units exist along the body, not only in the head. Relevant because our
+closed loop currently contains no intrinsic oscillator anywhere and latches into a
+static bend as a result.
+
 ---
 
 ## The neuromuscular junction

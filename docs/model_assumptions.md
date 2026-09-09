@@ -416,6 +416,242 @@ symptom itself was an artefact of the measurement.
   skeleton does. It has not been needed so far, but it would matter for any
   result about force rather than kinematics.
 
+## 5C. Closing the loop: the connectome driving the body
+
+This is the first experiment in which nothing scripts the gait. The loop is body
+curvature → proprioceptive current into B-type motor neurons → 397 coupled ODEs
+over the measured connectome → muscle activation through measured neuromuscular
+junctions → joint torque → body. `worm/isaac/run_connectome.py` contains no
+oscillator, no phase variable and no pattern generator.
+
+**It does not produce locomotion.** That result is recorded here in full, because
+the ways it fails are more informative than the fact that it fails.
+
+### 5C.1 Where each half of the bridge stands
+
+The outward half is nearly assumption-free. Body wall muscles are named cells in
+the connectome, their names encode quadrant and row, and the junctions driving
+them are measured synapses carrying a sign from measured physiology (§6.1b).
+
+One thing in this bridge is genuinely *derived* rather than assigned: **each motor
+neuron's position along the body is computed from its own measured synapses** —
+the synapse-count-weighted mean segment of the muscles it innervates. We never
+tell the code that the number in `VB7` means anything. That it comes out ordered
+head to tail (DB1 → segment 7.1, DB4 → 13.4, DB7 → 20.5) is a property of the
+anatomy, and `worm/tests/test_neural_bridge.py` asserts the *ordering* for DA, DB,
+VA and VB rather than any particular position.
+
+The inward half is where the assumptions are:
+
+| Choice | Confidence | Note |
+|---|---|---|
+| B-type neurons sense curvature anterior to themselves | **INFERRED** from Wen et al. 2012 (Neuron 76:750–761) | The direction is the load-bearing claim. |
+| Sensing offset = 2 segments | **ASSUMED** | Wen et al. give a region, not a length in our segment units. Largely sets the wavelength. |
+| Proprioceptive gain = 400 pA/rad | **ASSUMED** | Decides whether the loop moves at all. |
+| Muscle contraction = the neuron model's synaptic activation `s` | **ASSUMED** | Both saturate with voltage, so the shape is right; the identification is ours. |
+| `peak_torque_scale` | **ARBITRARY ENGINEERING CONSTANT** | See 5C.3. |
+
+### 5C.2 The model has no spontaneous activity, and that is exact
+
+With no input, every cell settles to `s = 0.0909` — *identically*, to machine
+precision, across all 397 cells. The reason is structural rather than accidental:
+`prepare()` centres each cell's activation sigmoid on that cell's own resting
+potential, so at rest every cell sits at its own midpoint, and `s` resolves to
+`a_r/2 / (a_d + a_r/2)` for all of them.
+
+Muscle torque is an antagonist *difference*, so a uniform activation gives
+**exactly zero** torque. The first closed-loop run reported `bend 0.0deg` and
+`moved 0.00 mm` for ten seconds, and that was correct behaviour rather than a bug:
+the body is straight, so proprioception injects nothing, so the network stays at
+its symmetric fixed point, so the body stays straight.
+
+The model therefore cannot start moving on its own. The animal's answer is that
+forward locomotion is *gated*: AVB command interneurons are gap-junction coupled
+to the B-type motor neurons, and without AVB activity the animal does not crawl
+forward. So the runner holds AVBL and AVBR depolarised. This is admissible under
+the project's rules, and it is worth being precise about why: it is **one constant
+number applied to two cells**, carrying no rhythm, no spatial pattern and no
+phase. It is a decision to move, not a gait. Removing it (`--command ''`) returns
+the model to complete stillness.
+
+### 5C.3 The torque constant had to be recalibrated, and it is not biology
+
+`peak_torque_scale` converts a dimensionless activation difference into N m. It
+was calibrated in W2 against a scripted drive spanning 0 to 1. Under AVB drive the
+connectome's dorsal−ventral difference is about **5×10⁻³**, roughly 200× smaller,
+so the W2 value produces no visible motion. It was rescaled to match.
+
+This constant is an arbitrary engineering simplification with no biological value
+attached, and no result may rest on it. What *can* be said is that the shape of
+the result below is unchanged across two decades of it.
+
+### 5C.4 The result: the chain latches, it does not oscillate
+
+Sweeping the torque constant over two decades, 12 s per condition:
+
+| `peak_torque_scale` | moved | bend | **amp** | pinned | heading |
+|---|---|---|---|---|---|
+| 1e-4 | 0.006 BL | 0.5° | **0.00°** | 0% | −1° |
+| 3e-4 | 0.029 BL | 1.5° | **0.00°** | 0% | −2° |
+| 1e-3 | 0.295 BL | 5.2° | **0.00°** | 0% | −3.5 → −5.1° |
+| 3e-3 | 2.896 BL | 43.7° | **0.00°** | 0% | +26 → −43° |
+| 1e-2 | 0.218 BL | 60.0° (limit) | **0.02°** | 39% | — |
+
+`amp` is the temporal standard deviation of joint angle, so a body frozen in a
+bent shape reads zero however bent it is. It is zero everywhere. (With noise
+added it is not; see §5C.7, which qualifies this result.) The body bends
+once and stops: at 3e-3 the bend is 43.7° and the end-to-end extent 0.54 at
+*both* 6 s and 12 s, unchanged to three digits.
+
+**The 2.896 BL is not locomotion.** Heading over that same run goes +26° → +3° →
+−20° → −43°, a steady −7.7°/s. It is a rigid C-shape rotating against anisotropic
+drag and gliding along a curve — a circling worm, not a crawling one. Distance
+travelled alone cannot tell those apart, which is why heading is now reported
+beside it.
+
+Two measurement mistakes were made and corrected while establishing this. Both are
+recorded because both produced *encouraging* numbers:
+
+* The first `travel` metric correlated each joint against its posterior neighbour
+  at one time lag. A body flexing in place does the same thing at positive and
+  negative lag, so this reported `+0.96` — a near-perfect travelling wave — for a
+  body that was not moving at all. It now takes the *difference* between the two
+  lag directions, which is zero for anything symmetric in time, and removes each
+  joint's own temporal mean so a static bend contributes nothing.
+* `amp` originally included the static component, so a frozen bend read as a large
+  amplitude.
+
+### 5C.5 Why it latches, and what would have to change
+
+The proprioceptive law as implemented is monotone positive feedback. A dorsal bend
+excites DB, DB contracts dorsal muscle, which deepens the dorsal bend. Nothing in
+the loop terminates a bend once it starts, so the chain runs to the equilibrium
+between muscle torque and passive cuticle stiffness and stays there. That is
+precisely what is observed.
+
+The biology this misses is that **the ventral cord proprioceptive chain is a wave
+conductor, not a wave generator.** Wen et al. 2012 describe it propagating a bend
+posteriorly; they do not claim it originates one. In the animal the rhythm has
+other sources — head motor circuitry (SMD/RMD), and Fouad et al. 2018 report
+oscillator units distributed along the body. Our model contains no intrinsic
+oscillator anywhere, and the network's only fixed point is the symmetric one it
+starts from.
+
+So the honest statement of the current result is: *given a command signal and a
+proprioceptive law we chose, the measured connectome drives the body into a
+sustained static bend and does not undulate.*
+
+Options, none yet taken:
+
+0. **First, find out what is actually driving the bend.** §5C.6 shows it is not
+   the B-type circuit and not the feedback loop. Until that is identified, every
+   other option is being tuned against a mechanism we have not located.
+1. **Look for the oscillator in the connectome we already have.** The head motor
+   circuit is in Cook 2019. If SMD/RMD can oscillate under our own neuron model,
+   the rhythm would come from measured wiring rather than from us. This is the
+   only option that keeps the project's central claim intact, and it should be
+   tried first.
+2. **Check the D-type inhibitory contribution.** DD and VD are GABAergic and
+   inhibit contralateral muscle; that cross-inhibition is in the connectome and
+   signed by measured physiology (§6.1b). Whether it currently reaches the muscles
+   at a useful strength has not been checked, and a latching positive-feedback
+   loop is exactly what a delayed inhibitory branch would break.
+3. **Revisit the proprioceptive law.** A law responding to the *rate of change* of
+   curvature rather than to curvature cannot latch. This is a larger modelling
+   assumption than the current one and would need its own justification.
+4. **Accept a head oscillator as an input**, as several published neuromechanical
+   models do. This is the option that most weakens the claim, because the rhythm
+   would then be ours.
+
+Option 4 would produce something that looks like a crawling worm quickly. It is
+listed last deliberately.
+
+### 5C.6 The controls, which are what actually settle it
+
+All at `peak_torque_scale` 3e-3, 8 s:
+
+| condition | moved | bend | amp | heading |
+|---|---|---|---|---|
+| baseline | 1.797 BL | 43.7° | 0.00° | −12.3° |
+| `--no-proprioception` | 0.932 BL | **14.5°** | 0.00° | +78.3° |
+| `--lesion DB,VB` | 0.200 BL | **56.2°** | 0.00° | −95.4° |
+| `--command ''` | **0.000 BL** | **0.0°** | 0.00° | +0.0° |
+
+Read in order these say something quite different from "the connectome bends the
+body":
+
+* **Cutting proprioception does not abolish the bend.** The body still reaches
+  14.5°. So the bend is not produced by the sensorimotor loop; it is produced by a
+  fixed dorsal/ventral asymmetry in how a uniform AVB depolarisation spreads
+  through the wiring. Proprioception then deepens it about threefold, which is
+  what positive feedback into a saturating element does.
+* **Ablating every B-type motor neuron does not abolish it either** — the bend
+  gets *larger*, 56.2°. Whatever is bending this body, it is not the forward
+  locomotor circuit. DA/VA and the D-type neurons are reaching muscle on their own.
+* **Removing the command signal abolishes everything exactly** (§5C.2).
+
+Together: the only thing currently demonstrated is that the model is silent
+without drive, and that with drive it adopts one fixed posture. The posture is a
+property of the connectome, which is mildly interesting, but it is not locomotion
+and it is not attributable to the locomotor circuit.
+
+Heading also swings between −95° and +78° across conditions while `amp` stays at
+zero, confirming that the distance travelled in every row is turning and gliding
+rather than crawling.
+
+This is why `--lesion` and `--no-proprioception` are wired into the runner rather
+than left as something to add later. Run alone, the baseline row looks like a
+worm that bends and travels nearly two body lengths.
+
+### 5C.7 Noise breaks the symmetry but does not produce a wave
+
+§5C.2 showed the resting state is symmetric to machine precision. That is partly
+an artefact of a perfectly deterministic model: real nervous systems have channel
+noise, synaptic release is stochastic, and no biological network sits at an exact
+fixed point forever. So `--noise-pa` injects a fluctuating current into every
+cell, resampled each neural step.
+
+It is injected as an **input current** rather than added inside the integrator,
+which keeps the runtime bit-for-bit deterministic (`common/neural/runtime.py`
+guarantees this and the test suite asserts it) and keeps the noise visibly a
+thing we add to the model rather than a property of it. The magnitude is
+**ASSUMED**; nothing here is calibrated against measured membrane-potential
+variance.
+
+At 20 pA std, 10 s, `peak_torque_scale` 3e-3:
+
+| condition | bend | **amp** | **travel** | extent | moved |
+|---|---|---|---|---|---|
+| no noise | 43.7° | **0.00°** | −0.03 | 0.54 | 1.797 BL |
+| noise + command | 33.5° | **8.76°** | **+0.05** | 0.67 | 0.620 BL |
+| noise only, no command | 60° | 16.6° | +0.06 | **0.04** | 0.163 BL |
+
+Three things follow.
+
+**The latch is broken.** `amp` goes from exactly zero to ~9°, so the body moves
+continuously instead of freezing into one posture. The static-bend result of
+§5C.4 was therefore partly a consequence of determinism, and that correction
+belongs on the record.
+
+**The posture becomes the most animal-like the model has produced.** Bend 33.5°
+against ~25–30° in the animal, body extent 0.67 against ~0.6–0.7. Neither was
+tuned to match.
+
+**There is still no wave.** `travel` stays at +0.05, against +1 for clean
+head-to-tail propagation. The body wriggles; it does not undulate, and it covers
+*less* ground than the frozen-bend case did by gliding. Noise supplies symmetry
+breaking, not coordination.
+
+That is a useful narrowing. The missing ingredient is not a perturbation to get
+things started — noise provides that and it is not enough. What is missing is
+whatever makes neighbouring segments act in a fixed phase relationship, which is
+the oscillator question of §5C.5, options 0 and 1.
+
+Without the command drive, noise alone drives the body into a ball: extent 0.04
+with every joint pinned against its limit. Uncoordinated activation plus a
+saturating muscle model coils the animal, which is at least the right failure
+mode — an uncoordinated worm does coil.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

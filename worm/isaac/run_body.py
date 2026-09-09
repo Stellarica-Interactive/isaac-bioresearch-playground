@@ -74,6 +74,13 @@ parser.add_argument(
     help="disable ground drag entirely. Diagnostic: if the body still coils with no "
     "drag, the instability is in the muscle drive rather than drag compression.",
 )
+parser.add_argument(
+    "--self-collision",
+    action="store_true",
+    help="Stop the body passing through itself when it folds. Off by default "
+    "because it adds contact forces beside the drag model that stands in for "
+    "the substrate, and every W2 number was measured without it.",
+)
 parser.add_argument("--report-every", type=float, default=2.0, help="seconds between reports")
 args, _ = parser.parse_known_args()
 
@@ -91,7 +98,7 @@ from isaacsim.core.simulation_manager import SimulationManager  # noqa: E402
 from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import MuscleModel, MuscleParameters, sine_wave_drive  # noqa: E402
-from worm.isaac.stage import build_scene, dof_order  # noqa: E402
+from worm.isaac.stage import add_camera, build_scene, dof_order  # noqa: E402
 
 
 def main() -> int:
@@ -115,12 +122,17 @@ def main() -> int:
     print(
         f"  torque {muscles.params.peak_torque_scale:.3g} N m, "
         f"stiffness {muscles.params.joint_stiffness:.3g}, "
-        f"target bend {np.degrees(
-            muscles.params.peak_torque_scale / muscles.params.joint_stiffness
-        ):.1f} deg"
+        f"target bend {
+            np.degrees(muscles.params.peak_torque_scale / muscles.params.joint_stiffness):.1f} deg"
     )
 
-    root_path, joint_paths = build_scene(plan, gravity=args.gravity, ground=args.gravity)
+    root_path, joint_paths = build_scene(
+        plan,
+        gravity=args.gravity,
+        ground=args.gravity,
+        self_collision=args.self_collision,
+    )
+    camera = add_camera(plan)
     print(f"  built {len(joint_paths)} joints under {root_path}\n")
 
     dt = 1.0 / args.physics_hz
@@ -181,7 +193,7 @@ def main() -> int:
     t_ms = 0.0
     steps = int(args.seconds * args.physics_hz)
 
-    for _ in range(steps):
+    for step in range(steps):
         drive = sine_wave_drive(
             plan,
             t_ms,
@@ -202,14 +214,22 @@ def main() -> int:
 
         simulation_app.update()
         t_ms += dt * 1000.0
+        # Keep the animal in frame; it travels several body lengths.
+        if step % 4 == 0:
+            camera.follow(_centroid(links))
 
         if t_ms / 1000.0 - reported >= args.report_every:
             reported = t_ms / 1000.0
             _report(reported, start, links, plan, articulation=articulation, dof_indices=dofs)
 
     _report(
-        args.seconds, start, links, plan, final=True,
-        articulation=articulation, dof_indices=dofs,
+        args.seconds,
+        start,
+        links,
+        plan,
+        final=True,
+        articulation=articulation,
+        dof_indices=dofs,
     )
     simulation_app.close()
     return 0
@@ -220,9 +240,7 @@ def _centroid(links: RigidPrim) -> np.ndarray:
     return np.asarray(positions)[:, :2].mean(axis=0)
 
 
-def _apply_drag(
-    links: RigidPrim, drag: GroundDrag, dt_s: float, masses_kg: np.ndarray
-) -> None:
+def _apply_drag(links: RigidPrim, drag: GroundDrag, dt_s: float, masses_kg: np.ndarray) -> None:
     """Anisotropic ground drag, as an explicit force on each segment.
 
     Not left to contact friction: PhysX material friction is isotropic and cannot

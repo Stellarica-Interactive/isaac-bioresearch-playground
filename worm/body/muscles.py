@@ -49,7 +49,14 @@ DEFAULT_ACTIVATION_TAU_MS = 60.0
 
 #: Torque per unit net activation, N m. ASSUMED -- tuned so the body moves at a
 #: plausible speed, not measured. The most openly fitted number in the project.
-DEFAULT_PEAK_TORQUE_SCALE = 2.0e-4
+#:
+#: This is the value the documented W2 result was measured at: 0.109-0.119 BL/s
+#: with 30.5 deg bends and body extent 0.60. It was briefly four times larger,
+#: which pins every joint against its 60 deg limit and makes the body coil and
+#: spin -- and, because the wave still looks superficially like a wave, that is
+#: not obvious from watching it. The tell is `extent`, which falls to 0.21, and
+#: `bend max`, which sits exactly on the limit.
+DEFAULT_PEAK_TORQUE_SCALE = 5.0e-5
 
 #: Passive stiffness and damping of the cuticle, resisting bending. ASSUMED.
 #: Without these the chain is floppy and the wave does not hold its shape.

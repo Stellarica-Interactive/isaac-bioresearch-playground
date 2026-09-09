@@ -22,6 +22,7 @@ that makes a locomotion result meaningless without ever looking wrong.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from worm.body.geometry import BodyPlan
@@ -44,6 +45,7 @@ def build_worm(
     joint_limit_deg: float = DEFAULT_JOINT_LIMIT_DEG,
     z_offset_m: float | None = None,
     planar: bool = True,
+    self_collision: bool = False,
 ) -> tuple[str, list[str]]:
     """Create the articulation on ``stage``. Returns ``(root_path, joint_paths)``.
 
@@ -60,10 +62,22 @@ def build_worm(
 
     root = UsdGeom.Xform.Define(stage, root_path)
     UsdPhysics.ArticulationRootAPI.Apply(root.GetPrim())
-    # A worm is not bolted down: it is a floating-base articulation. Self
-    # collision is off because adjacent capsules overlap slightly by design.
+    # A worm is not bolted down: it is a floating-base articulation.
+    #
+    # Self collision defaults off, and the consequence is visible: a strongly bent
+    # body passes straight through itself, which a real animal obviously cannot do.
+    # Turning it on is safe here, contrary to what the geometry first suggests.
+    # Adjacent capsules do overlap by design -- a segment is 4.17 mm long and up to
+    # 3.25 mm in radius -- but PhysX filters collisions between links joined by a
+    # joint, which is exactly that set. The nearest unfiltered pair is i and i+2, at
+    # 8.33 mm centre to centre against a radius sum of at most 6.47 mm, so they are
+    # clear at rest and only meet when the body genuinely folds onto itself.
+    #
+    # It is off by default because it adds contact forces alongside the drag model
+    # that represents the substrate (see build_scene), and every W2 locomotion
+    # number was measured without it.
     physx_root = PhysxSchema.PhysxArticulationAPI.Apply(root.GetPrim())
-    physx_root.CreateEnabledSelfCollisionsAttr().Set(False)
+    physx_root.CreateEnabledSelfCollisionsAttr().Set(self_collision)
 
     link_paths: list[str] = []
     for segment in segments:
@@ -159,6 +173,7 @@ def build_scene(
     gravity: bool = False,
     ground: bool = False,
     planar: bool = True,
+    self_collision: bool = False,
 ) -> tuple[str, list[str]]:
     """Create a fresh stage containing a physics scene, a light and the worm.
 
@@ -205,7 +220,89 @@ def build_scene(
     # Without gravity there is nothing to rest on, so the body sits in the z = 0
     # plane rather than being lifted clear of a ground plane.
     z_offset = None if ground else 0.0
-    return build_worm(stage, plan, root_path=root_path, z_offset_m=z_offset, planar=planar)
+    return build_worm(
+        stage,
+        plan,
+        root_path=root_path,
+        z_offset_m=z_offset,
+        planar=planar,
+        self_collision=self_collision,
+    )
+
+
+#: How many body lengths the camera frames across the view.
+DEFAULT_CAMERA_FRAMING = 2.5
+
+
+@dataclass
+class WormCamera:
+    """A top-down camera that keeps the worm in frame.
+
+    Isaac's default perspective camera is placed for a scene measured in metres --
+    several metres out, with its near clipping plane at 1 m. This body is 0.1 m
+    long, so the default view is roughly fifty body lengths away and the animal is
+    a speck near the origin. That is a property of the default viewport, not of the
+    model, but it makes every visual check unnecessarily hard.
+
+    The camera also *follows*, because a worm that is working travels several body
+    lengths and would otherwise leave a fixed frame within seconds.
+    """
+
+    path: str
+    height_m: float
+    _translate: Any
+
+    def follow(self, xy: Any) -> None:
+        """Centre the view on ``xy``, typically the body centroid."""
+        from pxr import Gf
+
+        self._translate.Set(Gf.Vec3d(float(xy[0]), float(xy[1]), self.height_m))
+
+
+def add_camera(
+    plan: BodyPlan | None = None,
+    *,
+    path: str = "/World/WormCamera",
+    framing: float = DEFAULT_CAMERA_FRAMING,
+    activate: bool = True,
+) -> WormCamera:
+    """Add a top-down camera framed on the worm and make it the active view.
+
+    Call after :func:`build_scene`. Safe to call headless, where there is no
+    viewport to activate and the camera is simply authored into the stage.
+    """
+    import isaacsim.core.experimental.utils.stage as stage_utils
+    from pxr import Gf, Sdf, UsdGeom
+
+    plan = plan or BodyPlan()
+    stage = stage_utils.get_current_stage()
+
+    camera = UsdGeom.Camera.Define(stage, path)
+    # A USD camera looks down its own -Z, so an unrotated camera above the plane
+    # looks straight down at it. The body is planar, so that is the view that
+    # shows the actual shape rather than a foreshortening of it.
+    focal_length, aperture = 18.0, 20.955
+    width_m = framing * plan.total_length_m
+    height_m = width_m * focal_length / aperture
+
+    camera.CreateFocalLengthAttr().Set(focal_length)
+    camera.CreateHorizontalApertureAttr().Set(aperture)
+    # The default near plane of 1 m sits far behind a body 0.1 m across.
+    camera.CreateClippingRangeAttr().Set(Gf.Vec2f(0.001, 100.0))
+    translate = camera.AddTranslateOp()
+    translate.Set(Gf.Vec3d(0.0, 0.0, height_m))
+
+    if activate:
+        try:
+            from omni.kit.viewport.utility import get_active_viewport
+
+            viewport = get_active_viewport()
+        except (ImportError, AttributeError):  # headless: no viewport to point
+            viewport = None
+        if viewport is not None:
+            viewport.set_active_camera(Sdf.Path(path))
+
+    return WormCamera(path=path, height_m=height_m, _translate=translate)
 
 
 def dof_order(articulation: Any, joint_paths: list[str]) -> list[int]:
