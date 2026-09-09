@@ -4,9 +4,9 @@ The register of every place where this project departs from directly measured
 biology. If you want to know how much of a result is data and how much is us,
 this is the document.
 
-**Status: milestone W1 (neural runtime).** Data layer complete and verified; a
-graded neuron model runs on it. No body and no Isaac Sim yet. §5A covers the
-runtime's own assumptions; §6 records the decisions taken and what remains open.
+**Status: milestone W2 (body) in progress.** Data layer and neural runtime complete
+and verified. The body crawls in Isaac Sim under a scripted wave; no neurons are
+connected to it yet. §5A covers the neural runtime, §5B the body, §6 the open decisions.
 
 **Confidence vocabulary** (mirrors `common.data.schemas.Confidence`, so it is
 machine-queryable — run `inspect_connectome.py --dataset ID gaps`):
@@ -258,6 +258,163 @@ carry current, which cells move first, which are unaffected — because those fo
 from connectivity, the part that was actually measured. Experiments should be
 designed to ask questions of that kind, and every result should be reported with
 its sweep.
+
+## 5B. The body, and what the simulator imposes on it
+
+Full write-up: `worm/body/` and `worm/isaac/`. Status: the body crawls under a
+scripted wave. No neurons are connected to it yet.
+
+| Parameter / mechanism | Basis | Confidence | Simplification | Potential improvement |
+|---|---|---|---|---|
+| 24 segments | 95 body wall muscles in four quadrants, ~24 rows deep | `INFERRED` | Derived, not chosen: at 24 each row drives exactly one segment | — |
+| Planar, one rotational DOF per joint | The animal crawls on its side | `PUBLISHED_ANNOTATION` | Discards roll and the lateral component of real crawling. Same simplification as Boyle, Berri & Cohen 2012 | 3-D body |
+| Body scaled 100x | PhysX tolerances are tuned near 1 m; a 1 mm body misbehaves | `ASSUMED` | Dimensionally consistent, **not quantitatively the animal's** | Retune solver tolerances and simulate at real scale |
+| Segment taper | Qualitative worm profile | `ASSUMED` | Chosen to look right, not fitted to measurements | Segment radii from EM reconstructions |
+| Muscle activation lags neural drive, tau = 60 ms | Calcium transients are tens of ms | `ASSUMED` | First-order low-pass | Measured activation kinetics |
+| Torque = dorsal minus ventral activation | A muscle pulls, it cannot push | `INFERRED` | Co-contraction stiffens without bending, which falls out rather than being added | — |
+| Peak torque | none | `ASSUMED` | **Fitted to make it move.** The most openly tuned number in the project | Force measurements from single muscles |
+| Anisotropic ground drag | Resistive force theory | `PUBLISHED_ANNOTATION` | Ratio is ASSUMED at 20; published agar estimates span ~10 (Rabets et al. 2014, direct measurement) to ~40 (Niebur & Erdos 1991 lineage). Belongs in any sweep | Direct measurement at our scale |
+| No gravity, no ground contact | The drag model *is* the substrate | `ASSUMED` | Adding a ground plane resists the body twice, the second time isotropically -- which masks the anisotropy the gait depends on. Measured: with contact enabled, isotropic drag moved the body as far as anisotropic (0.686 vs 0.701 BL), i.e. the mechanism became unmeasurable | Proper anisotropic contact model |
+
+### 5B.1 Three numerical traps, each of which produced a plausible-looking wrong answer
+
+Recorded because in every case the model kept running and looked reasonable.
+
+**Explicit damping on a tiny inertia.** A joint's effective inertia is about
+3e-11 kg m^2, so a passive damping of 2e-5 N m s/rad has a time constant near
+1e-6 s -- roughly three thousand times shorter than a 240 Hz step. Applied
+explicitly as part of our commanded torque it does not damp; it oscillates and
+slams every joint to its limit. The body coiled into a knot and tumbled, and
+**no torque scale across three orders of magnitude changed the symptom** --
+reducing torque 1000x actually increased displacement. Passive stiffness and
+damping now go into the PhysX joint drive, which is solved implicitly and is
+unconditionally stable. It is also the more honest model: the cuticle is a
+passive spring-damper, not part of the muscle's active command.
+
+The same failure appeared one layer down in the ground drag, and has the same
+fix: drag is now applied as the exact exponential decay of velocity over a step
+rather than a raw `-c v`. Both are the lesson of the neural runtime's integrator
+in a different costume -- solve the linear part exactly instead of stepping
+toward it.
+
+**PhysX does not order degrees of freedom the way joints are authored.** It
+chooses its own root link -- for a serial chain, the middle -- and numbers
+outward:
+
+```
+authored:  joint_00, joint_01, joint_02, ...
+PhysX:     joint_10, joint_11, joint_09, joint_12, joint_08, ...
+mapping:   [20, 18, 16, 14, 12, 10, 8, 6, 4, 2, 0, 1, ...]
+```
+
+Writing a head-to-tail torque array straight into `set_dof_efforts` therefore
+applies the head's command to a mid-body joint. **Every summary statistic still
+matched**: bend amplitude 27.5 deg against a commanded 28.1, rms 18.9 against
+19.8. Only the body's actual shape was wrong. `worm/isaac/stage.py::dof_order`
+now supplies the permutation, and every read and write goes through it.
+
+**The reachable bend amplitude is set by the timestep, not by the biology.** The
+joint drive's natural frequency is sqrt(k / I). At k = 1e-4 and dt = 4.17 ms
+there are about 21 samples per oscillation and the body is stable; raising k to
+1e-2 leaves about two, and it coils immediately. So the stiffness that can be
+used -- and therefore the bend amplitude, which is set by torque/stiffness -- is
+currently a property of the solver rather than of the animal. Any claim about
+gait amplitude has to be checked against a smaller timestep before it means
+anything.
+
+### 5B.2 What the body does
+
+Driven by a scripted travelling wave, the body crawls in a straight line
+indefinitely. At torque 5e-5 N m and stiffness 1e-4 N m/rad, over ten seconds:
+
+```
+moved     19.5 -> 42.1 -> 64.5 -> 87.0 -> 109.4 mm      (exactly linear)
+heading   -2.2 -> -2.2 -> -2.2 -> -2.2 -> -2.3 deg      (dead straight)
+extent    0.90 throughout, z span 0.00                   (stable and planar)
+```
+
+| | this model | adult on agar |
+|---|---|---|
+| speed | 0.109-0.119 BL/s | ~0.15 BL/s |
+| bend amplitude | 12 deg at 2e-5, **30.5 deg** at 5e-5 | ~25-30 deg |
+| body extent while crawling | 0.60 at full amplitude | ~0.6-0.7 |
+
+So roughly 75-80% of biological speed at biologically plausible amplitude and
+body shape. Given that the torque scale is openly fitted, the speed agreement is
+not evidence of anything; the *shape* and the mechanism below are.
+
+**The anisotropy is doing the work, and that is measurable.** Same wave, same
+torque, same resulting bend profile; only the substrate model differs:
+
+| ground model | moved in 10 s |
+|---|---|
+| anisotropic, 20:1 | **109.4 mm (1.094 BL)** |
+| isotropic, 1:1 | 6.1 mm (0.061 BL) |
+
+A factor of eighteen, with the body undulating identically in both cases (bend
+max 12.0 vs 11.3 deg). This is the control showing that forward motion comes
+from the modelled physics rather than from numerical drift, and it is why
+gravity and ground contact are off.
+
+### 5B.3 The instability that was not what it looked like
+
+Worth recording in full, because every hypothesis was wrong and the symptom was
+actively misleading.
+
+The body crawled cleanly for two to three seconds and then appeared to buckle
+into a tight coil, `extent` collapsing from 0.90 to below 0.10. Ruled out in
+turn: the timestep (at dt = 0.5 ms the joints reach full commanded amplitude and
+it still happened); the drag anisotropy (the isotropic control did it too); joint
+saturation (fixed separately, and this occurred at unsaturated amplitudes); and
+Euler buckling under drag compression -- **raising bending stiffness tenfold made
+it happen sooner, not later**, which is the opposite of what a buckling threshold
+predicts.
+
+What was actually happening: the body was **rotating out of the XY plane and
+standing up vertically**. Measuring the true three-dimensional extent alongside
+the projected one settled it in a single run:
+
+```
+extent (2-D)  0.90 -> 0.90 -> 0.23 -> 0.05     what was being measured
+extent (3-D)  0.90 -> 0.90 -> 0.90 -> 0.90     the body was always fine
+z span        0.00 -> 0.03 -> 0.87 -> 0.90     it stands up
+```
+
+The body never coiled. Its joint angles stayed a clean travelling wave
+throughout -- net turn oscillating at +/-65 deg, total turning steady at 170 deg,
+nowhere near the 360 deg a ring requires. Only the projection into XY collapsed,
+and that looks exactly like coiling.
+
+Two things made it self-reinforcing. The model is planar by design but the
+articulation has a free six-DOF floating base, and with gravity off nothing
+opposed rotation out of the plane; the explicit per-segment drag forces are not
+perfectly symmetric, and that asymmetry was enough to start the tip. And
+:class:`GroundDrag` builds its tangents from XY positions alone, so once the body
+left the plane the drag became meaningless and drove it further.
+
+The fix is a world-anchored D6 joint locking translation in Z and rotation about
+X and Y, leaving exactly the three degrees of freedom a worm on a surface has:
+slide in X, slide in Y, turn about Z. See ``_lock_to_plane`` in
+``worm/isaac/stage.py``.
+
+**The lesson worth keeping:** the diagnostic that cracked it was measuring the
+same quantity a second way. Three plausible mechanisms were each tested and
+rejected against a symptom that no mechanism could have explained, because the
+symptom itself was an artefact of the measurement.
+
+### 5B.4 Still true, and still limiting
+
+* **The scripted wave is not biology.** It exists so that a later failure can be
+  attributed to the neural model rather than the mechanics, and it is deleted
+  from any experiment that makes a biological claim.
+* **Peak torque is fitted**, so speed agreement with a real animal is not
+  evidence. Amplitude, body shape and the anisotropy ratio are the parts that
+  were not tuned to match an outcome.
+* The body is **scaled 100x** and simulated without gravity; it is dimensionally
+  consistent, not quantitatively the animal's.
+* Nothing here resists axial compression the way a pressurised hydrostatic
+  skeleton does. It has not been needed so far, but it would matter for any
+  result about force rather than kinematics.
 
 ## 6. Decisions taken, and what remains open
 
