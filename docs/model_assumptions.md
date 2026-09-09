@@ -4,9 +4,9 @@ The register of every place where this project departs from directly measured
 biology. If you want to know how much of a result is data and how much is us,
 this is the document.
 
-**Status: milestone W0 (data foundation).** No neural dynamics, no body, no
-simulator yet. So the entries below are all about the *data layer*. §6 lists the
-open decisions that must be settled before W1.
+**Status: milestone W1 (neural runtime).** Data layer complete and verified; a
+graded neuron model runs on it. No body and no Isaac Sim yet. §5A covers the
+runtime's own assumptions; §6 records the decisions taken and what remains open.
 
 **Confidence vocabulary** (mirrors `common.data.schemas.Confidence`, so it is
 machine-queryable — run `inspect_connectome.py --dataset ID gaps`):
@@ -226,7 +226,40 @@ order of magnitude, applied identically to every neuron. In that lineage
 
 ---
 
-## 6. Open decisions before W1
+## 5A. The neural runtime's own assumptions
+
+Full derivation and the sensitivity numbers: [neural_runtime.md](neural_runtime.md).
+
+| Parameter / mechanism | Biological source | Confidence | Implementation | Simplification | Potential improvement |
+|---|---|---|---|---|---|
+| Membrane capacitance, 1 pF | Goodman et al. 1998 (0.5–3 pF) | `MEASURED` | `parameters.toml` | One figure for every neuron; cell sizes differ | Per-neuron capacitance from EM soma volume |
+| Leak conductance, 10 pS | Kunert et al. 2014 | `ASSUMED` | `parameters.toml` | Uniform; gives τ = 100 ms, consistent with measured GΩ input resistances but not itself measured | Per-class patch clamp |
+| Leak potential, −35 mV | Kunert et al. 2014 | `ASSUMED` | `parameters.toml` | Uniform. Resting potentials have not been measured across the nervous system | Voltage imaging |
+| Synapse conductance, 100 pS each | Kunert et al. 2014 | `ASSUMED` | `parameters.toml` | Uniform per synapse **and** linear in EM count — two assumptions | Paired recordings |
+| Gap-junction conductance, 100 pS each | Kunert et al. 2014 | `ASSUMED` | `parameters.toml` | Uniform; **rectification not modelled** | Innexin-specific conductances |
+| Reversal potentials, 0 / −45 mV | Kunert et al. 2014 | `ASSUMED` | `parameters.toml` | Generic cation and chloride values | Receptor-specific reversal potentials |
+| Release sigmoid β, kinetics a_r, a_d | Kunert et al. 2014 | `ASSUMED` | `parameters.toml` | Uniform | Voltage-clamp measurement of graded release |
+| Resting state = solved equilibrium with all sigmoids at midpoint | Kunert et al. 2014 procedure | `ASSUMED` | `neuron_models.threshold_potentials` | Self-referential: the model defines the rest state, then is parameterised by it. Leaves synapses ~9% active at rest | Measured resting potentials |
+| Count → conductance is linear | none | `ASSUMED` | `WeightScaling.LINEAR` | The single most influential choice in the sweep (±390%) | Anything measured |
+| Sign is per connection, not per neuron | Follows from receptor biology | `INFERRED` | `e_rev` matrix | None — this is *less* simplified than the published models, which use one value per presynaptic neuron | — |
+| `MIXED` sign treated as a shunt at `E_leak` | none | `ASSUMED` | `build_matrices` | The source says the net effect is undetermined; a shunt is the least committal way to keep the anatomy | Receptor-stoichiometry modelling |
+| Gap junction from a cell to itself is dropped | Follows from the model | `INFERRED` | `build_matrices` | Electrically inert in a single-compartment model — driving force is zero. Kept in the data, dropped only here | Multi-compartment neurons |
+| Muscles, glia and `hyp`/`hmc` excluded from the default network | Kunert lineage practice | `ASSUMED` | `parameters.toml` `[network]` | `hyp` is a body-spanning **syncytium** with thousands of gap-junction sites; treating it as one isopotential 1 pF compartment gives it ~200 nS and a 0.005 ms time constant, which is an artefact rather than physiology | A muscle model and a spatially extended hypodermis, at W2 |
+
+### 5A.1 The sensitivity result, which matters more than any single parameter
+
+Varying one assumption at a time and measuring AVAL's response to driving the ASH
+nociceptor pair (`python tools/benchmark_runtime.py sweep`), the answer spans a
+**factor of fourteen** across defensible choices — from +0.14 mV to +2.02 mV.
+
+**The magnitude of a response is a property of our parameters, not of the worm.**
+What survives more robustly is the *sign and ordering* of effects — which pathways
+carry current, which cells move first, which are unaffected — because those follow
+from connectivity, the part that was actually measured. Experiments should be
+designed to ask questions of that kind, and every result should be reported with
+its sweep.
+
+## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
 
@@ -252,7 +285,44 @@ Options as considered:
 is chosen, `sign_confidence` is `PREDICTED` and never `MEASURED` — `validate()`
 already rejects a connection claiming a measured sign.
 
-### 6.2 Neuron model
+### 6.1b Neuromuscular junction sign — OPEN, and blocking W2
+
+Fenyves et al. covers **interneuronal connections only**. Every one of Cook 2019's
+1051 neuron→muscle synapses is unsigned — that is, the synapses that actually drive
+muscle have no polarity in any dataset here. Locomotion cannot be modelled until
+this is resolved.
+
+The biology is unusually solid, which makes this tractable: at the *C. elegans*
+body-wall neuromuscular junction, acetylcholine is excitatory and GABA is
+inhibitory. Muscle expresses two nicotinic ACh receptors and one GABA receptor,
+UNC-49, and UNC-49 is required postsynaptically for "the inhibitory effect of GABA
+on the body muscles".
+
+- Richmond JE, Jorgensen EM. *Nat Neurosci* 2:791–797 (1999).
+- McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. *Nature* 364:337–341 (1993).
+
+Proposed for W2: a separate `nmj` overlay assigning sign from the presynaptic
+transmitter for neuron→body-wall-muscle synapses only, tagged
+`PUBLISHED_ANNOTATION` — better-evidenced than the Fenyves predictions, and kept
+as its own overlay with its own citations rather than folded into them.
+
+### 6.2 Neuron model — DECIDED
+
+**Decision (2026-09-08): option A, behind a pluggable interface.** The graded
+leaky integrator is implemented as the default, and
+:class:`~common.neural.neuron_models.NeuronModel` is a protocol so a
+conductance-based model (option C) can be swapped in **per neuron** for the few
+cells whose channels have been characterised — AWC^on and RMD (Nicoletti et al.
+2019), and AWA's calcium spikes (Liu et al. 2018) — without inventing channel
+kinetics for the other three hundred.
+
+The reasoning, recorded because it is easy to get backwards: a conductance-based
+model applied network-wide would not be *more* accurate. Accuracy here is the
+ratio of measured to invented parameters, not the sophistication of the equations.
+Extending two cells' channel kinetics to 302 neurons multiplies the invented
+parameters while looking more rigorous.
+
+Options as considered:
 
 | Option | Basis | Honest caveat |
 |---|---|---|

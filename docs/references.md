@@ -71,17 +71,32 @@ Derived tables: `worm/data/annotations/neurotransmitters.csv`,
 
 ---
 
-## Cited but not yet imported
+### `fenyves_2020_polarity`
 
-**Fenyves BG, Arnold C, Gerencsér VG, Vörös P, Pollner P, Csermely P, Korcsmáros T.
-Synaptic polarity and sign-balance prediction using gene expression data in the
+Fenyves BG, Szilágyi GS, Vassy Z, Sőti C, Csermely P.
+**Synaptic polarity and sign-balance prediction using gene expression data in the
 *Caenorhabditis elegans* chemical synapse neuronal connectome network.**
 *PLOS Computational Biology* 16(12):e1007974 (2020).
 doi:[10.1371/journal.pcbi.1007974](https://doi.org/10.1371/journal.pcbi.1007974)
-Licence CC BY 4.0. Predicts excitatory/inhibitory sign for ~2/3 of chemical
-synapses from presynaptic transmitter and postsynaptic receptor gene expression.
-Would be the source for an opt-in polarity overlay —
-[model_assumptions.md](model_assumptions.md) §6.1.
+Department of Molecular Biology, Semmelweis University, Budapest.
+
+Predicted excitatory/inhibitory sign for chemical synapses, combining presynaptic
+neurotransmitter with postsynaptic ionotropic receptor gene expression. Licence
+CC BY 4.0. S1 Data, the NT+R method, covering 3638 connections / 20589 synapses.
+
+- **`PREDICTED`, never measured.** No experiment measures synaptic sign across a
+  connectome. Applied only via the opt-in `polarity` overlay.
+- A definite sign for 48.2% of connections (1327 excitatory, 425 inhibitory);
+  471 `mixed`, where the target expresses both excitatory and inhibitory receptors
+  for that transmitter; 1415 with no receptor match. By synapse weight, 73.2% get
+  some prediction and the E:I ratio is 3.5:1.
+- **Interneuronal connections only** — it contains no neuromuscular junctions, so
+  it gives no polarity for the synapses that drive muscle. See
+  [model_assumptions.md](model_assumptions.md) §6.1b.
+
+---
+
+## Cited but not yet imported
 
 **Randi F, Sharma AK, Dvali S, Leifer AM. Neural signal propagation atlas of
 *Caenorhabditis elegans*.** *Nature* 623:406–414 (2023).
@@ -197,6 +212,25 @@ The RMG gap-junction hub.
 junctions reduce the backward motor circuit activity to bias *C. elegans* for
 forward locomotion.** *Neuron* 72:572–586 (2011).
 doi:[10.1016/j.neuron.2011.09.005](https://doi.org/10.1016/j.neuron.2011.09.005)
+
+---
+
+## The neuromuscular junction
+
+Needed for W2: no dataset here supplies a sign for neuron→muscle synapses, but the
+biology is well established. See [model_assumptions.md](model_assumptions.md) §6.1b.
+
+**Richmond JE, Jorgensen EM. One GABA and two acetylcholine receptors function at
+the *C. elegans* neuromuscular junction.** *Nature Neuroscience* 2:791–797 (1999).
+doi:[10.1038/12160](https://doi.org/10.1038/12160)
+Body wall muscle expresses two nicotinic acetylcholine receptors and one GABA
+receptor.
+
+**McIntire SL, Jorgensen E, Kaplan J, Horvitz HR. The GABAergic nervous system of
+*Caenorhabditis elegans*.** *Nature* 364:337–341 (1993).
+doi:[10.1038/364337a0](https://doi.org/10.1038/364337a0)
+Identifies the 26 GABAergic neurons, and reports that `unc-49` is required
+postsynaptically for the inhibitory effect of GABA on the body muscles.
 
 ---
 

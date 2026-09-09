@@ -188,6 +188,7 @@ LABEL_MAP: dict[str, LabelMapping] = {
 CELLS_COLUMNS = ("cell_id", "category", "type_label", "sex_specific", "source_ref")
 SIM_ROLES_COLUMNS = ("cell_id", "role", "type_label", "source_ref")
 DESCRIPTIONS_COLUMNS = ("cell_id", "name_expansion", "lineage", "classification", "source_ref")
+POLARITY_COLUMNS = ("pre", "post", "sign", "basis", "primary_nt", "source_row", "source_ref")
 
 #: WormAtlas leaves unfilled fields as this literal string. It means "not recorded",
 #: which is different from an empty description, so it is dropped rather than stored.
@@ -308,6 +309,92 @@ def parse_nt_atlas(path: Path) -> tuple[list[tuple[str, ...]], list[tuple[str, .
     nt_rows.sort(key=lambda t: (t[0], t[1]))
     class_rows.sort(key=lambda t: t[0])
     return nt_rows, class_rows
+
+
+# ---------------------------------------------------------------------------
+# Fenyves et al. 2020 synaptic polarity predictions
+# ---------------------------------------------------------------------------
+
+FENYVES_URL = (
+    "https://journals.plos.org/ploscompbiol/article/file?"
+    "id=10.1371/journal.pcbi.1007974.s003&type=supplementary"
+)
+FENYVES_FILENAME = "pcbi.1007974.s003.xlsx"
+FENYVES_SOURCE_REF = "fenyves_2020_polarity"
+FENYVES_SHEET = "5. Sign prediction"
+
+#: Sheet layout: two header rows, data from row 3 (1-based).
+_FEN_HEADER_ROWS = 2
+_FEN_COL_PRE, _FEN_COL_NT1, _FEN_COL_POST = 0, 1, 3
+_FEN_COL_TYPE, _FEN_COL_POLARITY = 5, 16
+
+#: How the source's polarity strings map onto our Sign enum.
+#:
+#: ``complex`` means the postsynaptic cell expresses BOTH excitatory and inhibitory
+#: receptors for the presynaptic transmitter, so the net effect is genuinely
+#: undetermined by this method — not merely unmeasured. ``no pred`` means no
+#: receptor match was found at all. The two are different findings and are kept apart.
+_FEN_SIGN = {
+    "+": ("excitatory", "receptor_match"),
+    "-": ("inhibitory", "receptor_match"),
+    "complex": ("mixed", "both_excitatory_and_inhibitory_receptors"),
+    "no pred": ("unknown", "no_receptor_match_found"),
+}
+
+
+def parse_fenyves_polarity(path: Path) -> list[tuple[str, ...]]:
+    """Per-connection predicted synaptic polarity.
+
+    **These are predictions, not measurements.** They combine the presynaptic
+    neurotransmitter with postsynaptic ionotropic receptor gene expression: if the
+    target expresses an excitatory receptor for that transmitter and no inhibitory
+    one, the synapse is predicted excitatory, and vice versa.
+
+    Every row of the source is emitted, including the ones with no prediction, so
+    that "Fenyves considered this connection and could not call it" stays
+    distinguishable from "this connection is not in Fenyves at all".
+
+    Scope limit worth knowing before relying on this: the source covers
+    **interneuronal connections only**. It contains no neuromuscular junctions, so
+    it supplies no polarity for the synapses that actually drive muscle.
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, read_only=True, data_only=True)
+    if FENYVES_SHEET not in wb.sheetnames:
+        raise SystemExit(f"{path.name}: expected a {FENYVES_SHEET!r} sheet")
+    rows = list(wb[FENYVES_SHEET].iter_rows(values_only=True))
+    wb.close()
+
+    out: list[tuple[str, ...]] = []
+    for row_no, row in enumerate(rows[_FEN_HEADER_ROWS:], start=_FEN_HEADER_ROWS + 1):
+        pre, post = row[_FEN_COL_PRE], row[_FEN_COL_POST]
+        if not pre or not post:
+            continue
+        edge_type = str(row[_FEN_COL_TYPE] or "").strip().lower()
+        if edge_type != "chemical":
+            continue  # polarity is meaningless for a gap junction
+        raw = str(row[_FEN_COL_POLARITY] or "").strip()
+        if raw not in _FEN_SIGN:
+            raise SystemExit(
+                f"{path.name} row {row_no}: unrecognised polarity {raw!r}. Add it to "
+                "_FEN_SIGN explicitly; guessing a synapse's sign is exactly what this "
+                "project must not do."
+            )
+        sign, basis = _FEN_SIGN[raw]
+        out.append(
+            (
+                str(pre).strip(),
+                str(post).strip(),
+                sign,
+                basis,
+                str(row[_FEN_COL_NT1] or "").strip(),
+                str(row_no),
+                FENYVES_SOURCE_REF,
+            )
+        )
+    out.sort(key=lambda t: (t[0], t[1]))
+    return out
 
 
 def fetch_text(url: str, cache: Path | None) -> str:
@@ -440,6 +527,19 @@ def main(argv: list[str] | None = None) -> int:
     write_csv(WORM_DATA / "annotations" / "neurotransmitters.csv", NT_COLUMNS, nt_rows)
     write_csv(WORM_DATA / "annotations" / "neuron_classes.csv", CLASS_COLUMNS, class_rows)
 
+    fen_path = WORM_DATA / "raw" / FENYVES_FILENAME
+    if not fen_path.exists():
+        print(f"downloading {FENYVES_URL}")
+        fen_path.parent.mkdir(parents=True, exist_ok=True)
+        with urllib.request.urlopen(FENYVES_URL, timeout=180) as r:  # noqa: S310
+            fen_path.write_bytes(r.read())
+    polarity_rows = parse_fenyves_polarity(fen_path)
+    write_csv(
+        WORM_DATA / "annotations" / "polarity_fenyves2020.csv",
+        POLARITY_COLUMNS,
+        polarity_rows,
+    )
+
     known = {c[0] for c in cells}
     stray = sorted({r[0] for r in nt_rows} - known)
     if stray:
@@ -461,6 +561,17 @@ def main(argv: list[str] | None = None) -> int:
     print("neurotransmitters: " + ", ".join(f"{k}={v}" for k, v in sorted(nt_counts.items())))
     orphans = sorted({r[0] for r in nt_rows if r[1] == UNKNOWN})
     print(f"neurons with no detected transmitter pathway gene ({len(orphans)}): {orphans}")
+
+    pol: dict[str, int] = {}
+    for r in polarity_rows:
+        pol[r[2]] = pol.get(r[2], 0) + 1
+    print("predicted synapse polarity: " + ", ".join(f"{k}={v}" for k, v in sorted(pol.items())))
+    called = pol.get("excitatory", 0) + pol.get("inhibitory", 0)
+    print(
+        f"  a definite sign for {called}/{len(polarity_rows)} connections "
+        f"({called / max(len(polarity_rows), 1):.1%}); "
+        f"E:I = {pol.get('excitatory', 0) / max(pol.get('inhibitory', 1), 1):.2f}:1"
+    )
     return 0
 
 

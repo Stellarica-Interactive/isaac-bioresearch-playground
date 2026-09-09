@@ -1,0 +1,178 @@
+# Biophysical parameters for the C. elegans graded neuron model.
+#
+# READ THIS BEFORE TRUSTING ANY NUMBER BELOW.
+#
+# In this model's lineage - Wicks et al. 1996, then Kunert et al. 2014 - the
+# CONNECTIVITY IS THE ONLY MEASURED QUANTITY. Every constant here is applied
+# identically to all 302 neurons, and almost none of them has been measured in
+# even one neuron, let alone all of them.
+#
+# Each entry therefore carries an explicit `confidence`:
+#
+#   measured              directly observed in the cited experiment
+#   published_annotation  curated from the literature across many experiments
+#   predicted             computationally inferred, not observed
+#   assumed               our modelling choice; no direct biological backing
+#
+# Anything marked `assumed` should be varied to see whether a result depends on
+# it. `tools/benchmark_runtime.py --sweep` exists for that.
+#
+# Units, chosen to be mutually consistent (see common/neural/synapses.py):
+#   voltage mV | time ms | capacitance pF | conductance pS | current pA
+
+[metadata]
+name = "kunert_2014_default"
+description = """
+The Kunert-Shlizerman-Kutz 2014 parameterisation of the Wicks et al. 1996 graded
+model. Reproduced here so a run can be compared against published work, not
+because these values are known to be right."""
+citation = "Kunert J, Shlizerman E, Kutz JN. Low-dimensional functionality of complex network dynamics: neurosensory integration in the Caenorhabditis elegans connectome. Physical Review E 89:052805 (2014)."
+doi = "10.1103/PhysRevE.89.052805"
+derived_from = "Wicks SR, Roehrig CJ, Rankin CH. J Neurosci 16:4017-4031 (1996)."
+
+# ---------------------------------------------------------------------------
+# Membrane
+# ---------------------------------------------------------------------------
+
+[parameters.c_m_pf]
+value = 1.0
+unit = "pF"
+confidence = "measured"
+source = "Goodman MB, Hall DH, Avery L, Lockery SR. Neuron 20:763-772 (1998)."
+note = """
+The one value here with real measured support: whole-cell capacitance of
+C. elegans neurons is 0.5-3 pF, so 1 pF sits inside the measured range. Applying
+a single figure to every neuron is still an assumption - cell sizes differ."""
+improvement = "Per-neuron capacitance from soma volume, available in EM reconstructions."
+
+[parameters.g_leak_ps]
+value = 10.0
+unit = "pS"
+confidence = "assumed"
+source = "Kunert et al. 2014, chosen to order of magnitude."
+note = """
+Gives a 100 ms membrane time constant in isolation, broadly consistent with the
+gigaohm input resistances Goodman et al. 1998 report. That is a consistency
+check, not a measurement: no per-neuron leak conductance has been measured."""
+improvement = "Whole-cell patch clamp per neuron class; currently exists for very few."
+
+[parameters.e_leak_mv]
+value = -35.0
+unit = "mV"
+confidence = "assumed"
+source = "Kunert et al. 2014."
+note = """
+Resting potentials across the C. elegans nervous system have not been measured.
+Recordings that exist report values roughly in the -30 to -70 mV range depending
+on cell and method."""
+improvement = "Per-neuron resting potential measurements, or voltage-imaging estimates."
+
+# ---------------------------------------------------------------------------
+# Synapses
+# ---------------------------------------------------------------------------
+
+[parameters.g_syn_ps]
+value = 100.0
+unit = "pS"
+confidence = "assumed"
+source = "Kunert et al. 2014."
+note = """
+Conductance attributed to ONE chemical synapse, multiplied by the EM synapse
+count. Both halves are assumptions: this magnitude, and that the relationship is
+linear in count. The count itself is measured; what it means physiologically is
+not. See WeightScaling in common/neural/synapses.py for alternatives."""
+improvement = "Paired whole-cell recordings; done for a handful of connections only."
+
+[parameters.g_gap_ps]
+value = 100.0
+unit = "pS"
+confidence = "assumed"
+source = "Kunert et al. 2014."
+note = """
+Per gap junction. Rectification is NOT modelled: some C. elegans gap junctions
+pass current asymmetrically depending on the innexins each side expresses, which
+this symmetric ohmic treatment cannot represent."""
+improvement = "Innexin-specific conductances and rectification from paired recordings."
+
+[parameters.e_exc_mv]
+value = 0.0
+unit = "mV"
+confidence = "assumed"
+source = "Kunert et al. 2014."
+note = "Reversal potential for a synapse predicted excitatory. A generic cation-channel value."
+
+[parameters.e_inh_mv]
+value = -45.0
+unit = "mV"
+confidence = "assumed"
+source = "Kunert et al. 2014."
+note = """
+Reversal potential for a synapse predicted inhibitory. A generic chloride value.
+Note it sits below e_leak_mv, so an inhibitory synapse hyperpolarizes rather than
+merely shunting."""
+
+# ---------------------------------------------------------------------------
+# Transmitter release
+# ---------------------------------------------------------------------------
+
+[parameters.beta_per_mv]
+value = 0.125
+unit = "1/mV"
+confidence = "assumed"
+source = "Kunert et al. 2014, following Wicks et al. 1996."
+note = """
+Steepness of the sigmoid relating membrane potential to transmitter release. Sets
+how much of a neuron's voltage range is usefully signalling: 1/beta = 8 mV, so
+release saturates within roughly +-20 mV of threshold."""
+improvement = "Voltage-clamp measurements of graded release; done for very few synapses."
+
+[parameters.a_r_per_ms]
+value = 0.001
+unit = "1/ms"
+confidence = "assumed"
+source = "Kunert et al. 2014 (published as 1 s^-1)."
+note = "Rate at which synaptic activation rises toward its sigmoid target."
+
+[parameters.a_d_per_ms]
+value = 0.005
+unit = "1/ms"
+confidence = "assumed"
+source = "Kunert et al. 2014 (published as 5 s^-1)."
+note = """
+Decay rate. With a_r, sets a synaptic time constant of ~170 ms and a resting
+activation of 1/11 - so a resting synapse is already passing about 9% of its
+maximum conductance."""
+
+# ---------------------------------------------------------------------------
+# Integration defaults
+# ---------------------------------------------------------------------------
+
+[integration]
+dt_ms = 0.1
+integrator = "exponential"
+confidence = "assumed"
+note = """
+These are engineering choices, not biology. The exponential integrator solves
+each cell's own leak-plus-conductance term exactly over the step, so it stays
+stable where explicit methods do not. It matters here: the busiest cells have
+membrane time constants near 0.008 ms, over a thousand times shorter than an
+isolated neuron's, because gap-junction conductance adds up. At dt = 0.1 ms it
+agrees with a fine RK4 reference to under 0.01 mV over 50 ms while running about
+35 times faster. Use rk4 with dt <= 0.005 ms to check any result that matters."""
+
+# ---------------------------------------------------------------------------
+# Which cells to simulate
+# ---------------------------------------------------------------------------
+
+[network]
+default_cells = "neurons"
+confidence = "assumed"
+note = """
+Simulating neurons only, which is what the Kunert lineage does. Including
+muscles, glia and the other cells present in a whole-animal connectome makes the
+system far stiffer, because `hyp` (the hypodermis) and `hmc` (the head mesodermal
+cell) carry thousands of gap-junction sites and would get ~200 nS under linear
+scaling - a 0.005 ms time constant on a 1 pF cell, which is not physiological so
+much as an artefact of treating a body-spanning syncytium as one isopotential
+compartment. Muscles come back in at W2, with a muscle model of their own rather
+than as honorary neurons."""

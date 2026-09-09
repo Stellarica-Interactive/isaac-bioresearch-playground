@@ -45,6 +45,7 @@ include = ["common*", "worm*", "fly*", "tools*"]
 
 [tool.setuptools.package-data]
 "worm.data" = ["*.toml", "annotations/*.csv", "normalized/**/*", "circuits/*.json"]
+"worm.neural" = ["*.toml"]
 
 [tool.pytest.ini_options]
 testpaths = ["worm/tests", "common/tests"]

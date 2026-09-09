@@ -42,10 +42,18 @@ class TestSeparationOfConcerns:
         assert all(not c.neurotransmitters for c in anatomy.cells)
         assert all(c.class_name is None for c in anatomy.cells)
 
-    def test_polarity_is_not_in_the_default_overlay_set(self) -> None:
-        """A predicted synapse sign must never arrive by default."""
+    def test_polarity_is_available_but_never_applied_by_default(self) -> None:
+        """A predicted synapse sign must never arrive unless it was asked for.
+
+        The overlay exists -- the neural runtime needs it -- but selecting it is
+        always an explicit act, and the runtime reports its coverage when it does.
+        """
+        assert "polarity" in OVERLAYS
         assert "polarity" not in DEFAULT_OVERLAYS
-        assert "polarity" not in OVERLAYS
+
+    def test_anatomy_loaded_by_default_carries_no_sign(self) -> None:
+        c, _ = load(DATASET)
+        assert all(str(e.sign) == "unknown" for e in c.connections)
 
     def test_annotations_are_attributed_to_their_own_sources(
         self, annotated: Connectome

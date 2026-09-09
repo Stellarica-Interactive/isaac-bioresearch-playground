@@ -159,6 +159,16 @@ mirror_note = "Supplementary File 2 (hermaphrodite). Feeds tools/extract_annotat
 # These are not files we download. They exist so that a `field_sources` entry can
 # cite them, and so docs/references.md can be checked against this manifest.
 
+[fenyves_2020_polarity]
+kind = "annotation"
+url = "https://journals.plos.org/ploscompbiol/article/file?id=10.1371/journal.pcbi.1007974.s003&type=supplementary"
+filename = "pcbi.1007974.s003.xlsx"
+sha256 = "85959066fd7cbdbc2024d0ebb323b71c4365f4083bc85e555ee973f470697c47"
+license = "CC BY 4.0"
+citation = "Fenyves BG, Szilagyi GS, Vassy Z, Soti C, Csermely P. Synaptic polarity and sign-balance prediction using gene expression data in the Caenorhabditis elegans chemical synapse neuronal connectome network. PLOS Computational Biology 16(12):e1007974 (2020)."
+doi = "10.1371/journal.pcbi.1007974"
+mirror_note = "S1 Data, the NT+R (neurotransmitter plus receptor) prediction. PREDICTED, never measured: no experiment measures synaptic sign across the connectome. Covers interneuronal connections ONLY - it contains no neuromuscular junctions, so it gives no polarity for the synapses that drive muscle."
+
 [wormatlas_cook_2019_via_cect]
 kind = "annotation"
 url = "https://www.wormatlas.org/NeuronNames.htm"

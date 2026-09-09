@@ -35,10 +35,14 @@ from common.data.overlay import AnnotationOverlay, OverlayReport
 from common.data.schemas import (
     Cell,
     CellCategory,
+    Confidence,
+    Connection,
     Connectome,
     Neurotransmitter,
     Provenance,
+    Sign,
     SIMRole,
+    SynapseType,
 )
 from worm.importers.sources import source_file
 
@@ -199,6 +203,88 @@ class NeurotransmitterOverlay:
         return _rebuild(c, updated), _report(self.overlay_id, set(updated), c, set(table))
 
 
+@dataclass(frozen=True)
+class PolarityOverlay:
+    """Predicted excitatory/inhibitory sign for chemical synapses. **Opt-in.**
+
+    Not in :data:`DEFAULT_OVERLAYS`, and that is deliberate. No experiment measures
+    synaptic sign across a connectome; these values combine the presynaptic
+    transmitter with postsynaptic receptor gene expression, so every one is
+    :attr:`~common.data.schemas.Confidence.PREDICTED`. A neural simulation is
+    extremely sensitive to whether a connection is + or -, so a prediction arriving
+    unnoticed is the fastest route to confident nonsense.
+
+    Three limits worth knowing before switching it on:
+
+    * **Roughly half of connections get a definite sign** (1327 excitatory, 425
+      inhibitory of 3638). 471 are ``mixed`` -- the target expresses both excitatory
+      and inhibitory receptors for that transmitter, so the net effect is genuinely
+      undetermined rather than merely unmeasured -- and 1415 have no receptor match
+      at all.
+    * **No neuromuscular junctions.** The source covers interneuronal connections
+      only, so it supplies no sign for the synapses that actually drive muscle. See
+      ``docs/model_assumptions.md``.
+    * Predictions are made against the WormWiring/Cook reconstruction, so coverage of
+      a different dataset's edges will be partial. The overlay reports what it matched.
+    """
+
+    overlay_id: str = "polarity"
+    source_id: str = "fenyves_2020_polarity"
+
+    def provenance(self) -> Provenance:
+        return _provenance(
+            self.source_id,
+            "PREDICTED synaptic polarity from neurotransmitter and receptor gene "
+            "expression (S1 Data, NT+R method). Never measured.",
+        )
+
+    def apply(self, c: Connectome) -> tuple[Connectome, OverlayReport]:
+        table: dict[tuple[str, str], Sign] = {}
+        for r in _rows("polarity_fenyves2020.csv"):
+            table[(r["pre"], r["post"])] = Sign(r["sign"])
+
+        updated: list[Connection] = []
+        matched = 0
+        eligible = 0
+        for e in c.connections:
+            if e.synapse_type is not SynapseType.CHEMICAL:
+                updated.append(e)
+                continue
+            eligible += 1
+            sign = table.get((e.pre, e.post))
+            if sign is None:
+                updated.append(e)
+                continue
+            matched += 1
+            updated.append(
+                replace(
+                    e,
+                    sign=sign,
+                    sign_confidence=Confidence.PREDICTED,
+                    field_sources={**e.field_sources, "sign": self.source_id},
+                )
+            )
+
+        chemical_pairs = {(e.pre, e.post) for e in c.chemical()}
+        report = OverlayReport(
+            overlay_id=self.overlay_id,
+            matched=matched,
+            eligible=eligible,
+            unmatched=tuple(
+                sorted(f"{e.pre}->{e.post}" for e in c.chemical() if (e.pre, e.post) not in table)
+            ),
+            unknown_in_source=tuple(
+                sorted(f"{a}->{b}" for a, b in table if (a, b) not in chemical_pairs)
+            ),
+        )
+        return replace(c, connections=tuple(updated)), report
+
+
+def polarity_evidence() -> Iterator[Mapping[str, str]]:
+    """Full polarity table including the basis string and source row."""
+    yield from _rows("polarity_fenyves2020.csv")
+
+
 def neurotransmitter_evidence() -> Iterator[Mapping[str, str]]:
     """Full neurotransmitter table including evidence strings and source rows."""
     yield from _rows("neurotransmitters.csv")
@@ -208,6 +294,9 @@ OVERLAYS: dict[str, AnnotationOverlay] = {
     "classes": NeuronClassOverlay(),
     "sim": SIMRoleOverlay(),
     "nt": NeurotransmitterOverlay(),
+    # Opt-in only. Never add this to DEFAULT_OVERLAYS: synaptic sign is predicted,
+    # never measured, and a simulation is extremely sensitive to it.
+    "polarity": PolarityOverlay(),
 }
 
 DEFAULT_OVERLAYS = ("classes", "sim", "nt")
