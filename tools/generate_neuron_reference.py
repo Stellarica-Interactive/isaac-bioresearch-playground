@@ -40,6 +40,9 @@ class Curated:
 
     summary: str
     source: str
+    doi: str = ""
+    """Resolved against CrossRef by tools/verify_citations.py. A note whose source
+    cannot be checked is a note nobody can audit."""
 
 
 #: Short notes on the cells a reader is most likely to meet first — the ones that
@@ -51,143 +54,171 @@ CURATED: dict[str, Curated] = {
         "ablating them abolishes the response to gentle body touch. Anterior touch "
         "is associated with reversal.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985).",
+        doi="10.1523/jneurosci.05-04-00956.1985",
     ),
     "AVM": Curated(
         "Anterior ventral gentle-touch receptor, born post-embryonically. Works "
         "with ALM for anterior touch.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985).",
+        doi="10.1523/jneurosci.05-04-00956.1985",
     ),
     "PLM": Curated(
         "Posterior gentle-touch receptor. Posterior touch is associated with "
         "forward acceleration rather than reversal.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985).",
+        doi="10.1523/jneurosci.05-04-00956.1985",
     ),
     "AVA": Curated(
         "Premotor command interneuron associated with backward locomotion. "
         "Among the most heavily connected cells in the animal.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985); Kawano T, et al. Neuron 72:572-586 (2011).",
+        doi="10.1016/j.neuron.2011.09.005",
     ),
     "AVB": Curated(
         "Premotor command interneuron associated with forward locomotion.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985); Kawano T, et al. Neuron 72:572-586 (2011).",
+        doi="10.1016/j.neuron.2011.09.005",
     ),
     "AVD": Curated(
         "Premotor interneuron in the backward-locomotion pathway, downstream of "
         "the anterior touch receptors.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985).",
+        doi="10.1523/jneurosci.05-04-00956.1985",
     ),
     "AVE": Curated(
         "Premotor interneuron associated with backward locomotion, acting on the "
         "anterior body.",
         "Kawano T, et al. Neuron 72:572-586 (2011).",
+        doi="10.1016/j.neuron.2011.09.005",
     ),
     "PVC": Curated(
         "Premotor command interneuron associated with forward locomotion, "
         "downstream of the posterior touch receptors.",
         "Chalfie M, et al. J Neurosci 5:956-964 (1985).",
+        doi="10.1523/jneurosci.05-04-00956.1985",
     ),
     "ASH": Curated(
         "Polymodal nociceptor: responds to noxious chemicals, high osmolarity and "
         "nose touch, and drives avoidance. A good example of why a single "
         "sensory/inter/motor label is a simplification.",
         "Kaplan JM, Horvitz HR. PNAS 90:2227-2231 (1993).",
+        doi="10.1073/pnas.90.6.2227",
     ),
     "ASE": Curated(
         "Principal salt-sensing chemosensory pair, and functionally left/right "
         "asymmetric: ASEL responds to salt increases and ASER to decreases. The "
         "two members of one class are not interchangeable.",
         "Suzuki H, et al. Nature 454:114-117 (2008).",
+        doi="10.1038/nature06927",
     ),
     "AWA": Curated(
         "Olfactory neuron for attractive volatile odours. Notable for the model: "
         "AWA fires genuine calcium-mediated all-or-none action potentials, which "
         "the common 'C. elegans neurons are graded, not spiking' summary omits.",
         "Bargmann CI, et al. Cell 74:515-527 (1993); Liu Q, et al. Cell 175:57-70 (2018).",
+        doi="10.1016/j.cell.2018.08.018",
     ),
     "AWB": Curated(
         "Olfactory neuron mediating avoidance of repulsive volatile odours.",
         "Troemel ER, et al. Cell 91:161-169 (1997).",
+        doi="10.1016/s0092-8674(00)80399-2",
     ),
     "AWC": Curated(
         "Olfactory neuron for attractive volatile odours, and asymmetric between "
         "left and right in the odorants it detects.",
         "Bargmann CI, et al. Cell 74:515-527 (1993); "
         "Wes PD, Bargmann CI. Nature 410:698-701 (2001).",
+        doi="10.1038/35070581",
     ),
     "AIY": Curated(
         "First-layer amphid interneuron; a major integration point downstream of "
         "chemosensory and thermosensory input, implicated in the turn/run decision "
         "underlying chemotaxis.",
         "Gray JM, Hill JJ, Bargmann CI. PNAS 102:3184-3191 (2005).",
+        doi="10.1073/pnas.0409009101",
     ),
     "AIB": Curated(
         "First-layer amphid interneuron acting largely in opposition to AIY in "
         "the chemotaxis turning decision.",
         "Gray JM, Hill JJ, Bargmann CI. PNAS 102:3184-3191 (2005).",
+        doi="10.1073/pnas.0409009101",
     ),
     "AIA": Curated(
         "First-layer amphid interneuron receiving convergent chemosensory input.",
         "White JG, et al. Phil Trans R Soc Lond B 314:1-340 (1986).",
+        doi="10.1098/rstb.1986.0056",
     ),
     "AIZ": Curated(
         "First-layer amphid interneuron in the chemotaxis pathway.",
         "Gray JM, Hill JJ, Bargmann CI. PNAS 102:3184-3191 (2005).",
+        doi="10.1073/pnas.0409009101",
     ),
     "RIM": Curated(
         "Motor/interneuron coupled to the backward-locomotion circuit; its "
         "published label records disagreement between studies about whether it is "
         "an interneuron or a motor neuron.",
         "Kawano T, et al. Neuron 72:572-586 (2011).",
+        doi="10.1016/j.neuron.2011.09.005",
     ),
     "RIA": Curated(
         "Highly connected ring interneuron integrating sensory input with head "
         "motor output; compartmentalized calcium dynamics within one cell.",
         "Hendricks M, et al. Nature 487:99-103 (2012).",
+        doi="10.1038/nature11081",
     ),
     "RMG": Curated(
         "Hub of a gap-junction 'hub-and-spoke' circuit: several sensory neurons "
         "are electrically coupled to RMG, which aggregates them.",
         "Macosko EZ, et al. Nature 458:1171-1175 (2009).",
+        doi="10.1038/nature07886",
     ),
     "URX": Curated(
         "Oxygen-sensing neuron, electrically coupled into the RMG hub circuit.",
         "Macosko EZ, et al. Nature 458:1171-1175 (2009).",
+        doi="10.1038/nature07886",
     ),
     "BAG": Curated(
         "Sensory neuron responding to carbon dioxide and to falling oxygen.",
         "Hallem EA, Sternberg PW. PNAS 105:8038-8043 (2008).",
+        doi="10.1073/pnas.0707469105",
     ),
     "AQR": Curated(
         "Oxygen-sensing neuron with a process exposed to the body cavity, part of "
         "the RMG hub circuit.",
         "Macosko EZ, et al. Nature 458:1171-1175 (2009).",
+        doi="10.1038/nature07886",
     ),
     "AFD": Curated(
         "Principal thermosensory neuron, setting the temperature the animal "
         "prefers based on prior experience.",
         "Mori I, Ohshima Y. Nature 376:344-348 (1995).",
+        doi="10.1038/376344a0",
     ),
     "ADE": Curated(
         "Dopaminergic mechanosensory neuron of the anterior deirid, involved in "
         "sensing bacterial lawn texture and the resulting slowing response.",
         "Sawin ER, Ranganathan R, Horvitz HR. Neuron 26:619-631 (2000).",
+        doi="10.1016/s0896-6273(00)81199-x",
     ),
     "CEP": Curated(
         "Dopaminergic mechanosensory neuron of the head, acting with ADE and PDE "
         "in the food-induced slowing response.",
         "Sawin ER, Ranganathan R, Horvitz HR. Neuron 26:619-631 (2000).",
+        doi="10.1016/s0896-6273(00)81199-x",
     ),
     "DVA": Curated(
         "Interneuron with a stretch-sensitive, proprioceptive role: it reports the "
         "body's own bending back to the nervous system, so it is both an "
         "interneuron by anatomy and a sensor by function.",
         "Li W, Feng Z, Sternberg PW, Xu XZS. Nature 440:684-687 (2006).",
+        doi="10.1038/nature04538",
     ),
     "CAN": Curated(
         "Makes no chemical synapses at all, yet the animal dies without it. Its "
         "function remains unclear, which is why this repository records its role "
         "as unknown rather than guessing.",
         "Forrester WC, Garriga G. Development 124:1831-1843 (1997).",
+        doi="10.1242/dev.124.9.1831",
     ),
     "NSM": Curated(
         "Serotonergic neurosecretory-motor neuron of the pharynx; detects "
@@ -195,28 +226,34 @@ CURATED: dict[str, Curated] = {
         "neurosecretory function, so a single SIM role does not apply.",
         "Sawin ER, Ranganathan R, Horvitz HR. Neuron 26:619-631 (2000); "
         "Rhoades JL, et al. Cell 176:85-97 (2019).",
+        doi="10.1016/j.cell.2018.11.023",
     ),
     "RIP": Curated(
         "The only direct connection between the pharyngeal nervous system and the "
         "rest of the animal.",
         "Albertson DG, Thomson JN. Phil Trans R Soc Lond B 275:299-325 (1976).",
+        doi="10.1098/rstb.1976.0085",
     ),
     "HSN": Curated(
         "Hermaphrodite-specific serotonergic motor neuron driving egg laying.",
         "Desai C, Garriga G, McIntire SL, Horvitz HR. Nature 336:638-646 (1988).",
+        doi="10.1038/336638a0",
     ),
     "PVD": Curated(
         "Highly branched nociceptor responding to harsh touch and cold.",
         "Way JC, Chalfie M. Genes Dev 3:1823-1833 (1989); Chatzigeorgiou M, et al. "
         "Nat Neurosci 13:861-868 (2010).",
+        doi="10.1038/nn.2581",
     ),
     "ALA": Curated(
         "Interneuron mediating a sleep-like quiescent state after cellular stress.",
         "Hill AJ, et al. Curr Biol 24:2399-2405 (2014).",
+        doi="10.1016/j.cub.2014.08.040",
     ),
     "RIS": Curated(
         "Interneuron that induces developmentally timed sleep.",
         "Turek M, Lewandrowski I, Bringmann H. Curr Biol 23:2215-2223 (2013).",
+        doi="10.1016/j.cub.2013.09.028",
     ),
 }
 

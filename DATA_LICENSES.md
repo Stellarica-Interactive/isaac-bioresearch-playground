@@ -49,6 +49,19 @@ file records them. Machine-readable equivalents live in
   `worm/data/annotations/neurotransmitters.csv` and `neuron_classes.csv`.
 - Not redistributed; fetched by script.
 
+### Fenyves et al. 2020 — predicted synaptic polarity
+
+> Fenyves BG, Szilágyi GS, Vassy Z, Sőti C, Csermely P.
+> **Synaptic polarity and sign-balance prediction using gene expression data in the
+> *Caenorhabditis elegans* chemical synapse neuronal connectome network.**
+> *PLOS Computational Biology* 16(12):e1007974 (2020). doi:10.1371/journal.pcbi.1007974
+
+- **Licence: CC BY 4.0.** S1 Data is the source of
+  `worm/data/annotations/polarity_fenyves2020.csv`.
+- Not redistributed; fetched by script.
+- These are **predictions**, never measurements. They reach a simulation only
+  through an opt-in overlay, and every row is tagged `PREDICTED`.
+
 ### WormAtlas cell listings, with Cook et al. 2019 groupings
 
 > Cook SJ, Jarrell TA, Brittin CA, Wang Y, Bloniarz AE, Yakovlev MA, Nguyen KCQ,
