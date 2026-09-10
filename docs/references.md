@@ -224,6 +224,13 @@ circuit for touch sensitivity in *Caenorhabditis elegans*.** *Journal of
 Neuroscience* 5:956–964 (1985).
 doi:[10.1523/JNEUROSCI.05-04-00956.1985](https://doi.org/10.1523/JNEUROSCI.05-04-00956.1985)
 
+**O'Hagan R, Chalfie M, Goodman MB. The MEC-4 DEG/ENaC channel of *Caenorhabditis
+elegans* touch receptor neurons transduces mechanical signals.** *Nature
+Neuroscience* 8:43–50 (2005). doi:[10.1038/nn1362](https://doi.org/10.1038/nn1362)
+In-vivo recordings from ALM and PLM: touch produces graded receptor currents of
+order picoamps. The basis for the scale of `DEFAULT_TOUCH_CURRENT_PA` in
+`worm/body/touch.py`, which was otherwise an arbitrary number.
+
 **Kaplan JM, Horvitz HR. A dual mechanosensory and chemosensory neuron in
 *Caenorhabditis elegans*.** *PNAS* 90:2227–2231 (1993).
 doi:[10.1073/pnas.90.6.2227](https://doi.org/10.1073/pnas.90.6.2227)

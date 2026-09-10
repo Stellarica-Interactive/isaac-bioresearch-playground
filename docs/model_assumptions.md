@@ -771,6 +771,95 @@ was not chosen wholesale.
 The cheaper alternative remains §5C.5 option 4, an externally supplied head
 oscillation, and it remains the one that most weakens the claim.
 
+## 5D. Touch: the first behaviour the connectome gets right
+
+§5C.9 showed the neuron model has no limit cycle anywhere, which rules out a gait.
+It does **not** rule out a touch response, because a touch response is not a
+rhythm — it is a transient, and a relaxation model is the right shape for one. So
+touch is the sensory experiment the oscillator problem does not block, and it was
+brought forward from milestone W4 for that reason.
+
+`worm/body/touch.py` maps a contact on the body to current in the six gentle-touch
+receptors; `run_connectome.py --probe` adds a draggable sphere, and `--poke
+START:STOP:FRACTION` does the same thing on a script so a result can be reproduced
+headless.
+
+### 5D.1 The result
+
+Two seconds of contact, `peak_torque_scale` 3e-3, reported as the change in mean
+membrane potential of each command interneuron group from the moment of contact:
+
+| touch at | AVA (backward) | AVB (forward) | AVD (backward) | PVC (forward) |
+|---|---|---|---|---|
+| **head**, 0.15 along body | −2.28 mV | **−7.42 mV** | −1.39 mV | −3.88 mV |
+| **tail**, 0.85 along body | +1.36 mV | +0.92 mV | +1.02 mV | **+2.29 mV** |
+
+Both directions come out right:
+
+* **Head touch suppresses the forward command hardest.** AVB falls 7.42 mV against
+  AVA's 2.28 mV, a relative shift of about 5 mV toward backward. Anterior touch
+  causing reversal is the canonical response (Chalfie et al. 1985).
+* **Tail touch raises PVC most.** PVC is the forward command driven by posterior
+  touch, and it moves furthest of the four. Posterior touch causing forward
+  acceleration is likewise canonical.
+
+Nothing was tuned to produce this. The receptive fields decide only *which cells*
+a contact reaches; everything after that is measured wiring carrying measured
+synaptic signs, and the head/tail asymmetry is a property of the connectome.
+
+### 5D.2 The control that matters
+
+Shuffling synaptic signs at random while keeping every synapse in place
+(`--shuffle-sign`) reverses the result completely. Head touch, three seeds:
+
+| | AVA | **AVB** |
+|---|---|---|
+| measured signs | −2.28 mV | **−7.42 mV** |
+| shuffled, seed 1 | +1.49 mV | **+11.94 mV** |
+| shuffled, seed 2 | +1.79 mV | **+13.45 mV** |
+| shuffled, seed 3 | +1.60 mV | **+12.10 mV** |
+
+The forward command goes from strongly *suppressed* to strongly *excited*, in the
+same direction every time. So the behaviour depends on which synapses excite and
+which inhibit — on the neurotransmitter and polarity data of §6.1 and §6.1b — and
+not merely on the anatomy. That is the strongest evidence in this repository so
+far that a result rests on the biology rather than on the shape of the graph.
+
+### 5D.3 What this is not
+
+**There is no escape.** A real animal reverses away from the touch; this one does
+not, because reversing requires working locomotion and §5C.4 establishes that we
+do not have any. What is demonstrated is the *sensory-to-command* half of the
+reflex arc, ending at the interneurons. The half that turns a command into
+movement is still missing.
+
+The magnitudes are also small — a few millivolts on cells sitting at tens of
+millivolts — and nothing calibrates them. They are reported as changes rather than
+absolute values for that reason.
+
+### 5D.4 Two bugs worth recording
+
+Both produced failures that pointed at the wrong part of the system.
+
+**A current chosen by analogy was wrong by 20x.** `DEFAULT_TOUCH_CURRENT_PA` was
+first set to 400 pA, matching the command drive and the proprioceptive gain. AVB
+tolerates 500 pA because heavy gap-junction coupling gives it a large total
+conductance; ALM has far less coupling, and the same current drove it to **+443
+mV**. The model has no spike mechanism and no upper bound, so nothing objected —
+it simply carried on and later diverged. The value is now 20 pA, set from the
+measured slope of about 1 mV per pA in this network so that a touch produces a
+receptor potential of tens of millivolts, the order seen in real mechanoreceptor
+recordings (O'Hagan, Chalfie & Goodman 2005).
+
+**A physics bug that surfaced as a neuroscience one.** The scripted poke teleported
+the probe to the *centre* of a segment, placing a collider entirely inside the
+animal. PhysX resolved the interpenetration explosively, the body flailed, joint
+angles went wild, and proprioception carried them into the network — which
+reported a `FloatingPointError` in the neural runtime, forty lines and one
+subsystem away from the cause. The probe is now placed against the surface. Worth
+remembering the next time the nervous system appears to diverge: in a closed loop,
+the report location says little about the origin.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

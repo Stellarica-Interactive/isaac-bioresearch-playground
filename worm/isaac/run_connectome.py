@@ -104,6 +104,24 @@ parser.add_argument(
 )
 parser.add_argument("--seed", type=int, default=0, help="seed for --noise-pa")
 parser.add_argument(
+    "--probe",
+    action="store_true",
+    help="Add a draggable sphere. Move it onto the worm in the viewport (select "
+    "it, press W, drag) and the body wall touch receptors fire. Touch is a "
+    "transient, so unlike locomotion it is not blocked by the model's inability "
+    "to oscillate -- but the escape it should trigger needs working locomotion, "
+    "so expect the circuit to respond and the animal not to get away.",
+)
+parser.add_argument("--touch-current", type=float, default=None, help="pA per contact")
+parser.add_argument(
+    "--poke",
+    default="",
+    help="Scripted touch: START:STOP:FRACTION, seconds and position along the body "
+    "(0 head, 1 tail), e.g. 3:4:0.15 for a head touch in the fourth second. Drives "
+    "the same probe the mouse does, so an interactive result can be reproduced "
+    "headless and put in a test.",
+)
+parser.add_argument(
     "--no-grid",
     action="store_true",
     help="hide the checkerboard. It is scenery with no collider, so this changes "
@@ -137,8 +155,16 @@ from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import MuscleModel, MuscleParameters  # noqa: E402
 from worm.body.neural_bridge import MuscleDrive, Proprioception  # noqa: E402
+from worm.body.touch import TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
-from worm.isaac.stage import add_camera, add_ground_grid, build_scene, dof_order  # noqa: E402
+from worm.isaac.stage import (  # noqa: E402
+    DEFAULT_PROBE_RADIUS_SCALE,
+    add_camera,
+    add_ground_grid,
+    add_probe,
+    build_scene,
+    dof_order,
+)  # noqa: E402
 from worm.loader import load  # noqa: E402
 from worm.neural.config import RUNTIME_OVERLAYS, build_runtime  # noqa: E402
 
@@ -182,6 +208,11 @@ def main() -> int:
         **({"offset": args.sensing_offset} if args.sensing_offset else {}),
         **({"gain_pa_per_rad": args.proprioceptive_gain} if args.proprioceptive_gain else {}),
     )
+    touch = TouchField.build(
+        plan,
+        cells=runtime.network.cell_ids,
+        **({"current_pa": args.touch_current} if args.touch_current else {}),
+    )
     command = {
         c.strip(): args.command_current
         for c in args.command.split(",")
@@ -195,6 +226,12 @@ def main() -> int:
         f"\n  noise: {args.noise_pa:g} pA std (seed {args.seed})"
         f"\n  command drive: {', '.join(command) or 'none'} "
         f"at {args.command_current:g} pA (constant, no rhythm)"
+        + (
+            f"\n  touch receptors: {', '.join(touch.cells)} "
+            f"at {touch.current_pa:g} pA -- drag the red sphere onto the body"
+            if args.probe
+            else ""
+        )
     )
 
     dt = 1.0 / args.physics_hz
@@ -213,6 +250,7 @@ def main() -> int:
         _run_condition(
             plan=plan,
             runtime=runtime,
+            touch=touch,
             rng=np.random.default_rng(args.seed),
             noise_pa=args.noise_pa,
             bridge=bridge,
@@ -241,6 +279,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     *,
     plan: BodyPlan,
     runtime: NeuralRuntime,
+    touch: TouchField,
     rng: np.random.Generator,
     noise_pa: float,
     bridge: MuscleDrive,
@@ -268,6 +307,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     camera = add_camera(plan)
     if not args.no_grid:
         add_ground_grid(plan)
+    poke = [float(x) for x in args.poke.split(":")] if args.poke else None
+    probe = RigidPrim(add_probe(plan)) if (args.probe or poke) else None
     SimulationManager.set_physics_dt(dt)
     masses = plan.masses_kg()
     articulation = Articulation(root_path)
@@ -286,6 +327,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         articulation.set_dof_armatures(args.armature)
 
     start = _centroid(links)
+    touching = False
+    peak: dict[str, float] = {}
+    baseline: dict[str, float] = {}
     history: list[np.ndarray] = []
     reported = 0.0
     t = 0.0
@@ -301,6 +345,41 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         runtime.inject_many(command)
         if not args.no_proprioception:
             runtime.inject_many(proprio.currents(angles))
+        if probe is not None:
+            if poke is not None:
+                _drive_poke(probe, links, plan, t, poke)
+            contact, ventral = _probe_contact(probe, links, plan)
+            if contact.any():
+                currents = touch.currents_from_segments(contact, ventral=ventral)
+                runtime.inject_many(currents)
+                if not touching:
+                    hit = np.flatnonzero(contact)
+                    baseline = _command_state(runtime)
+                    print(
+                        f"    t={t:5.1f}s  TOUCH segments {hit.min()}-{hit.max()} "
+                        f"({touch.segment_fraction(int(hit.mean())):.2f} along body) "
+                        f"-> {', '.join(f'{c} {v:.1f}pA' for c, v in sorted(currents.items()))}"
+                    )
+                touching = True
+                peak = {
+                    k: max(peak.get(k, 0.0), v - baseline[k], key=abs)
+                    for k, v in _command_state(runtime).items()
+                }
+            elif touching:
+                # The result that matters. Anterior touch should raise the backward
+                # command (AVA) and lower the forward one (AVB); posterior touch the
+                # reverse. Reported as a change from the moment of contact, because
+                # the absolute values are set by the standing command drive.
+                print(
+                    f"    t={t:5.1f}s  released -> "
+                    + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(peak.items()))
+                    + (
+                        "   (AVA up + AVB down = reversal)"
+                        if peak.get("AVA", 0) > 0 > peak.get("AVB", 0)
+                        else ""
+                    )
+                )
+                touching, peak = False, {}
 
         # --- nervous system ---------------------------------------------
         for _ in range(neural_substeps):
@@ -335,6 +414,106 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             _report(t, start, links, plan, angles, history)
 
     _report(args.seconds, start, links, plan, angles, history, final=True)
+
+
+def _command_state(runtime: NeuralRuntime) -> dict[str, float]:
+    """Mean membrane potential of the forward and backward command interneurons.
+
+    AVA/AVD/AVE drive backward locomotion and AVB/PVC forward; the touch circuit
+    reaches the body only through them, so they are where a response has to appear
+    if the pathway works at all.
+    """
+    groups = {
+        "AVA": ("AVAL", "AVAR"),
+        "AVB": ("AVBL", "AVBR"),
+        "AVD": ("AVDL", "AVDR"),
+        "PVC": ("PVCL", "PVCR"),
+    }
+    out: dict[str, float] = {}
+    for name, cells in groups.items():
+        present = [c for c in cells if c in runtime.network.cell_ids]
+        if present:
+            out[name] = float(np.mean([runtime.voltage(c) for c in present]))
+    return out
+
+
+def _drive_poke(
+    probe: RigidPrim, links: RigidPrim, plan: BodyPlan, t: float, poke: list[float]
+) -> None:
+    """Move the probe onto the body between two times, then take it away.
+
+    The scripted equivalent of dragging with the mouse. It exists so a touch
+    experiment is reproducible and can be asserted in a test: an interactive demo
+    that cannot be re-run identically is not evidence of anything.
+    """
+    start, stop, fraction = poke[0], poke[1], poke[2]
+    positions = np.asarray(links.get_world_poses()[0])[:, :3]
+    segment = int(np.clip(round(fraction * (plan.n_segments - 1)), 0, plan.n_segments - 1))
+
+    if start <= t <= stop:
+        # Placed against the *surface*, not the centre.
+        #
+        # Teleporting a collider to positions[segment] puts the sphere entirely
+        # inside the animal. PhysX resolves that interpenetration explosively, the
+        # body flails, and the failure then surfaces somewhere else entirely: joint
+        # angles go wild, proprioception carries them into the network, and the
+        # neural runtime reports a divergence that looks like a neuroscience
+        # problem. It is not; it is a spawn position.
+        axis = np.gradient(positions[:, :2], axis=0)[segment]
+        norm = np.linalg.norm(axis)
+        normal = np.array([-axis[1], axis[0]]) / norm if norm > 1e-12 else np.array([0.0, 1.0])
+        # Just far enough in to register as a firm touch, not far enough to shove.
+        reach = plan.segments()[segment].radius_m + DEFAULT_PROBE_RADIUS_SCALE * plan.max_radius_m
+        target = positions[segment].copy()
+        target[:2] += normal * reach * 0.82
+    else:
+        # Parked well clear of the animal, where it contacts nothing.
+        target = positions.mean(axis=0) + np.array([0.0, 0.5 * plan.total_length_m, 0.0])
+    if not np.all(np.isfinite(target)):
+        return  # the body has already diverged; do not feed PhysX a NaN pose
+    # Orientation is passed explicitly: PhysX rejects a pose whose quaternion it
+    # cannot read, and an omitted one is not necessarily identity.
+    probe.set_world_poses(
+        positions=np.asarray(target, dtype=np.float32).reshape(1, 3),
+        orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
+    )
+
+
+def _probe_contact(
+    probe: RigidPrim, links: RigidPrim, plan: BodyPlan
+) -> tuple[np.ndarray, np.ndarray]:
+    """Which segments the probe is pressing on, and from which side.
+
+    Contact is measured geometrically here rather than read from PhysX contact
+    reports. The probe is kinematic and the worm's shape is known, so sphere-to-
+    capsule overlap is exact, cheap, and -- unlike a contact report -- gives a
+    graded depth we can use as stimulus strength. It also means the sensory signal
+    is computed the same way whether or not the probe is physically pushing.
+
+    The model is planar, so 'ventral' is a side of the body axis rather than a
+    direction in space: the sign of the cross product between the local body axis
+    and the direction to the probe. That distinction only matters for AVM and PVM,
+    the two genuinely ventral receptors.
+    """
+    centre = np.asarray(probe.get_world_poses()[0]).reshape(-1)[:3]
+    positions = np.asarray(links.get_world_poses()[0])[:, :3]
+    seg_radii = np.array([s.radius_m for s in plan.segments()])
+    probe_radius = DEFAULT_PROBE_RADIUS_SCALE * plan.max_radius_m
+
+    delta = positions - centre
+    distance = np.linalg.norm(delta, axis=1)
+    overlap = (seg_radii + probe_radius) - distance
+    # Stimulus strength is how far the body is indented as a fraction of its own
+    # radius, which is the physically meaningful quantity. Dividing by the probe
+    # radius instead makes a firm press with a large probe read as a graze.
+    contact = np.clip(overlap / seg_radii, 0.0, 1.0)
+    contact[overlap <= 0.0] = 0.0
+
+    # Body axis at each segment, from its neighbours.
+    axis = np.gradient(positions[:, :2], axis=0)
+    to_probe = -delta[:, :2]
+    cross = axis[:, 0] * to_probe[:, 1] - axis[:, 1] * to_probe[:, 0]
+    return contact, cross < 0.0
 
 
 # --- controls -----------------------------------------------------------------

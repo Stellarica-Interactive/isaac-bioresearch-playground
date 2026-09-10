@@ -75,6 +75,12 @@ jobs:
       - name: Committed derived data is reproducible
         run: git diff --exit-code -- worm/data/normalized
 
+      # The RMD channel parameters are extracted from the authors' XPPAUT source
+      # rather than retyped. This asserts the committed table still matches that
+      # source, so the model cannot silently drift from the published one.
+      - name: Imported neuron models match their published source
+        run: python tools/import_neuron_model.py --source nicoletti_2019_rmd_awc --out worm/neural/models/rmd_nicoletti2019.toml --check
+
       # Compares our parse against totals published independently of this project.
       - name: Verify every dataset against its published totals
         run: |

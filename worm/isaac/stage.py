@@ -234,6 +234,61 @@ def build_scene(
 DEFAULT_CAMERA_FRAMING = 2.5
 
 
+#: Radius of the interactive probe, in body radii.
+DEFAULT_PROBE_RADIUS_SCALE = 2.0
+
+
+def add_probe(
+    plan: BodyPlan | None = None,
+    *,
+    path: str = "/World/Probe",
+    radius_scale: float = DEFAULT_PROBE_RADIUS_SCALE,
+    offset_body_lengths: float = 0.35,
+) -> str:
+    """A sphere you can drag onto the worm to touch it.
+
+    Made **kinematic**, which is the whole trick. A kinematic rigid body pushes
+    what it collides with but is never pushed back and is never integrated by the
+    solver, so it goes exactly where the viewport gizmo puts it and stays there.
+    A dynamic body would be shoved aside by the worm and would drift, and a body
+    with no collider at all could not press on the animal.
+
+    That also keeps the substrate model honest. :func:`build_scene` runs with no
+    ground and no gravity because :class:`~worm.body.drag.GroundDrag` *is* the
+    substrate, and a second contact surface would corrupt it (see
+    :func:`add_ground_grid`). A probe is a different case: poking a real worm with
+    a wire really does exert a force on it, so contact here is the thing being
+    modelled rather than an artefact. It still only acts while you hold it against
+    the animal.
+
+    Starts to one side, clear of the body, so a run with nobody at the mouse is
+    identical to a run without a probe at all.
+    """
+    import isaacsim.core.experimental.utils.stage as stage_utils
+    from pxr import Gf, UsdGeom, UsdPhysics
+
+    plan = plan or BodyPlan()
+    stage = stage_utils.get_current_stage()
+
+    radius = radius_scale * plan.max_radius_m
+    sphere = UsdGeom.Sphere.Define(stage, path)
+    sphere.CreateRadiusAttr().Set(float(radius))
+    sphere.AddTranslateOp().Set(
+        Gf.Vec3d(
+            float(0.5 * plan.total_length_m),
+            float(offset_body_lengths * plan.total_length_m),
+            0.0,
+        )
+    )
+    sphere.CreateDisplayColorAttr().Set([Gf.Vec3f(0.85, 0.30, 0.25)])
+
+    prim = sphere.GetPrim()
+    UsdPhysics.CollisionAPI.Apply(prim)
+    body = UsdPhysics.RigidBodyAPI.Apply(prim)
+    body.CreateKinematicEnabledAttr().Set(True)
+    return path
+
+
 def add_ground_grid(
     plan: BodyPlan | None = None,
     *,

@@ -100,6 +100,13 @@ KNOWN_CROSSREF_ERRATA: dict[str, dict[str, str]] = {
             "which is 1997. We keep 1997."
         ),
     },
+    "10.1038/nn1362": {
+        "year": (
+            "Nature Neuroscience volume 8 issue 1 is January 2005, and the article "
+            "is universally cited as 2005. CrossRef records 2004-12-05, the advance "
+            "online publication date. We keep 2005."
+        ),
+    },
     "10.1038/nature04538": {
         "authors missing from our citation": (
             "CrossRef records the last author's family name as 'Shawn Xu'; the "
@@ -238,10 +245,12 @@ def compare(citation: Citation, record: dict) -> list[Mismatch]:
     title = " ".join(record.get("title", []) + record.get("container-title", []))
     allowed = {_fold(w) for w in re.findall(r"[A-Za-zÀ-ž']+", title)}
     for name in registered:
-        # A hyphenated surname such as Ripoll-Sánchez must match both as a whole
-        # and as its parts, since our text may be tokenised either way.
+        # A surname such as Ripoll-Sánchez or O'Hagan must match both as a whole
+        # and as its parts, since our text may be tokenised either way. Apostrophes
+        # matter as much as hyphens: the surname-token scan below reads "O'Hagan"
+        # as "Hagan", which without this would be reported as an invented author.
         allowed.add(_fold(name))
-        allowed.update(_fold(part) for part in re.split(r"[-\s]+", name) if part)
+        allowed.update(_fold(part) for part in re.split(r"[-\s'’]+", name) if part)
     allowed |= _STOPWORDS
     author_part = citation.text.split(".")[0] if "." in citation.text else citation.text
     suspicious = [
