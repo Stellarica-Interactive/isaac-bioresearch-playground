@@ -550,7 +550,9 @@ Options, none yet taken:
    circuit is in Cook 2019. If SMD/RMD can oscillate under our own neuron model,
    the rhythm would come from measured wiring rather than from us. This is the
    only option that keeps the project's central claim intact, and it should be
-   tried first.
+   tried first. **Tried, and refuted: see §5C.9. The model has no limit cycle
+   anywhere under any drive, because the graded leaky integrator cannot produce
+   one. §5C.9 gives the replacement.**
 2. **Check the D-type inhibitory contribution.** DD and VD are GABAergic and
    inhibit contralateral muscle; that cross-inhibition is in the connectome and
    signed by measured physiology (§6.1b). Whether it currently reaches the muscles
@@ -651,6 +653,123 @@ Without the command drive, noise alone drives the body into a ball: extent 0.04
 with every joint pinned against its limit. Uncoordinated activation plus a
 saturating muscle model coils the animal, which is at least the right failure
 mode — an uncoordinated worm does coil.
+
+### 5C.8 What is actually bending the body
+
+§5C.6 ruled out both the feedback loop and the B-type motor neurons, which left
+the question open. Answering it needs no simulator: hold AVB depolarised, let the
+network settle, and ask how much signed drive each presynaptic class delivers to
+dorsal versus ventral body wall muscle.
+
+| class | dorsal | ventral | D−V |
+|---|---|---|---|
+| VB | 0.0 | 55.8 | −55.8 |
+| VD (GABA, inhibitory) | −0.4 | −48.5 | **+48.1** |
+| DA | 43.8 | 0.0 | +43.8 |
+| VA | 0.0 | 39.5 | **−39.5** |
+| DD (GABA, inhibitory) | −33.2 | −0.2 | −33.0 |
+| DB | 28.3 | 0.0 | **+28.3** |
+| SMD | 16.7 | 43.0 | −26.3 |
+| SIB | 8.5 | 30.6 | −22.1 |
+| AS | 21.4 | 0.0 | +21.4 |
+| SMB | 29.9 | 16.2 | +13.7 |
+
+Each excitatory class is very nearly offset by its antagonist or by its GABAergic
+partner, and the residual after all of them sums to about **−18.5**: a ventral
+bias. It appears in the muscle drive as 19 of 24 segments biased ventral, peaking
+at only 0.0078 around segments 16–20.
+
+**So the posture is the residual of imperfect cancellation between antagonist
+motor classes under a uniform drive.** That explains the control results directly.
+Ablating DB and VB does not abolish the bend because it removes one pair from a
+stack of imperfectly cancelling pairs and leaves the others; it can make the
+imbalance *larger*, which is what was measured (56.2° against 43.7°).
+
+Nothing here is recruiting anything differentially in time, which is consistent
+with there being no wave: the bend is a **static anatomical imbalance in synapse
+counts**, not a computation.
+
+A hypothesis tested and rejected on the way: that the network had become
+effectively isopotential, with gap-junction coupling (`g_gap` 100 pS per unit
+weight) swamping the leak (`g_leak` 10 pS) so that AVB drive spread uniformly.
+Sweeping `g_gap` over two decades refutes it — the spread of class-mean activation
+*falls* as gap coupling is reduced, from 0.0185 at 100 pS to 0.0100 at 1 pS, so
+electrical coupling is creating what differentiation exists rather than erasing
+it. The hypothesis came from misreading a table of per-class **maxima** as if it
+described typical cells. Recorded because it is the same error as the `travel`
+metric in §5C.4: a summary statistic that answered a different question than the
+one being asked.
+
+One lead this does hand us. **SMD, SIB, SMB, SIA and RMD all innervate body wall
+muscle directly** and appear in the table above. Those are head motor neurons, the
+oscillator candidates of §5C.5 option 1, and they are already in our network and
+already reaching the body.
+
+### 5C.9 The network cannot oscillate at all, and that is a property of the neuron model
+
+Option 1 of §5C.5 asked whether the head motor circuit could supply the rhythm
+from measured wiring. It cannot, and the reason turns out to have nothing to do
+with the head.
+
+Forty head motor and premotor cells (SMD, RMD, SMB, SIA, SIB, RIA, RIB, RIM, RME,
+OLQ, URY) were driven directly, the initial transient allowed to decay for 2 s,
+and membrane potential then recorded for 20 s. Sustained variation:
+
+| drive | max sustained sd |
+|---|---|
+| none | 3.6×10⁻¹⁵ mV |
+| AVB 500 pA | 9.7×10⁻⁷ mV |
+| AVB 2000 pA | 1.9×10⁻⁶ mV |
+| RIA 500 pA | 7.2×10⁻⁶ mV |
+| SMD 500 pA | 8.3×10⁻⁶ mV |
+| SMD+RMD 2000 pA | 4.4×10⁻⁵ mV |
+
+These are floating-point residue, not rhythms — 4×10⁻⁵ mV against a working range
+of tens of millivolts. (The "dominant frequency" such a signal reports is just the
+lowest non-zero FFT bin, an artefact of the record length rather than a period.)
+
+**So the model has no limit cycle anywhere, under any drive tried.** It is a pure
+relaxation system: every input drives it to a fixed point and it stays there. That
+is a property of the *neuron model*, not of the connectome, and it explains every
+earlier result at once — the exact symmetry of §5C.2, the latching bend of §5C.4,
+and the wriggle-without-wave under noise in §5C.7. Nothing was ever going to
+oscillate.
+
+This is a consequence of choices already recorded, not a new surprise. The graded
+leaky integrator of §6.2 has one first-order membrane equation and one first-order
+synaptic activation per cell, no voltage-gated currents, and no calcium dynamics.
+A loop of such elements oscillates only with enough gain and phase lag around an
+inhibitory path, and at `g_syn` 100 pS with a sigmoid slope of `beta/4` ≈ 0.03 per
+mV, the loop gain is far below what that needs.
+
+**Option 1 is therefore refuted as stated, but it points at its own replacement.**
+§5 already records three measured exceptions to "all *C. elegans* neurons are
+graded", and one of them is precisely the cell in question:
+
+| | | |
+|---|---|---|
+| Ca²⁺ action potentials | AWA | Liu et al. 2018 |
+| **Plateau potentials** | **RMD** | reviewed in Lockery & Goodman 2009 |
+| Compound action potentials | AVL | Jiang et al. 2022 |
+
+RMD is a head motor neuron that innervates body wall muscle directly (§5C.8), it
+has bistable plateau potentials in the real animal, and Nicoletti et al. 2019
+provide a conductance-based model of RMD specifically. Bistability plus synaptic
+delay is the classic ingredient our model lacks.
+
+So the revised option 1 is: **give the specific cells whose intrinsic currents
+have actually been measured their measured dynamics**, rather than adding an
+oscillator of our own. That is importing published physiology for named cells, not
+inventing a central pattern generator, and it keeps the rhythm attributable to
+biology. It is a substantial piece of work — a second neuron model coexisting with
+the graded one, per-cell model assignment, and its own parameter provenance — and
+it should not be started without deciding how far the conductance-based
+parameterisation may be extrapolated beyond the two cells (AWC^on and RMD) where
+it is characterised. §6.2 already flags that extrapolation as the reason Option C
+was not chosen wholesale.
+
+The cheaper alternative remains §5C.5 option 4, an externally supplied head
+oscillation, and it remains the one that most weakens the claim.
 
 ## 6. Decisions taken, and what remains open
 

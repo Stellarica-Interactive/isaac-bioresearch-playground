@@ -207,3 +207,52 @@ license = "See wormatlas.org terms; groupings from Cook et al. 2019 (Nature, sub
 citation = "WormAtlas cell listings (wormatlas.org/NeuronNames.htm), with cell groupings from Cook SJ, Jarrell TA, Brittin CA, et al. Whole-animal connectomes of both Caenorhabditis elegans sexes. Nature 571:63-71 (2019). Compiled by the OpenWorm C. elegans Connectome Toolbox."
 doi = "10.1038/s41586-019-1352-7"
 mirror_note = "Derived tables live in worm/data/cells.csv and worm/data/annotations/sim_roles.csv."
+
+# ---------------------------------------------------------------------------
+# Nicoletti et al. - conductance-based models of individual neurons
+# ---------------------------------------------------------------------------
+# These are not connectomes. They are Hodgkin-Huxley style models of a handful of
+# SPECIFIC named cells, fitted to voltage-clamp recordings of C. elegans channels
+# (or homologues where no worm recording exists). They matter because our graded
+# leaky integrator has no intrinsic currents and therefore cannot oscillate at all
+# (docs/model_assumptions.md 5C.9), and these are the only published sources of
+# measured intrinsic dynamics for cells in our network.
+#
+# IMPORTANT: the 2019 paper carries a published Correction. A plus sign is missing
+# from a Boltzmann denominator in the Methods, and supplementary equations A1, A6,
+# A10, A15, A22, A25, A28, B1, B3, B6, B11 and B13 are wrong as printed. The
+# authors' own XPPAUT source does not have these errors -- it is the code they
+# actually ran -- so the CODE is our source of truth and the corrected paper is the
+# cross-check. Never transcribe these equations from the original PDF.
+
+[nicoletti_2019_rmd_awc]
+kind = "neuron_model"
+url = "https://raw.githubusercontent.com/ModelDBRepository/267187/master/RMD.ode"
+filename = "RMD.ode"
+sha256 = "b977f208ad21a449cd1f3049973e0791a95f565ab3d3a623075817d1b0ac9f87"
+license = "ModelDB entry 267187; no licence file is supplied with the code. We do not redistribute it. Parameters are re-derived into our own implementation and cited; the paper itself is CC-BY 4.0 (PLOS ONE)."
+citation = "Nicoletti M, Loppini A, Chiodo L, Folli V, Ruocco G, Filippi S. Biophysical modeling of C. elegans neurons: Single ion currents and whole-cell dynamics of AWCon and RMD. PLoS ONE 14(7):e0218738 (2019)."
+doi = "10.1371/journal.pone.0218738"
+correction_doi = "10.1371/journal.pone.0256930"
+mirror_note = "XPPAUT source from ModelDB 267187 (github.com/ModelDBRepository/267187). RMD is a head motor neuron with plateau potentials that innervates body wall muscle directly. 22 state variables, 10 channel types (SHL-1, SHK-1, EGL-36, IRK, UNC-2, EGL-19, CCA-1, SLO-1, SLO-2, KCNL), calcium nanodomains, C=1.2 pF, g_leak=0.4 nS. Units are mV/nS/pF/pA, matching our runtime."
+
+[nicoletti_2019_awc]
+kind = "neuron_model"
+url = "https://raw.githubusercontent.com/ModelDBRepository/267187/master/AWC.ode"
+filename = "AWC.ode"
+sha256 = "6b391d3560bdfcce9e32b59e74e8a066a1f7f7c9ab8b41a8683e3c49d877ad2e"
+license = "ModelDB entry 267187; see nicoletti_2019_rmd_awc."
+citation = "Nicoletti M, Loppini A, Chiodo L, Folli V, Ruocco G, Filippi S. Biophysical modeling of C. elegans neurons: Single ion currents and whole-cell dynamics of AWCon and RMD. PLoS ONE 14(7):e0218738 (2019)."
+doi = "10.1371/journal.pone.0218738"
+correction_doi = "10.1371/journal.pone.0256930"
+mirror_note = "AWC-on, a chemosensory neuron. Not needed for locomotion; recorded here because it is the other half of the same model and will matter for chemotaxis (W3)."
+
+[nicoletti_2024_motor_interneurons]
+kind = "neuron_model"
+url = "https://github.com/martinanicoletti92/CelegansInterMotorNeuronsModels"
+filename = ""
+sha256 = ""
+license = "Paper is CC-BY 4.0 (PLOS ONE). Code repository licence not yet verified -- CHECK BEFORE USE."
+citation = "Nicoletti M, Chiodo L, Loppini A, Liu Q, Folli V, Ruocco G, Filippi S. Biophysical modeling of the whole-cell dynamics of C. elegans motor and interneurons families. PLoS ONE 19(3):e0298105 (2024)."
+doi = "10.1371/journal.pone.0298105"
+mirror_note = "Conductance-based models of AVA, AIY, RIM, and the motor neurons VA5, VB6 and VD5. NEURON + Python. VB6 is one of the B-type cells our proprioceptive loop targets. NOT YET IMPORTED: the per-cell scope question (does VB6 stand for every VB?) is unresolved -- see docs/model_assumptions.md."

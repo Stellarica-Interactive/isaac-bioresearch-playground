@@ -166,12 +166,54 @@ long-timescale transients encoded by network structure in a model of *C. elegans
 connectome dynamics.** *Frontiers in Computational Neuroscience* 11:53 (2017).
 doi:[10.3389/fncom.2017.00053](https://doi.org/10.3389/fncom.2017.00053)
 
+### `nicoletti_2019_rmd_awc` / `nicoletti_2019_awc`
+
 **Nicoletti M, Loppini A, Chiodo L, Folli V, Ruocco G, Filippi S. Biophysical
 modeling of *C. elegans* neurons: single ion currents and whole-cell dynamics of
 AWC^on and RMD.** *PLOS ONE* 14:e0218738 (2019).
 doi:[10.1371/journal.pone.0218738](https://doi.org/10.1371/journal.pone.0218738)
-Conductance-based models — the most faithful option, and characterized for only
-two neuron types.
+
+Conductance-based models of two named cells — the most faithful option available,
+and characterized for only two neuron types. **RMD** is the one that matters for
+locomotion: a head motor neuron innervating body wall muscle directly (§5C.8) with
+plateau potentials in the real animal. 22 state variables, ten channel types
+(SHL-1, SHK-1, EGL-36, IRK, UNC-2, EGL-19, CCA-1, SLO-1, SLO-2, KCNL), calcium
+nanodomains, `C = 1.2 pF`, `g_leak = 0.4 nS`. Units are mV/nS/pF/pA, which is
+already our runtime's convention.
+
+**Read the Correction before transcribing anything from the original paper.**
+
+> **Nicoletti M, Loppini A, Chiodo L, Folli V, Ruocco G, Filippi S. Correction:
+> Biophysical modeling of *C. elegans* neurons: Single ion currents and whole-cell
+> dynamics of AWCon and RMD.** *PLOS ONE* 16:e0256930 (2021).
+> doi:[10.1371/journal.pone.0256930](https://doi.org/10.1371/journal.pone.0256930)
+>
+> A plus sign is missing from a Boltzmann denominator in the Methods, and
+> supplementary equations A1, A6, A10, A15, A22, A25, A28, B1, B3, B6, B11 and
+> B13 are wrong as printed. The authors' own XPPAUT source is free of these errors
+> — it is the code they ran — so **the code is the source of truth and the
+> corrected paper is the cross-check.**
+
+- Code: ModelDB [267187](https://modeldb.science/267187), mirrored at
+  [github.com/ModelDBRepository/267187](https://github.com/ModelDBRepository/267187).
+  No licence file accompanies it, so we do not redistribute it; parameters are
+  re-derived into our own implementation and cited. The paper itself is CC-BY 4.0.
+
+### `nicoletti_2024_motor_interneurons`
+
+**Nicoletti M, Chiodo L, Loppini A, Liu Q, Folli V, Ruocco G, Filippi S.
+Biophysical modeling of the whole-cell dynamics of *C. elegans* motor and
+interneurons families.** *PLOS ONE* 19:e0298105 (2024).
+doi:[10.1371/journal.pone.0298105](https://doi.org/10.1371/journal.pone.0298105)
+
+Conductance-based models of AVA, AIY, RIM and the motor neurons **VA5, VB6 and
+VD5** — VB6 being one of the B-type cells our proprioceptive loop targets. Code in
+NEURON + Python at
+[github.com/martinanicoletti92/CelegansInterMotorNeuronsModels](https://github.com/martinanicoletti92/CelegansInterMotorNeuronsModels).
+
+**Not yet imported.** The unresolved question is scope: these are models of *named
+individual cells*, and whether VB6's parameters may stand for VB1–VB11 is a
+modelling decision the paper does not license. Repository licence not yet verified.
 
 ---
 
