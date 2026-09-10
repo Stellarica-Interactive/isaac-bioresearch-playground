@@ -803,6 +803,41 @@ PVC most, and PVC is the forward command driven by posterior touch.
 But the magnitudes are a few tenths of a millivolt, and the control below shows
 this is much weaker evidence than it first appeared.
 
+### 5D.1b It is real, and it is undetectable in a single run
+
+The table above compares each command group against its own value at the moment of
+contact. That is not a measurement of the touch: it is a measurement of the touch
+*plus whatever the network was doing anyway*, and the body is bending and moving
+throughout. Controlling for it properly changes the conclusion twice over.
+
+**A sham window -- the identical readout over a stretch with no contact at all --
+reports a larger swing than a real touch does.** Without noise, AVB moves 2.19 mV
+on its own against 0.31 mV attributable to a touch. With `--noise-pa 20`, a sham
+window reports AVA -10.01, AVB -21.20, AVD -22.40 mV and 215% muscle drive, and a
+real touch reports -9.88, -21.37, -21.65 and 216%. The two are indistinguishable
+because the touch contributes essentially nothing to either.
+
+The readout used to print "(AVA up + AVB down = reversal)" over exactly that noise.
+It now computes the same statistic over an equal window ending at the moment of
+contact and prints it alongside, refusing the verdict unless the response clears
+twice its own background. **A tool that cannot report "this is not a response" will
+eventually report that noise is one.**
+
+**But the pathway is real.** Isolated from the body -- two identical networks, same
+settling, same command drive, the touch as the only difference -- it is small,
+reproducible and correctly directed:
+
+| paired comparison, no body | AVA | AVB | AVD | PVC |
+|---|---|---|---|---|
+| head touch | **+0.089 mV** | **-0.261 mV** | +0.631 | +0.169 |
+| tail touch | +0.211 mV | -0.048 mV | +0.309 | **+0.428 mV** |
+
+Head touch raises the backward command and lowers the forward one; tail touch moves
+PVC most. So the reflex arc works, at about a quarter of a millivolt, and the body
+perturbs the same cells by ten times that much simply by moving. Both facts are the
+result. Neither is visible in the viewport, which is the honest answer to "why can
+I not see anything when I press on it".
+
 ### 5D.2 The control fails: this does not depend on synaptic sign
 
 Shuffling synaptic signs at random while keeping every synapse in place

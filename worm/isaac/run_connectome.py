@@ -114,6 +114,13 @@ parser.add_argument(
 )
 parser.add_argument("--touch-current", type=float, default=None, help="pA per contact")
 parser.add_argument(
+    "--sham",
+    default="",
+    help="START:STOP -- measure the readout over a window with NO touch at all. "
+    "The control for the touch readout: whatever this reports is what the body's "
+    "own ongoing motion contributes, and a real touch has to beat it.",
+)
+parser.add_argument(
     "--probe-pushes",
     action="store_true",
     help="give the probe a collider so it physically shoves the worm. Off by "
@@ -331,6 +338,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     if not args.no_grid:
         add_ground_grid(plan)
     poke = [float(x) for x in args.poke.split(":")] if args.poke else None
+    sham = [float(x) for x in args.sham.split(":")] if args.sham else None
     probe_path = add_probe(plan, collider=args.probe_pushes) if (args.probe or poke) else None
     probe = RigidPrim(probe_path) if probe_path else None
     tint = ActivityTint.build(plan.n_segments, probe_path=probe_path) if not args.no_tint else None
@@ -353,6 +361,11 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
     start = _centroid(links)
     touching = False
+    # Rolling history, so a touch is always reported against what the network was
+    # doing anyway. Without this the readout cannot tell a response from noise --
+    # and with --noise-pa on it reported pure noise as a reversal.
+    command_history: list[tuple[float, dict[str, float]]] = []
+    contact_started_at = 0.0
     drive_reference: np.ndarray | None = None
     drive_at_contact: np.ndarray | None = None
     peak: dict[str, float] = {}
@@ -372,7 +385,32 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         runtime.inject_many(command)
         if not args.no_proprioception:
             runtime.inject_many(proprio.currents(angles))
-        if probe is not None:
+        if sham is not None:
+            # Same statistic, no stimulus. Anything it reports is confound.
+            if sham[0] <= t <= sham[1]:
+                if not touching:
+                    baseline = _command_state(runtime)
+                    drive_at_contact = (
+                        muscle_model.dorsal_activation() - muscle_model.ventral_activation()
+                    )
+                    print(f"    t={t:5.1f}s  SHAM window opens (no touch)")
+                touching = True
+                peak = {
+                    k: max(peak.get(k, 0.0), v - baseline[k], key=abs)
+                    for k, v in _command_state(runtime).items()
+                }
+            elif touching:
+                now = muscle_model.dorsal_activation() - muscle_model.ventral_activation()
+                assert drive_at_contact is not None
+                shift = float(np.abs(now - drive_at_contact).max())
+                rest = max(float(np.abs(drive_at_contact).max()), 1e-12)
+                print(
+                    f"    t={t:5.1f}s  SHAM closes  -> "
+                    + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(peak.items()))
+                    + f"; muscle drive moved {100 * shift / rest:.1f}%"
+                )
+                touching, peak = False, {}
+        elif probe is not None:
             if poke is not None:
                 _drive_poke(probe, links, plan, t, poke)
             contact, ventral = _probe_contact(probe, links, plan)
@@ -382,6 +420,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 if not touching:
                     hit = np.flatnonzero(contact)
                     baseline = _command_state(runtime)
+                    contact_started_at = t
                     drive_at_contact = (
                         muscle_model.dorsal_activation() - muscle_model.ventral_activation()
                     )
@@ -406,15 +445,19 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                     shift = float(np.abs(now - drive_at_contact).max())
                     rest = max(float(np.abs(drive_at_contact).max()), 1e-12)
                     muscle_note = f"; muscle drive moved {100 * shift / rest:.1f}%"
+                background = _background_swing(
+                    command_history, contact_started_at, t - contact_started_at
+                )
+                verdict = _verdict(peak, background)
                 print(
                     f"    t={t:5.1f}s  released -> "
                     + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(peak.items()))
                     + muscle_note
-                    + (
-                        "   (AVA up + AVB down = reversal)"
-                        if peak.get("AVA", 0) > 0 > peak.get("AVB", 0)
-                        else ""
-                    )
+                )
+                print(
+                    "                 background over an equal window with no touch: "
+                    + ", ".join(f"{k} {v:.2f}mV" for k, v in sorted(background.items()))
+                    + f"   -> {verdict}"
                 )
                 touching, peak = False, {}
 
@@ -436,6 +479,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
         # --- nervous system -> body -------------------------------------
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
+        command_history.append((t, _command_state(runtime)))
+        if len(command_history) > 2400:  # ten seconds at 240 Hz
+            command_history.pop(0)
         drive_now = muscle_model.dorsal_activation() - muscle_model.ventral_activation()
         if drive_reference is None and t > 1.0:
             drive_reference = drive_now.copy()
@@ -460,6 +506,40 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             _report(t, start, links, plan, angles, history)
 
     _report(args.seconds, start, links, plan, angles, history, final=True)
+
+
+def _background_swing(
+    history: list[tuple[float, dict[str, float]]], contact_at: float, duration: float
+) -> dict[str, float]:
+    """How much each command group moved on its own, just before the touch.
+
+    Every touch needs its own control, because "how much did AVB change while I was
+    pressing" is not a measurement of the touch -- it is a measurement of the touch
+    plus whatever the network was already doing. With ``--noise-pa`` on, the second
+    term dominates completely: a sham window with no contact at all reports the same
+    -21 mV swing as a real touch does.
+
+    So the same statistic is computed over an equal-length window ending at the
+    moment of contact, and printed beside the response. A response that does not
+    exceed its own background is not a response.
+    """
+    window = [s for time, s in history if contact_at - duration <= time < contact_at]
+    if len(window) < 2:
+        return {}
+    keys = window[0].keys()
+    return {k: float(max(abs(s[k] - window[0][k]) for s in window)) for k in keys}
+
+
+def _verdict(peak: dict[str, float], background: dict[str, float]) -> str:
+    """Whether the response is distinguishable from the network's own fluctuation."""
+    if not background:
+        return "no background window yet"
+    clears = {k: abs(v) for k, v in peak.items() if abs(v) > 2.0 * background.get(k, 0.0)}
+    if not clears:
+        return "INDISTINGUISHABLE FROM BACKGROUND -- this is not a touch response"
+    reversal = peak.get("AVA", 0.0) > 0 > peak.get("AVB", 0.0)
+    tag = "; AVA up + AVB down = reversal" if reversal else ""
+    return f"clears background: {', '.join(sorted(clears))}{tag}"
 
 
 def _command_state(runtime: NeuralRuntime) -> dict[str, float]:
