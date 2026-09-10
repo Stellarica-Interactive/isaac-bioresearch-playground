@@ -122,6 +122,12 @@ parser.add_argument(
     "headless and put in a test.",
 )
 parser.add_argument(
+    "--no-tint",
+    action="store_true",
+    help="stop colouring the body by muscle activation. Display only -- the tint "
+    "changes no number a run reports.",
+)
+parser.add_argument(
     "--no-grid",
     action="store_true",
     help="hide the checkerboard. It is scenery with no collider, so this changes "
@@ -159,6 +165,7 @@ from worm.body.touch import TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
     DEFAULT_PROBE_RADIUS_SCALE,
+    ActivityTint,
     add_camera,
     add_ground_grid,
     add_probe,
@@ -308,7 +315,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     if not args.no_grid:
         add_ground_grid(plan)
     poke = [float(x) for x in args.poke.split(":")] if args.poke else None
-    probe = RigidPrim(add_probe(plan)) if (args.probe or poke) else None
+    probe_path = add_probe(plan) if (args.probe or poke) else None
+    probe = RigidPrim(probe_path) if probe_path else None
+    tint = ActivityTint.build(plan.n_segments, probe_path=probe_path) if not args.no_tint else None
     SimulationManager.set_physics_dt(dt)
     masses = plan.masses_kg()
     articulation = Articulation(root_path)
@@ -399,6 +408,11 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
         # --- nervous system -> body -------------------------------------
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
+        if tint is not None and len(history) % 6 == 0:
+            tint.update(
+                muscle_model.dorsal_activation() - muscle_model.ventral_activation(),
+                touching=touching,
+            )
         articulation.set_dof_efforts(muscle_model.joint_torques().reshape(1, -1), dof_indices=dofs)
         _apply_drag(links, drag, dt, masses)
 

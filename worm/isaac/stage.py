@@ -25,6 +25,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 from worm.body.geometry import BodyPlan
 
 if TYPE_CHECKING:  # pragma: no cover - only available inside Isaac Sim
@@ -236,6 +238,83 @@ DEFAULT_CAMERA_FRAMING = 2.5
 
 #: Radius of the interactive probe, in body radii.
 DEFAULT_PROBE_RADIUS_SCALE = 2.0
+
+
+@dataclass
+class ActivityTint:
+    """Paints the neural state onto the body, so it can be seen at all.
+
+    Everything this project computes about the nervous system is invisible in the
+    viewport. Muscle activation, a touch arriving, a command interneuron shifting
+    by a few millivolts -- none of it changes the picture, because the only thing
+    on screen is a chain of grey capsules whose motion is dominated by whatever the
+    mechanics are doing. Watching an experiment therefore tells you nothing, which
+    is how you end up dragging a probe onto the animal and concluding that nothing
+    happened when in fact the whole circuit responded.
+
+    So: each segment is tinted by what its muscles are being told to do, and the
+    probe lights up when it is actually registering a contact rather than merely
+    intersecting something.
+
+    This is display only. It sets ``primvars:displayColor`` and touches no physics
+    state, so a run looks different and measures identically.
+    """
+
+    segment_prims: list[Any]
+    probe_prim: Any = None
+
+    #: Contracting dorsal, contracting ventral, and neutral.
+    dorsal_colour: tuple[float, float, float] = (0.95, 0.45, 0.20)
+    ventral_colour: tuple[float, float, float] = (0.25, 0.55, 0.95)
+    neutral_colour: tuple[float, float, float] = (0.55, 0.55, 0.58)
+    touch_colour: tuple[float, float, float] = (0.20, 0.95, 0.35)
+    probe_colour: tuple[float, float, float] = (0.85, 0.30, 0.25)
+
+    @classmethod
+    def build(
+        cls,
+        n_segments: int,
+        *,
+        root_path: str = DEFAULT_ROOT,
+        probe_path: str | None = None,
+    ) -> ActivityTint:
+        import isaacsim.core.experimental.utils.stage as stage_utils
+        from pxr import UsdGeom
+
+        stage = stage_utils.get_current_stage()
+        segments = [
+            UsdGeom.Gprim(stage.GetPrimAtPath(f"{root_path}/segment_{i:02d}"))
+            for i in range(n_segments)
+        ]
+        probe = UsdGeom.Gprim(stage.GetPrimAtPath(probe_path)) if probe_path else None
+        return cls(segment_prims=segments, probe_prim=probe)
+
+    def update(self, net_activation: np.ndarray, *, touching: bool = False) -> None:
+        """``net_activation`` is dorsal minus ventral per segment.
+
+        Scaled by the largest magnitude present rather than an absolute range,
+        because the connectome's antagonist difference is around 5e-3 while a
+        scripted wave spans 1.0 -- a fixed scale would render one of them invisible.
+        """
+        from pxr import Gf, Vt
+
+        net = np.asarray(net_activation, dtype=np.float64)
+        scale = float(np.abs(net).max())
+        strength = net / scale if scale > 1e-12 else np.zeros_like(net)
+
+        for prim, value in zip(self.segment_prims, strength, strict=False):
+            if prim is None or not prim.GetPrim().IsValid():
+                continue
+            target = self.dorsal_colour if value >= 0.0 else self.ventral_colour
+            blend = abs(float(value))
+            colour = Gf.Vec3f(
+                *(n + (t - n) * blend for n, t in zip(self.neutral_colour, target, strict=True))
+            )
+            prim.CreateDisplayColorAttr().Set(Vt.Vec3fArray([colour]))
+
+        if self.probe_prim is not None and self.probe_prim.GetPrim().IsValid():
+            colour = self.touch_colour if touching else self.probe_colour
+            self.probe_prim.CreateDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(*colour)]))
 
 
 def add_probe(
