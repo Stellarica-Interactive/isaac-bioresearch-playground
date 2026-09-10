@@ -552,7 +552,10 @@ Options, none yet taken:
    only option that keeps the project's central claim intact, and it should be
    tried first. **Tried, and refuted: see §5C.9. The model has no limit cycle
    anywhere under any drive, because the graded leaky integrator cannot produce
-   one. §5C.9 gives the replacement.**
+   one. §5C.9 gives the replacement, and §5F reports what happened when it was
+   built: RMD now runs on its measured biophysics inside the network, and the
+   network still cannot oscillate, because the assumed parameters hold the
+   measured cell permanently switched on.**
 2. **Check the D-type inhibitory contribution.** DD and VD are GABAergic and
    inhibit contralateral muscle; that cross-inhibition is in the connectome and
    signed by measured physiology (§6.1b). Whether it currently reaches the muscles
@@ -1029,6 +1032,99 @@ entirely electrically.
 smaller network. They have not been recomputed except where stated, because the
 conclusions they support are unchanged: the model cannot oscillate, and the touch
 response does not depend on sign.
+
+## 5F. RMD in the network: the blocker is not the neuron model
+
+§5C.9 showed the graded model has no limit cycle anywhere, and §5C.5 concluded
+that the way forward was to give the few cells with measured intrinsic dynamics
+those dynamics. `common/neural/hybrid.py` does that: six RMD cells run the
+Nicoletti conductance model inside the otherwise-graded 397-cell network.
+
+It works, it is stable, and **the network still does not oscillate.** The reason
+is worth more than a rhythm would have been.
+
+### 5F.1 What the measured cell reveals about the assumed network
+
+| | |
+|---|---|
+| RMD resting potential, measured (Nicoletti 2019) | **−69.5 mV** |
+| graded network resting potential, median | **−13.1 mV** |
+| current this mismatch drives into each RMD cell | **112 – 301 pA** |
+| for scale: AVB command drive / a touch | 500 pA (two cells) / 20 pA |
+
+Connecting one measured cell to the assumed network is a calibration experiment we
+had not previously been able to run, and the assumed network fails it by about
+50 mV. The mismatch is not a detail: it delivers more current into RMD than the
+command drive that makes the animal move.
+
+**It is not the leak parameter.** Sweeping `e_leak` from −35 to −80 mV moves the
+network's resting potential only from −13.1 to −21.3 mV, because with `g_syn`
+(100 pS) ten times `g_leak` (10 pS) the operating point is set by the synaptic
+reversal potentials, not by leak. Raising `g_leak` a hundredfold to 1 nS reaches
+−58 mV and is still 11 mV short. The depolarised operating point is a structural
+consequence of the assumed `g_syn`/`g_leak` ratio, and both numbers are ASSUMED
+(§5A).
+
+### 5F.2 Why that abolishes the bistability
+
+RMD's plateau is only bistable near its own resting potential:
+
+| standing bias | sits at | after a depolarising pulse | after a hyperpolarising pulse | bistable |
+|---|---|---|---|---|
+| 0 pA | −69.5 mV | −46.6 mV | −69.5 mV | **yes** |
+| 2 pA | −65.0 mV | −45.5 mV | −65.1 mV | **yes** |
+| 4 pA | −44.3 mV | −44.3 mV | −44.3 mV | no |
+| 20 pA | −23.7 mV | −23.7 mV | −23.7 mV | no |
+| 40 pA | +9.1 mV | +10.5 mV | +11.3 mV | no |
+
+The two stable states survive a bias of about 4 pA. Our network supplies between
+112 and 301 pA, holding RMD at −22 mV — far up its plateau, saturated on, with no
+second state left to switch to. Embedded, it measures a sustained variation of
+1.7e-4 mV with a single mean-crossing over four seconds under every drive tried,
+which is drift, not rhythm.
+
+So: the connectome plus measured intrinsic dynamics still cannot oscillate,
+**because the assumed biophysics holds the measured cell permanently switched on.**
+The bistable element is present and correct and is being clamped by its
+surroundings.
+
+### 5F.3 What this changes
+
+The conclusion of §5C.5 was that the missing ingredient is intrinsic dynamics.
+That was right as far as it went and is now superseded: the missing ingredient is
+intrinsic dynamics **plus an operating point that lets them work**. Adding better
+cell models to a network whose resting potential is 50 mV off will not help,
+because the network overwhelms whatever is added.
+
+This makes the assumed parameters of §5A the next target rather than more
+physiology. `g_syn`, `g_leak`, `e_exc` and `e_inh` are all ASSUMED, taken from
+Kunert et al. 2014 as order-of-magnitude values, and §5A.1 already showed the
+answer moves 14x across defensible choices of them. We now have something we did
+not have then: **a measured constraint.** A cell whose real resting potential is
+known, embedded in the network, gives a target the assumed parameters can be
+fitted against rather than guessed at.
+
+That is a different and better-posed problem than the one this section started
+with, and it is the first time this project has had a measured quantity capable of
+constraining the assumed ones.
+
+### 5F.4 How the two models are joined, and one bug worth keeping
+
+The conductance model owns its cells' membrane potential; the network owns
+everything else about them. They receive gap and chemical current normally, and
+drive their targets through the same activation variable. Leak and capacitance
+come from the measurement (0.4 nS, 1.2 pF) and never from the graded model (10 pS,
+1.0 pF), so neither is double-counted.
+
+**Pass the conductance, not the current.** The first version handed the
+conductance model the total network current at the start of each step and held it
+fixed across the substeps. That diverged within nine milliseconds, and the reason
+is instructive: both coupling terms have the form `constant − g·V`, and freezing
+the whole thing discards the `−g·V` part — which is precisely the term that makes
+a gap junction *restoring*. A real gap junction pulls a cell back toward its
+neighbours; a frozen current cannot. With up to 3.8 nS of gap conductance on
+1.2 pF, removing the restoring force is fatal. Splitting the drive into a constant
+and a conductance fixes it, and is also simply the more faithful decomposition.
 
 ## 6. Decisions taken, and what remains open
 

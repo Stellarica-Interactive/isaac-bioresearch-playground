@@ -414,7 +414,11 @@ class ConductanceModel:
         return inf, tau
 
     def step(
-        self, state: np.ndarray, dt_ms: float, i_ext_pa: np.ndarray | float = 0.0
+        self,
+        state: np.ndarray,
+        dt_ms: float,
+        i_ext_pa: np.ndarray | float = 0.0,
+        g_ext_ns: np.ndarray | float = 0.0,
     ) -> np.ndarray:
         """Advance one timestep.
 
@@ -447,8 +451,19 @@ class ConductanceModel:
         )
         nxt[self.index("ca_intra1")] = np.maximum(ca + dt_ms * d_ca, 0.0)
 
+        # External input is `i_ext - g_ext * V`, not a bare current.
+        #
+        # `g_ext_ns` carries the conductance of whatever the cell is attached to --
+        # gap junctions and open chemical synapses when this model is embedded in a
+        # network. Passing only the current at the start of the step throws that
+        # away, and with it the part of the coupling that is *restorative*: a gap
+        # junction opposes the cell's own movement, and a frozen current does not.
+        # RMD has up to 3.8 nS of gap conductance against 1.2 pF, so a fixed current
+        # lets it run away within a few milliseconds. Keeping the conductance term
+        # makes the coupling stabilising, exactly as it is in the real cell.
         i_tot = sum(currents.values())
-        nxt[0] = state[0] + dt_ms * (i_ext_pa - i_tot) / p["c"]
+        drive = np.asarray(i_ext_pa) - np.asarray(g_ext_ns) * state[0]
+        nxt[0] = state[0] + dt_ms * (drive - i_tot) / p["c"]
         return nxt
 
     def run(
