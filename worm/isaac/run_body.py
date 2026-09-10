@@ -75,6 +75,12 @@ parser.add_argument(
     "drag, the instability is in the muscle drive rather than drag compression.",
 )
 parser.add_argument(
+    "--no-grid",
+    action="store_true",
+    help="hide the checkerboard. It is scenery with no collider, so this changes "
+    "nothing a run measures.",
+)
+parser.add_argument(
     "--self-collision",
     action="store_true",
     help="Stop the body passing through itself when it folds. Off by default "
@@ -98,7 +104,7 @@ from isaacsim.core.simulation_manager import SimulationManager  # noqa: E402
 from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import MuscleModel, MuscleParameters, sine_wave_drive  # noqa: E402
-from worm.isaac.stage import add_camera, build_scene, dof_order  # noqa: E402
+from worm.isaac.stage import add_camera, add_ground_grid, build_scene, dof_order  # noqa: E402
 
 
 def main() -> int:
@@ -133,6 +139,8 @@ def main() -> int:
         self_collision=args.self_collision,
     )
     camera = add_camera(plan)
+    if not args.no_grid:
+        add_ground_grid(plan)
     print(f"  built {len(joint_paths)} joints under {root_path}\n")
 
     dt = 1.0 / args.physics_hz

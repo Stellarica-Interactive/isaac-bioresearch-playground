@@ -104,6 +104,12 @@ parser.add_argument(
 )
 parser.add_argument("--seed", type=int, default=0, help="seed for --noise-pa")
 parser.add_argument(
+    "--no-grid",
+    action="store_true",
+    help="hide the checkerboard. It is scenery with no collider, so this changes "
+    "nothing a run measures.",
+)
+parser.add_argument(
     "--self-collision",
     action="store_true",
     help="Stop the body passing through itself when it folds. Off by default "
@@ -132,7 +138,7 @@ from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import MuscleModel, MuscleParameters  # noqa: E402
 from worm.body.neural_bridge import MuscleDrive, Proprioception  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
-from worm.isaac.stage import add_camera, build_scene, dof_order  # noqa: E402
+from worm.isaac.stage import add_camera, add_ground_grid, build_scene, dof_order  # noqa: E402
 from worm.loader import load  # noqa: E402
 from worm.neural.config import RUNTIME_OVERLAYS, build_runtime  # noqa: E402
 
@@ -260,6 +266,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
     root_path, joint_paths = build_scene(plan, self_collision=args.self_collision)
     camera = add_camera(plan)
+    if not args.no_grid:
+        add_ground_grid(plan)
     SimulationManager.set_physics_dt(dt)
     masses = plan.masses_kg()
     articulation = Articulation(root_path)

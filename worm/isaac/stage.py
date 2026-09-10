@@ -234,6 +234,78 @@ def build_scene(
 DEFAULT_CAMERA_FRAMING = 2.5
 
 
+def add_ground_grid(
+    plan: BodyPlan | None = None,
+    *,
+    path: str = "/World/GroundGrid",
+    extent_body_lengths: float = 24.0,
+    checker_body_lengths: float = 0.25,
+) -> str:
+    """A checkerboard under the worm, purely so movement is visible.
+
+    **This has no collider and no rigid body, and that is deliberate rather than
+    lazy.** In this model the substrate is represented entirely by
+    :class:`~worm.body.drag.GroundDrag`, an anisotropic resistive force standing in
+    for a worm lying in a film of water on agar. A real PhysX ground plane would
+    resist the body a second time with *isotropic* contact friction, which cannot
+    tell sliding along the body from sliding across it -- and that distinction is
+    the entire mechanism by which undulation becomes forward motion. With contact
+    friction added the anisotropy stops being measurable (see :func:`build_scene`).
+
+    So this is scenery. It is drawn below the body, it is never touched by the
+    solver, and switching it on or off cannot change a single number in a run.
+
+    The checkers give the eye a fixed reference. Without one, a worm undulating in
+    an empty void looks much the same whether it is travelling or thrashing in
+    place -- which is exactly the distinction the headline results turn on.
+    """
+    import isaacsim.core.experimental.utils.stage as stage_utils
+    from pxr import Gf, UsdGeom, Vt
+
+    plan = plan or BodyPlan()
+    stage = stage_utils.get_current_stage()
+
+    half = 0.5 * extent_body_lengths * plan.total_length_m
+    cell = checker_body_lengths * plan.total_length_m
+    n = max(2, int(round(2.0 * half / cell)))
+    # Sit just below the deepest part of the body so nothing z-fights with it.
+    z = -1.05 * plan.max_radius_m
+
+    step = 2.0 * half / n
+    points = [
+        Gf.Vec3f(float(-half + i * step), float(-half + j * step), float(z))
+        for j in range(n + 1)
+        for i in range(n + 1)
+    ]
+
+    counts: list[int] = []
+    indices: list[int] = []
+    colours: list[Gf.Vec3f] = []
+    light, dark = Gf.Vec3f(0.32, 0.34, 0.38), Gf.Vec3f(0.20, 0.21, 0.24)
+    for j in range(n):
+        for i in range(n):
+            base = j * (n + 1) + i
+            # Counter-clockwise seen from +Z, which is where the camera is.
+            indices += [base, base + 1, base + n + 2, base + n + 1]
+            counts.append(4)
+            colours.append(light if (i + j) % 2 == 0 else dark)
+
+    mesh = UsdGeom.Mesh.Define(stage, path)
+    mesh.CreatePointsAttr().Set(Vt.Vec3fArray(points))
+    mesh.CreateFaceVertexCountsAttr().Set(Vt.IntArray(counts))
+    mesh.CreateFaceVertexIndicesAttr().Set(Vt.IntArray(indices))
+    # One colour per face, so the checkers need no texture file and no material --
+    # nothing binary enters the repository for a piece of scenery.
+    colour_attr = mesh.CreateDisplayColorAttr()
+    colour_attr.Set(Vt.Vec3fArray(colours))
+    colour_attr.SetMetadata("interpolation", UsdGeom.Tokens.uniform)
+    mesh.CreateDoubleSidedAttr().Set(True)
+    mesh.CreateExtentAttr().Set(Vt.Vec3fArray([Gf.Vec3f(-half, -half, z), Gf.Vec3f(half, half, z)]))
+    # No CollisionAPI, no RigidBodyAPI, no physics schema of any kind. Anything
+    # added here stops this being scenery and starts it being an experiment.
+    return path
+
+
 @dataclass
 class WormCamera:
     """A top-down camera that keeps the worm in frame.
