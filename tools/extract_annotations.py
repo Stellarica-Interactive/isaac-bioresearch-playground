@@ -61,6 +61,8 @@ import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
+from worm.importers.naming import canonical_cell_id
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORM_DATA = REPO_ROOT / "worm" / "data"
 
@@ -382,10 +384,23 @@ def parse_fenyves_polarity(path: Path) -> list[tuple[str, ...]]:
                 "project must not do."
             )
         sign, basis = _FEN_SIGN[raw]
+        # Canonicalise, exactly as the connectome importers do.
+        #
+        # Fenyves zero-pads the ventral cord motor neurons -- DB01, VA07, AS03 --
+        # where Cook and Witvliet write DB1, VA7, AS3. Emitting the raw labels made
+        # 634 of 3638 rows unmatchable, and 582 of those carried an actual sign, so
+        # a quarter of every polarity prediction we have was being discarded. The
+        # loss fell almost entirely on the ventral nerve cord: every AS, DA, DB, VA,
+        # VB, DD and VD cell, which is to say the entire locomotor circuit.
+        #
+        # It failed quietly because the overlay reported it as "739 table entries
+        # not in this dataset", which is indistinguishable from the legitimate case
+        # of a table covering a different animal. See test_annotations.py, which now
+        # asserts the match rate rather than trusting the summary line.
         out.append(
             (
-                str(pre).strip(),
-                str(post).strip(),
+                canonical_cell_id(str(pre).strip()),
+                canonical_cell_id(str(post).strip()),
                 sign,
                 basis,
                 str(row[_FEN_COL_NT1] or "").strip(),

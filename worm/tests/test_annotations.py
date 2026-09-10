@@ -278,3 +278,59 @@ class TestNeuromuscularPolarity:
 
         assert classes(Sign.EXCITATORY) == {"AS", "DA", "DB", "VA", "VB", "VC"}
         assert classes(Sign.INHIBITORY) == {"DD", "VD"}
+
+
+def test_polarity_table_names_match_the_connectome() -> None:
+    """Every Fenyves row must name cells this dataset actually has.
+
+    This is the test that was missing. Fenyves zero-pads the ventral cord motor
+    neurons -- ``DB01`` where Cook writes ``DB1`` -- and because the extractor did
+    not canonicalise, 634 of 3638 rows named cells that did not exist. 582 of them
+    carried a real predicted sign, so a quarter of all polarity data was silently
+    discarded, and the loss fell on the entire locomotor circuit: every AS, DA, DB,
+    VA, VB, DD and VD cell.
+
+    Nothing failed. The overlay reported it faithfully as "739 table entries not in
+    this dataset", which is exactly what a table describing a *different animal*
+    would also produce -- so the summary line was read as expected noise for months.
+
+    Hence an assertion rather than a report. A naming mismatch and a genuine
+    dataset difference look identical in prose and completely different in numbers.
+    """
+    connectome, _ = load("cook_2019_herm")
+    known = {c.id for c in connectome.cells}
+
+    rows = list(
+        csv.DictReader(
+            (files("worm.data.annotations") / "polarity_fenyves2020.csv").open(
+                encoding="utf-8"
+            )
+        )
+    )
+    assert rows, "polarity table is empty"
+
+    unknown = {
+        name
+        for row in rows
+        for name in (row["pre"], row["post"])
+        if name not in known
+    }
+    # Fenyves covers a slightly different cell set, so a few genuine absences are
+    # expected; a systematic naming mismatch is not.
+    assert len(unknown) <= 12, (
+        f"{len(unknown)} cell names in the polarity table are not in the connectome. "
+        f"That is too many to be a dataset difference -- check canonicalisation. "
+        f"Sample: {sorted(unknown)[:10]}"
+    )
+
+
+def test_polarity_overlay_covers_most_of_the_connectome() -> None:
+    """A floor on how much of the connectome carries a predicted sign.
+
+    Coverage is 72.1%. It was 59.4% before the canonicalisation fix above, and a
+    regression there would quietly shrink the simulated network again rather than
+    fail anything.
+    """
+    _, reports = load("cook_2019_herm", annotations=("classes", "sim", "nt", "polarity"))
+    polarity = next(r for r in reports if r.overlay_id == "polarity")
+    assert polarity.matched / (polarity.matched + len(polarity.unmatched)) > 0.70

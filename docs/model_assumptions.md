@@ -771,7 +771,7 @@ was not chosen wholesale.
 The cheaper alternative remains §5C.5 option 4, an externally supplied head
 oscillation, and it remains the one that most weakens the claim.
 
-## 5D. Touch: the first behaviour the connectome gets right
+## 5D. Touch: a correctly-directed response, on a pathway we mostly cannot see
 
 §5C.9 showed the neuron model has no limit cycle anywhere, which rules out a gait.
 It does **not** rule out a touch response, because a touch response is not a
@@ -786,79 +786,214 @@ headless.
 
 ### 5D.1 The result
 
-Two seconds of contact, `peak_torque_scale` 3e-3, reported as the change in mean
-membrane potential of each command interneuron group from the moment of contact:
+Two seconds of contact from a **non-colliding** probe (5D.4), `peak_torque_scale`
+3e-3, reported as the change in mean membrane potential of each command
+interneuron group from the moment of contact:
 
 | touch at | AVA (backward) | AVB (forward) | AVD (backward) | PVC (forward) |
 |---|---|---|---|---|
-| **head**, 0.15 along body | −2.28 mV | **−7.42 mV** | −1.39 mV | −3.88 mV |
-| **tail**, 0.85 along body | +1.36 mV | +0.92 mV | +1.02 mV | **+2.29 mV** |
+| **head**, 0.15 along body | +0.12 mV | **−0.24 mV** | +0.58 mV | +0.17 mV |
+| **tail**, 0.85 along body | +0.24 mV | +0.15 mV | +0.29 mV | **+0.45 mV** |
 
-Both directions come out right:
+The directions are right. Head touch is the only condition that drives the forward
+command *down* while the backward commands go up — a shift toward reversal, which
+is the canonical anterior-touch response (Chalfie et al. 1985). Tail touch raises
+PVC most, and PVC is the forward command driven by posterior touch.
 
-* **Head touch suppresses the forward command hardest.** AVB falls 7.42 mV against
-  AVA's 2.28 mV, a relative shift of about 5 mV toward backward. Anterior touch
-  causing reversal is the canonical response (Chalfie et al. 1985).
-* **Tail touch raises PVC most.** PVC is the forward command driven by posterior
-  touch, and it moves furthest of the four. Posterior touch causing forward
-  acceleration is likewise canonical.
+But the magnitudes are a few tenths of a millivolt, and the control below shows
+this is much weaker evidence than it first appeared.
 
-Nothing was tuned to produce this. The receptive fields decide only *which cells*
-a contact reaches; everything after that is measured wiring carrying measured
-synaptic signs, and the head/tail asymmetry is a property of the connectome.
-
-### 5D.2 The control that matters
+### 5D.2 The control fails: this does not depend on synaptic sign
 
 Shuffling synaptic signs at random while keeping every synapse in place
-(`--shuffle-sign`) reverses the result completely. Head touch, three seeds:
+(`--shuffle-sign`) changes essentially nothing. Head touch:
 
-| | AVA | **AVB** |
+| | AVA | AVB |
 |---|---|---|
-| measured signs | −2.28 mV | **−7.42 mV** |
-| shuffled, seed 1 | +1.49 mV | **+11.94 mV** |
-| shuffled, seed 2 | +1.79 mV | **+13.45 mV** |
-| shuffled, seed 3 | +1.60 mV | **+12.10 mV** |
+| measured signs | +0.12 mV | −0.24 mV |
+| shuffled, seed 1 | +0.14 mV | −0.29 mV |
+| shuffled, seed 2 | +0.15 mV | −0.20 mV |
 
-The forward command goes from strongly *suppressed* to strongly *excited*, in the
-same direction every time. So the behaviour depends on which synapses excite and
-which inhibit — on the neurotransmitter and polarity data of §6.1 and §6.1b — and
-not merely on the anatomy. That is the strongest evidence in this repository so
-far that a result rests on the biology rather than on the shape of the graph.
+The response survives randomising which synapses excite and which inhibit. By the
+standard this project set itself in §5C, *behaviour that survives that never
+depended on the biology* — at least not on the part of the biology the shuffle
+touches.
+
+**Why**, and this is the useful part. Counting what actually leaves the touch
+receptors in our network:
+
+| | chemical | of which *signed* | electrical |
+|---|---|---|---|
+| ALML | 17 conns, weight 59 | 9 conns, weight 44 | 5 conns, weight 16 |
+| PLML | 8 conns, weight 74 | **0 conns, weight 0** | 10 conns, weight 45 |
+
+**Not one of PLM's chemical synapses has a predicted polarity.** Under
+`UnknownSignPolicy.EXCLUDE` — the honest choice, and the one this project makes —
+its entire chemical output is dropped from the simulation, and posterior touch
+reaches the rest of the network *only* through gap junctions. Gap junctions carry
+no sign, so shuffling cannot touch them.
+
+So the sign-shuffle control is not failing because signs do not matter. It is
+failing because, along this particular pathway, our model barely has any signs to
+shuffle. The touch response we measure is carried by electrical coupling and by
+anatomy, and a large part of the real circuit is simply absent.
+
+That is a statement about the **coverage** of the polarity prediction (§6.1)
+rather than about the connectome, and it is a sharper version of a limitation
+already recorded there: 52.9% of chemical connections are excluded for want of a
+sign. This is what that exclusion costs when it lands on the circuit you happen to
+be studying.
+
+### 5D.2b How little arrives: 0.5%
+
+Measured directly on the muscle drive -- the antagonist difference the body
+actually receives -- rather than on the interneurons:
+
+| stimulus | change in peak muscle drive |
+|---|---|
+| head touch, nervous system alone | 2.3% |
+| tail touch, nervous system alone | 2.9% |
+| head touch, in the closed loop | **0.5%** |
+| raising the AVB command from 500 to 2000 pA | 73% |
+| touch at 1000 pA (far above physiological) | 222% |
+
+So the touch does reach the muscles, and it is about half a percent. That is why
+nothing is visible in the viewport when you drag the probe onto the animal: not a
+rendering problem, and not a broken pathway, simply a very small number. The
+`--tint-change` view rescales the colours to the change so it can be seen at all,
+and prints the true percentage beside it so the amplification is not mistaken for
+a large effect.
+
+The cause is 5D.2. Most of the touch circuit is not in the simulation: PLM
+contributes no signed chemical synapse at all, ALM keeps 44 of 59 units of
+chemical weight, and what survives arrives largely through gap junctions.
 
 ### 5D.3 What this is not
 
 **There is no escape.** A real animal reverses away from the touch; this one does
 not, because reversing requires working locomotion and §5C.4 establishes that we
-do not have any. What is demonstrated is the *sensory-to-command* half of the
-reflex arc, ending at the interneurons. The half that turns a command into
-movement is still missing.
+do not have any. What is demonstrated is a small, correctly-directed shift in the
+sensory-to-command half of the reflex arc.
 
-The magnitudes are also small — a few millivolts on cells sitting at tens of
-millivolts — and nothing calibrates them. They are reported as changes rather than
-absolute values for that reason.
+**And it is not evidence that the connectome computes the response.** The
+directions are right, but a shuffled-sign network gives the same answer, so this
+does not distinguish the measured nervous system from one with its polarities
+randomised.
 
-### 5D.4 Two bugs worth recording
-
-Both produced failures that pointed at the wrong part of the system.
+### 5D.4 Three bugs, each of which produced a confident wrong answer
 
 **A current chosen by analogy was wrong by 20x.** `DEFAULT_TOUCH_CURRENT_PA` was
 first set to 400 pA, matching the command drive and the proprioceptive gain. AVB
 tolerates 500 pA because heavy gap-junction coupling gives it a large total
 conductance; ALM has far less coupling, and the same current drove it to **+443
-mV**. The model has no spike mechanism and no upper bound, so nothing objected —
-it simply carried on and later diverged. The value is now 20 pA, set from the
-measured slope of about 1 mV per pA in this network so that a touch produces a
-receptor potential of tens of millivolts, the order seen in real mechanoreceptor
-recordings (O'Hagan, Chalfie & Goodman 2005).
+mV**. The model has no spike mechanism and no upper bound, so nothing objected. It
+is now 20 pA, set from the measured slope of about 1 mV per pA in this network so
+that a touch produces a receptor potential of tens of millivolts — the order seen
+in real mechanoreceptor recordings (O'Hagan, Chalfie & Goodman 2005).
 
-**A physics bug that surfaced as a neuroscience one.** The scripted poke teleported
-the probe to the *centre* of a segment, placing a collider entirely inside the
-animal. PhysX resolved the interpenetration explosively, the body flailed, joint
-angles went wild, and proprioception carried them into the network — which
-reported a `FloatingPointError` in the neural runtime, forty lines and one
-subsystem away from the cause. The probe is now placed against the surface. Worth
-remembering the next time the nervous system appears to diverge: in a closed loop,
-the report location says little about the origin.
+**A physics bug that surfaced as a neuroscience one.** The scripted poke first
+teleported the probe to the *centre* of a segment, placing a collider entirely
+inside the animal. PhysX resolved the interpenetration explosively, joint angles
+went wild, and proprioception carried them into the network — which reported a
+`FloatingPointError` in the neural runtime, one subsystem away from the cause. In
+a closed loop, where a failure is reported says little about where it started.
+
+**The probe was both blind and violent, and it faked the headline result.** This
+is the one worth remembering.
+
+A rigid collider is held *outside* whatever it touches, so centre-to-centre
+distance never falls below the sum of the radii and any interpenetration-based
+contact test reads zero however hard you press. Dragging the probe with the gizmo
+therefore triggered nothing. The scripted poke only appeared to work because
+teleporting beat the solver for one frame.
+
+Meanwhile the collider was throwing the animal: commanding a gap of 8.2 mm
+produced an actual gap of **48 mm**, the worm flung clear across the scene. A
+kinematic body has effectively infinite mass and the segments weigh a tenth of a
+gram.
+
+Those two faults together manufactured a result. The first version of this section
+reported head touch driving AVB down by **7.42 mV** and a sign-shuffle control that
+reversed it — presented as the strongest evidence in the repository that a result
+rested on the biology. Almost all of that was the probe hurling the body around:
+the mechanical disturbance changed joint angles, proprioception fed them back into
+the network, and the shuffled runs were thrown differently. With a purely sensory
+probe the true figure is **−0.24 mV**, thirty times smaller, and the control fails.
+
+The probe now has no collider by default (`--probe-pushes` restores it), and
+contact is graded by proximity within a margin standing in for the compliance a
+rigid body does not have.
+
+## 5E. A quarter of the polarity data was being thrown away
+
+Every result in §5C and §5D was computed on a network missing more of itself than
+anyone realised. The cause was four characters wide.
+
+### 5E.1 What happened
+
+Fenyves et al. zero-pad the ventral cord motor neurons — `DB01`, `VA07`, `AS03` —
+where Cook and Witvliet write `DB1`, `VA7`, `AS3`. `worm/importers/naming.py`
+exists precisely to reconcile that, and every connectome importer calls it. The
+*annotation* extractor did not.
+
+So 634 of 3638 rows in `polarity_fenyves2020.csv` named cells that do not exist in
+any dataset we load. **582 of those carried an actual predicted sign**, which is
+26% of every polarity prediction we have. The loss was not spread evenly: it fell
+on the cells whose names get padded, which is every AS, DA, DB, VA, VB, DD and VD
+cell — the entire locomotor circuit.
+
+| | before | after |
+|---|---|---|
+| polarity coverage of Cook | 59.4% | **72.1%** |
+| table entries not matching the dataset | 739 | 122 |
+| chemical connections excluded from the runtime | 2199 | **1632** |
+| connections signed from polarity data | 52.9% | **65.0%** |
+| excitatory / inhibitory / mixed | 1584 / 549 / 333 | 2035 / 562 / 436 |
+
+### 5E.2 Why nothing caught it
+
+It was reported. Every runtime summary printed
+
+    polarity: 2899/4879 (59.4%) annotated, 1980 unmatched,
+              739 table entries not in this dataset
+
+and that last clause is exactly what a table describing a *different animal* would
+also produce. Fenyves genuinely does cover a slightly different cell set, so the
+line read as expected noise. The overlay machinery behaved correctly and honestly;
+the failure was in reading it.
+
+A prose report cannot distinguish "this table covers a different animal" from "this
+table is using a different naming convention". A number can:
+`test_polarity_table_names_match_the_connectome` now asserts that at most a
+handful of names in the polarity table are unknown to the connectome, and
+`test_polarity_overlay_covers_most_of_the_connectome` puts a floor under the match
+rate. Both fail against the old table and pass against the fixed one — checked, not
+assumed.
+
+The general lesson is worth stating because this project keeps rediscovering it: a
+diagnostic that reports a quantity is not the same as a test that constrains it.
+The same shape of mistake produced the `travel` metric of §5C.4 and the
+endpoint-only timestep check of `DEFAULT_DT_MS`.
+
+### 5E.3 What it changed, and what it did not
+
+**Locomotion: unchanged.** Still `amp 0.00` at every torque scale, still a static
+latched bend. This is the outcome §5C.9 predicts — the missing ingredient there is
+a limit cycle, and no amount of extra polarity creates one in a relaxation model.
+The diagnosis survives a substantially better network, which strengthens it.
+
+**Touch: better, and still not sign-dependent.** The muscle drive response to a
+head touch rose from 0.5% to **2.8%**, and AVB from −0.24 mV to −0.37 mV. But
+`--shuffle-sign` still reproduces it (−0.25, −0.35, −0.20 across three seeds), so
+the conclusion of §5D.2 stands: this pathway is carried by gap junctions and by
+anatomy rather than by synaptic sign. PLM contributes no Fenyves row *at all* —
+that absence is genuine, not a naming artefact — so posterior touch still travels
+entirely electrically.
+
+**Every number in §5C and §5D was computed before this fix** and reflects the
+smaller network. They have not been recomputed except where stated, because the
+conclusions they support are unchanged: the model cannot oscillate, and the touch
+response does not depend on sign.
 
 ## 6. Decisions taken, and what remains open
 
