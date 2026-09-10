@@ -289,7 +289,13 @@ class ActivityTint:
         probe = UsdGeom.Gprim(stage.GetPrimAtPath(probe_path)) if probe_path else None
         return cls(segment_prims=segments, probe_prim=probe)
 
-    def update(self, net_activation: np.ndarray, *, touching: bool = False) -> None:
+    def update(
+        self,
+        net_activation: np.ndarray,
+        *,
+        touching: bool = False,
+        reference: np.ndarray | None = None,
+    ) -> None:
         """``net_activation`` is dorsal minus ventral per segment.
 
         Scaled by the largest magnitude present rather than an absolute range,
@@ -299,6 +305,19 @@ class ActivityTint:
         from pxr import Gf, Vt
 
         net = np.asarray(net_activation, dtype=np.float64)
+        if reference is not None:
+            # Show what *changed* rather than what the drive is.
+            #
+            # A touch alters the muscle drive by about 2% of its resting value
+            # (docs/model_assumptions.md 5D), and the resting value is dominated by
+            # a large static bend. Normalising to the absolute drive therefore makes
+            # a real response invisible by construction -- the colours are set
+            # almost entirely by a posture that is not changing. Subtracting a
+            # reference and rescaling shows the response, at the cost of no longer
+            # showing the posture. Neither view is more honest than the other; they
+            # answer different questions, and the magnitude is printed either way so
+            # the amplification cannot be mistaken for a large effect.
+            net = net - np.asarray(reference, dtype=np.float64)
         scale = float(np.abs(net).max())
         strength = net / scale if scale > 1e-12 else np.zeros_like(net)
 
@@ -323,25 +342,35 @@ def add_probe(
     path: str = "/World/Probe",
     radius_scale: float = DEFAULT_PROBE_RADIUS_SCALE,
     offset_body_lengths: float = 0.35,
+    collider: bool = False,
 ) -> str:
     """A sphere you can drag onto the worm to touch it.
 
-    Made **kinematic**, which is the whole trick. A kinematic rigid body pushes
-    what it collides with but is never pushed back and is never integrated by the
-    solver, so it goes exactly where the viewport gizmo puts it and stays there.
-    A dynamic body would be shoved aside by the worm and would drift, and a body
-    with no collider at all could not press on the animal.
+    **No collider by default**, which is the opposite of the obvious choice and was
+    arrived at by measurement. A collider seemed right at first -- poking a real
+    worm with a wire does exert a force -- but a *rigid* probe against this body is
+    not a poke, it is an impact. The segments weigh about a tenth of a gram each,
+    and a kinematic body has effectively infinite mass, so driving one in by a
+    millimetre launches the animal: measured centre-to-centre distance jumped from
+    a commanded 8.2 mm to an actual 48 mm, with the worm flung clear across the
+    scene. Dragging the probe around therefore looked like the worm moving at
+    random, which is exactly what it was.
 
-    That also keeps the substrate model honest. :func:`build_scene` runs with no
-    ground and no gravity because :class:`~worm.body.drag.GroundDrag` *is* the
-    substrate, and a second contact surface would corrupt it (see
-    :func:`add_ground_grid`). A probe is a different case: poking a real worm with
-    a wire really does exert a force on it, so contact here is the thing being
-    modelled rather than an artefact. It still only acts while you hold it against
-    the animal.
+    Worse, the collider also made the touch sensor blind. PhysX holds a rigid body
+    *outside* whatever it hits, so the centre-to-centre distance can never fall
+    below the sum of the radii, and any contact test based on interpenetration
+    reads zero however hard you press.
 
-    Starts to one side, clear of the body, so a run with nobody at the mouse is
-    identical to a run without a probe at all.
+    A real worm is soft and a real touch indents it. We have no soft body, so the
+    honest simplification is to drop the mechanical half rather than to fake it
+    badly: the probe is a pure sensory stimulus, and
+    :func:`~worm.isaac.run_connectome._probe_contact` grades the response by
+    proximity. Pass ``collider=True`` for the mechanical version, and expect it to
+    throw the animal about.
+
+    Kinematic either way, so the solver never moves it and it stays exactly where
+    the gizmo puts it. Starts to one side, clear of the body, so a run with nobody
+    at the mouse is identical to a run without a probe at all.
     """
     import isaacsim.core.experimental.utils.stage as stage_utils
     from pxr import Gf, UsdGeom, UsdPhysics
@@ -362,7 +391,8 @@ def add_probe(
     sphere.CreateDisplayColorAttr().Set([Gf.Vec3f(0.85, 0.30, 0.25)])
 
     prim = sphere.GetPrim()
-    UsdPhysics.CollisionAPI.Apply(prim)
+    if collider:
+        UsdPhysics.CollisionAPI.Apply(prim)
     body = UsdPhysics.RigidBodyAPI.Apply(prim)
     body.CreateKinematicEnabledAttr().Set(True)
     return path

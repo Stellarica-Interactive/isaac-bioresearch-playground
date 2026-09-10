@@ -114,12 +114,28 @@ parser.add_argument(
 )
 parser.add_argument("--touch-current", type=float, default=None, help="pA per contact")
 parser.add_argument(
+    "--probe-pushes",
+    action="store_true",
+    help="give the probe a collider so it physically shoves the worm. Off by "
+    "default: a rigid probe against 0.1 g segments is an impact, not a poke, and "
+    "it throws the animal across the scene.",
+)
+parser.add_argument(
     "--poke",
     default="",
     help="Scripted touch: START:STOP:FRACTION, seconds and position along the body "
     "(0 head, 1 tail), e.g. 3:4:0.15 for a head touch in the fourth second. Drives "
     "the same probe the mouse does, so an interactive result can be reproduced "
     "headless and put in a test.",
+)
+parser.add_argument(
+    "--tint-change",
+    action="store_true",
+    help="colour the body by how the muscle drive is CHANGING rather than what it "
+    "is. A touch shifts the drive by about 2%% of its resting value, which is "
+    "invisible against a large static bend; this rescales to the change so it can "
+    "be seen. The percentage is printed so the amplification is not mistaken for a "
+    "large effect.",
 )
 parser.add_argument(
     "--no-tint",
@@ -315,7 +331,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     if not args.no_grid:
         add_ground_grid(plan)
     poke = [float(x) for x in args.poke.split(":")] if args.poke else None
-    probe_path = add_probe(plan) if (args.probe or poke) else None
+    probe_path = add_probe(plan, collider=args.probe_pushes) if (args.probe or poke) else None
     probe = RigidPrim(probe_path) if probe_path else None
     tint = ActivityTint.build(plan.n_segments, probe_path=probe_path) if not args.no_tint else None
     SimulationManager.set_physics_dt(dt)
@@ -337,6 +353,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
     start = _centroid(links)
     touching = False
+    drive_reference: np.ndarray | None = None
+    drive_at_contact: np.ndarray | None = None
     peak: dict[str, float] = {}
     baseline: dict[str, float] = {}
     history: list[np.ndarray] = []
@@ -364,6 +382,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 if not touching:
                     hit = np.flatnonzero(contact)
                     baseline = _command_state(runtime)
+                    drive_at_contact = (
+                        muscle_model.dorsal_activation() - muscle_model.ventral_activation()
+                    )
                     print(
                         f"    t={t:5.1f}s  TOUCH segments {hit.min()}-{hit.max()} "
                         f"({touch.segment_fraction(int(hit.mean())):.2f} along body) "
@@ -379,9 +400,16 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 # command (AVA) and lower the forward one (AVB); posterior touch the
                 # reverse. Reported as a change from the moment of contact, because
                 # the absolute values are set by the standing command drive.
+                muscle_note = ""
+                if drive_at_contact is not None:
+                    now = muscle_model.dorsal_activation() - muscle_model.ventral_activation()
+                    shift = float(np.abs(now - drive_at_contact).max())
+                    rest = max(float(np.abs(drive_at_contact).max()), 1e-12)
+                    muscle_note = f"; muscle drive moved {100 * shift / rest:.1f}%"
                 print(
                     f"    t={t:5.1f}s  released -> "
                     + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(peak.items()))
+                    + muscle_note
                     + (
                         "   (AVA up + AVB down = reversal)"
                         if peak.get("AVA", 0) > 0 > peak.get("AVB", 0)
@@ -408,10 +436,14 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
         # --- nervous system -> body -------------------------------------
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
+        drive_now = muscle_model.dorsal_activation() - muscle_model.ventral_activation()
+        if drive_reference is None and t > 1.0:
+            drive_reference = drive_now.copy()
         if tint is not None and len(history) % 6 == 0:
             tint.update(
-                muscle_model.dorsal_activation() - muscle_model.ventral_activation(),
+                drive_now,
                 touching=touching,
+                reference=drive_reference if args.tint_change else None,
             )
         articulation.set_dof_efforts(muscle_model.joint_torques().reshape(1, -1), dof_indices=dofs)
         _apply_drag(links, drag, dt, masses)
@@ -479,7 +511,10 @@ def _drive_poke(
         # Just far enough in to register as a firm touch, not far enough to shove.
         reach = plan.segments()[segment].radius_m + DEFAULT_PROBE_RADIUS_SCALE * plan.max_radius_m
         target = positions[segment].copy()
-        target[:2] += normal * reach * 0.82
+        # Resting against the surface. With no collider there is nothing to stop
+        # the probe going deeper, but there is no reason to: the proximity margin
+        # already reads a body-contacting probe as a full-strength touch.
+        target[:2] += normal * reach
     else:
         # Parked well clear of the animal, where it contacts nothing.
         target = positions.mean(axis=0) + np.array([0.0, 0.5 * plan.total_length_m, 0.0])
@@ -516,11 +551,22 @@ def _probe_contact(
 
     delta = positions - centre
     distance = np.linalg.norm(delta, axis=1)
-    overlap = (seg_radii + probe_radius) - distance
-    # Stimulus strength is how far the body is indented as a fraction of its own
-    # radius, which is the physically meaningful quantity. Dividing by the probe
-    # radius instead makes a firm press with a large probe read as a graze.
-    contact = np.clip(overlap / seg_radii, 0.0, 1.0)
+    # A margin standing in for the compliance a rigid body does not have.
+    #
+    # Without it this sensor is blind to the mouse. The probe is a rigid collider,
+    # so PhysX holds it *outside* the body: the centre-to-centre distance settles at
+    # exactly seg_radius + probe_radius and never goes below it, which makes any
+    # test based on interpenetration read zero no matter how hard you press. The
+    # scripted poke only appeared to work because it teleports the probe inside for
+    # a single frame before the solver ejects it.
+    #
+    # A real worm is soft and a real touch indents it; our capsules cannot deform,
+    # so the indentation that would have happened is represented by this margin.
+    # Resting against the body counts as a firm touch, and the response falls to
+    # zero as the probe is lifted a margin clear.
+    margin = 0.5 * seg_radii
+    overlap = (seg_radii + probe_radius + margin) - distance
+    contact = np.clip(overlap / margin, 0.0, 1.0)
     contact[overlap <= 0.0] = 0.0
 
     # Body axis at each segment, from its neighbours.
