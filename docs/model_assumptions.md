@@ -1331,6 +1331,96 @@ with the only two cells we can check. That does not make the results right, but 
 removes the most obvious reason they might have been wrong, and it means the next
 negative result is worth more than the last one.
 
+## 5I. Nicoletti 2024: three cells importable, and not the two that matter
+
+§5G.4 named the six cells of Nicoletti et al. 2024 as the way to take the
+calibration from two constraints to eight — above all **VB6**, a B-type motor
+neuron inside the proprioceptive loop, and **AVA**, the backward command
+interneuron. Assessed before implementing, and the answer is only half good.
+
+### 5I.1 What the published code actually contains
+
+Twenty-four NEURON `.mod` files holding channel kinetics, and twenty-two Python
+drivers holding each cell's conductances. The conductances are a bare vector whose
+entries are identified only by a comment:
+
+```python
+surf = 389.3e-8
+# CONDUCTANCES: slo2egl19,slo2iso,EGL19,irk,shk1,nca,leak,eleak,c2,cm
+g0 = [3, 3, 0.15, 1, 0.1, 0.01, 0.1, -70, 1, 1.5]
+gstart = gScm2(g0, surf, 6)
+```
+
+That is VA5, and it is consistent: ten names, ten values, and the index 6 says the
+first seven are conductances with `eleak`, `c2` and `cm` following. Everything
+needed is there.
+
+For four of the seven cells it is not.
+
+| cell | names | values | conductances | usable |
+|---|---|---|---|---|
+| VA5 | 10 | 10 | 7 | **yes** |
+| AIY | 9 | 9 | 7 | **yes** |
+| AVAR | 7 | 7 | 5 | **yes** |
+| **VB6** | 13 | **16** | 13 | no — 10 conductance names for 13 conductances |
+| **VD5** | 13 | **11** | 8 | no — more names than values |
+| AVAL | **0** | 6 | 4 | no — no comment at all |
+| RIM | 9 | — | — | no — comment present, vector absent from that file |
+
+The vectors are all there. What is missing is which channel each number belongs
+to, and that cannot be recovered from the repository. Guessing it would produce a
+cell carrying the right channels at the wrong densities: a model that runs, looks
+plausible, and is not the published one — the exact failure
+`tools/import_neuron_model.py` exists to prevent, and the reason its docstring
+says the constants are never retyped.
+
+**The two cells most wanted are among the four.** VB6 and VD5 are the ventral cord
+motor neurons; VA5 is an A-type, which drives backward locomotion.
+
+### 5I.2 What is still worth having
+
+VA5, AIY and AVAR are importable, and they are not nothing:
+
+* **AVAR** is a command interneuron — the cell the whole touch circuit converges on
+  (§5D) and half of the AVA pair whose balance against AVB decides direction.
+* **VA5** is a ventral cord motor neuron, the first measured cell that would sit in
+  the locomotor circuit rather than the head.
+* Three more resting potentials take the calibration of §5G from two constraints to
+  five.
+
+The cost is real: the channel set includes EXP-2, KQT-1, UNC-103 and the `iso`
+variants of SLO-1/SLO-2, none of which we have, plus a `.mod` parser, plus the
+per-cell conductances in a second format. Larger than AWC, which shared nineteen
+channels and needed three new ones.
+
+### 5I.3 A second published artefact with a defect
+
+The 2019 model carried a Correction covering twelve supplementary equations
+(§5G). The 2024 repository has stale comments in four of seven cells, and its
+`g_to_nS.py` appends outside its loop:
+
+```python
+for i in range(len(g)):
+    ...
+g_RESCALED.append(gg)      # one level too far left; returns a 1-element array
+```
+
+The helper actually used by the simulations, `g_to_Scm2.py`, has the same code
+correctly indented, so the published results are unaffected. But it is the second
+time in two imports that the artefact has needed checking rather than trusting,
+which is worth stating plainly: **in this field the published code is the better
+source than the published paper, and neither is a source that can be used without
+verification.**
+
+### 5I.4 The decision
+
+Not imported. Recorded in `worm/data/sources.toml` so that the next person to
+reach for this dataset finds the assessment rather than repeating it.
+
+Resolving it means reading the paper's parameter tables — which is precisely where
+the 2019 errata were — or asking the authors, who are reachable and whose code is
+otherwise careful. The latter is the better route and costs an email.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
