@@ -57,30 +57,53 @@ check, not a measurement: no per-neuron leak conductance has been measured."""
 improvement = "Whole-cell patch clamp per neuron class; currently exists for very few."
 
 [parameters.e_leak_mv]
-value = -35.0
+value = -70.0
 unit = "mV"
-confidence = "assumed"
-source = "Kunert et al. 2014."
+confidence = "constrained"
+source = "Nicoletti et al. 2019, via tools/calibrate_biophysics.py."
 note = """
-Resting potentials across the C. elegans nervous system have not been measured.
-Recordings that exist report values roughly in the -30 to -70 mV range depending
-on cell and method."""
-improvement = "Per-neuron resting potential measurements, or voltage-imaging estimates."
+CHANGED from -35.0 (Kunert et al. 2014) on 2026-09-11. This is the first
+parameter in the project set against a measurement rather than assumed.
+
+Two conductance-based models of individual C. elegans neurons settle at their own
+resting potential with no input: RMD at -69.487 mV and AWC-on at -69.180 mV. They
+carry different channel complements and were fitted to separate voltage-clamp
+data, so the third of a millivolt between them is not something either fit was
+told to produce.
+
+With the old value the network rested near -15 mV and pushed 200+ pA into a
+measured cell clamped where its measurement says it sits -- fifty times the ~4 pA
+its bistability survives. See docs/model_assumptions.md 5F and 5G.
+
+Still not a direct measurement of the leak reversal potential, which nobody has
+made. It is the value that makes the network consistent with the cells we can
+check."""
+improvement = """
+Per-neuron resting potentials. Nicoletti et al. 2024 adds six more cells,
+including VB6, which would constrain this further."""
 
 # ---------------------------------------------------------------------------
 # Synapses
 # ---------------------------------------------------------------------------
 
 [parameters.g_syn_ps]
-value = 100.0
+value = 10.0
 unit = "pS"
-confidence = "assumed"
-source = "Kunert et al. 2014."
+confidence = "constrained"
+source = "Kunert et al. 2014, revised via tools/calibrate_biophysics.py."
 note = """
 Conductance attributed to ONE chemical synapse, multiplied by the EM synapse
 count. Both halves are assumptions: this magnitude, and that the relationship is
 linear in count. The count itself is measured; what it means physiologically is
-not. See WeightScaling in common/neural/synapses.py for alternatives."""
+not. See WeightScaling in common/neural/synapses.py for alternatives.
+
+CHANGED from 100.0 (Kunert et al. 2014) on 2026-09-11, for the reason given under
+e_leak_mv: at ten times g_leak the network was so heavily loaded by its own
+synapses that it sat near E_exc and could not be reconciled with either measured
+cell. Lowering it was not a loss of function -- signal propagation improved
+elevenfold (AVB drive reaching AVAL, 3.74 -> 41.33 mV) and muscle drive fivefold.
+The old value was over-shunting the network, which is a plausible contributor to
+the very small responses recorded in 5D."""
 improvement = "Paired whole-cell recordings; done for a handful of connections only."
 
 [parameters.g_gap_ps]

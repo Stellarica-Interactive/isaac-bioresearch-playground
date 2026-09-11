@@ -48,6 +48,7 @@ one. Both are ASSUMED and neither is tuned to produce a particular behaviour.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import numpy as np
@@ -151,6 +152,21 @@ class TouchField:
     plan: BodyPlan
     receptors: tuple[Receptor, ...] = TOUCH_RECEPTORS
     current_pa: float = DEFAULT_TOUCH_CURRENT_PA
+    per_cell_pa: Mapping[str, float] | None = None
+    """Per-receptor current for a full-strength touch, overriding ``current_pa``.
+
+    Because one current does not mean one thing. Under the calibrated biophysics a
+    20 mV receptor potential needs 18.8 pA at ALM and 37.8 pA at PLM -- the cells
+    differ twofold in total conductance, so a single figure underdrives one of them
+    by half. Part of the head-versus-tail asymmetry in §5D was this, not the
+    circuit. Build it with :func:`common.neural.stimulus.solve_for_depolarisation`
+    so the target is a depolarisation and the currents follow the biophysics.
+    """
+
+    def _scale(self, cell: str) -> float:
+        if self.per_cell_pa is not None and cell in self.per_cell_pa:
+            return float(self.per_cell_pa[cell])
+        return self.current_pa
 
     @classmethod
     def build(
@@ -159,13 +175,19 @@ class TouchField:
         *,
         current_pa: float = DEFAULT_TOUCH_CURRENT_PA,
         cells: tuple[str, ...] | None = None,
+        per_cell_pa: Mapping[str, float] | None = None,
     ) -> TouchField:
         """``cells`` restricts to receptors actually present in the network."""
         receptors = TOUCH_RECEPTORS
         if cells is not None:
             present = set(cells)
             receptors = tuple(r for r in receptors if r.cell in present)
-        return cls(plan=plan, receptors=receptors, current_pa=current_pa)
+        return cls(
+            plan=plan,
+            receptors=receptors,
+            current_pa=current_pa,
+            per_cell_pa=per_cell_pa,
+        )
 
     @property
     def cells(self) -> tuple[str, ...]:
@@ -186,7 +208,7 @@ class TouchField:
                 continue
             weight = r.overlap(contact_fraction)
             if weight > 0.0:
-                out[r.cell] = self.current_pa * weight * float(force)
+                out[r.cell] = self._scale(r.cell) * weight * float(force)
         return out
 
     def segment_fraction(self, segment: int) -> float:

@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 
 # --- 1. Argument parsing and app launch, before any Isaac import --------------
 
@@ -60,11 +61,13 @@ parser.add_argument("--damping", type=float, default=2e-5)
 parser.add_argument("--armature", type=float, default=2.0e-8)
 parser.add_argument("--drag-ratio", type=float, default=None)
 parser.add_argument(
-    "--proprioceptive-gain",
+    "--proprioceptive-mv",
     type=float,
-    default=None,
-    help="pA per radian of sensed curvature. The parameter that decides whether "
-    "the loop oscillates at all, and an assumed one.",
+    default=20.0,
+    help="Depolarisation of a B-type motor neuron per radian of sensed "
+    "curvature, mV. Still the parameter that decides whether the loop oscillates "
+    "at all, and still assumed -- but now in a unit where the assumption can be "
+    "judged. The previous 400 pA/rad implied 124 mV per radian at DB1.",
 )
 parser.add_argument("--sensing-offset", type=float, default=None)
 parser.add_argument(
@@ -75,7 +78,16 @@ parser.add_argument(
     "to the B-type motor neurons. It carries no rhythm and no spatial pattern -- "
     "it is one constant number applied to two cells. Pass '' to remove it.",
 )
-parser.add_argument("--command-current", type=float, default=500.0, help="pA into each")
+parser.add_argument(
+    "--command-mv",
+    type=float,
+    default=20.0,
+    help="How far the command interneurons are depolarised, mV. Expressed as a "
+    "voltage rather than a current because a picoamp means different things to "
+    "different cells -- total conductance varies fourteenfold across this network "
+    "-- and because a millivolt can be judged against the -80..+30 mV a neuron "
+    "actually occupies. The current is solved for at startup.",
+)
 parser.add_argument(
     "--no-proprioception",
     action="store_true",
@@ -112,7 +124,15 @@ parser.add_argument(
     "to oscillate -- but the escape it should trigger needs working locomotion, "
     "so expect the circuit to respond and the animal not to get away.",
 )
-parser.add_argument("--touch-current", type=float, default=None, help="pA per contact")
+parser.add_argument(
+    "--touch-mv",
+    type=float,
+    default=20.0,
+    help="Receptor potential a full-strength touch produces, mV. Tens of mV is "
+    "the order seen in real mechanoreceptor recordings (O'Hagan, Chalfie & "
+    "Goodman 2005). Solved per receptor: ALM and PLM differ twofold in "
+    "conductance, so one current underdrives one of them by half.",
+)
 parser.add_argument(
     "--sham",
     default="",
@@ -179,12 +199,16 @@ from isaacsim.core.simulation_manager import SimulationManager  # noqa: E402
 
 from common.data.schemas import CellCategory, Connectome, Sign  # noqa: E402
 from common.neural.runtime import NeuralRuntime  # noqa: E402
+from common.neural.stimulus import (  # noqa: E402
+    scale_for_depolarisation,
+    solve_for_depolarisation,
+)
 from common.neural.synapses import UnknownSignPolicy  # noqa: E402
 from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import MuscleModel, MuscleParameters  # noqa: E402
 from worm.body.neural_bridge import MuscleDrive, Proprioception  # noqa: E402
-from worm.body.touch import TouchField  # noqa: E402
+from worm.body.touch import TOUCH_RECEPTORS, TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
     DEFAULT_PROBE_RADIUS_SCALE,
@@ -236,29 +260,47 @@ def main() -> int:
         connectome,
         plan,
         **({"offset": args.sensing_offset} if args.sensing_offset else {}),
-        **({"gain_pa_per_rad": args.proprioceptive_gain} if args.proprioceptive_gain else {}),
     )
-    touch = TouchField.build(
-        plan,
-        cells=runtime.network.cell_ids,
-        **({"current_pa": args.touch_current} if args.touch_current else {}),
+    b_type = [c for c in proprio.targets if c in runtime.network.cell_ids]
+    proprio = replace(
+        proprio,
+        gain_pa_per_rad=scale_for_depolarisation(runtime, b_type, args.proprioceptive_mv),
     )
-    command = {
-        c.strip(): args.command_current
+    # Every input is a target depolarisation, converted to a current against this
+    # network's own conductances. Done once here rather than per step: each solve
+    # settles the network several times. See common/neural/stimulus.py for why the
+    # targets are voltages and not picoamps.
+    print("\n  solving inputs for their target depolarisations ...")
+    runtime.run(2000.0)
+
+    command_cells = [
+        c.strip()
         for c in args.command.split(",")
         if c.strip() and c.strip() in runtime.network.cell_ids
-    }
+    ]
+    command = (
+        solve_for_depolarisation(runtime, command_cells, args.command_mv) if command_cells else {}
+    )
+
+    receptor_cells = [r.cell for r in TOUCH_RECEPTORS if r.cell in runtime.network.cell_ids]
+    per_cell = solve_for_depolarisation(runtime, receptor_cells, args.touch_mv)
+    touch = TouchField.build(plan, cells=runtime.network.cell_ids, per_cell_pa=per_cell)
     print(
         f"\n  muscle slots driven by the connectome: {bridge.covered}/{4 * plan.n_segments}"
         f"\n  proprioceptive targets: {len(proprio.targets)} B-type neurons"
         f"{' (DISABLED)' if args.no_proprioception else ''}"
-        f"\n  proprioceptive gain: {proprio.gain_pa_per_rad:g} pA/rad"
+        f"\n  proprioceptive gain: {args.proprioceptive_mv:g} mV/rad"
+        f" = {proprio.gain_pa_per_rad:.1f} pA/rad"
         f"\n  noise: {args.noise_pa:g} pA std (seed {args.seed})"
-        f"\n  command drive: {', '.join(command) or 'none'} "
-        f"at {args.command_current:g} pA (constant, no rhythm)"
+        f"\n  command drive: {', '.join(command) or 'none'} at "
+        f"{args.command_mv:g} mV = "
+        f"{np.mean(list(command.values())) if command else 0.0:.1f} pA "
+        f"(constant, no rhythm)"
         + (
-            f"\n  touch receptors: {', '.join(touch.cells)} "
-            f"at {touch.current_pa:g} pA -- drag the red sphere onto the body"
+            f"\n  touch receptors: {', '.join(touch.cells)} at "
+            f"{args.touch_mv:g} mV "
+            f"({min(per_cell.values()):.0f}-{max(per_cell.values()):.0f} pA)"
+            f" -- drag the red sphere onto the body"
             if args.probe
             else ""
         )

@@ -1258,6 +1258,79 @@ conductances. The case for changing `parameters.toml` is now much stronger, and
 doing it still requires re-deriving the command drive, the touch current and the
 proprioceptive gain in the same change rather than carrying them across.
 
+## 5H. The first change made against a measurement
+
+`parameters.toml` now carries `e_leak_mv = -70.0` and `g_syn_ps = 10.0`, replacing
+the Kunert et al. 2014 values of -35.0 and 100.0. Two of ten parameters are marked
+`constrained` rather than `assumed`, and seven remain assumed.
+
+This is the first parameter change in the project made because a measurement
+demanded it rather than because a value seemed reasonable. The argument is §5F and
+§5G: two independently fitted conductance-based cells rest a third of a millivolt
+apart at about -69 mV, and the old values put the network fifty times over the
+current budget that lets a measured cell behave as measured.
+
+### 5H.1 The injected currents had to move with it
+
+Changing the biophysics invalidates every input, because a current means whatever
+the cell's conductance says it means — and in this network that varies
+**fourteenfold**, from 1.6 nS at ALM to 23.3 nS at AVA.
+
+`common/neural/stimulus.py` replaces the three chosen currents with target
+depolarisations, converted against each cell's own conductance:
+
+| input | was | now |
+|---|---|---|
+| command drive (AVB) | 500 pA | **20 mV** = 61.1 pA |
+| touch | 20 pA, flat | **20 mV** = 18.8 pA at ALM, 37.8 pA at PLM |
+| proprioceptive gain | 400 pA/rad | **20 mV/rad** = 44.3 pA/rad |
+
+Three things this fixes, each of which had produced a wrong result:
+
+* **PLM was underdriven by half.** ALM and PLM differ twofold in conductance, so
+  the flat 20 pA gave ALM a 12 mV receptor potential and PLM 5 mV. Part of the
+  head-versus-tail asymmetry §5D reported as circuitry was this.
+* **400 pA/rad implied 124 mV per radian at DB1** under the calibrated biophysics.
+  A half-radian bend would have swung it 62 mV.
+* **The old touch current of 400 pA drove ALM to +443 mV** (§5D.4), which is the
+  same failure a year earlier in the same units.
+
+A millivolt can be judged against the -80 to +30 mV a neuron actually occupies. A
+picoamp cannot, which is why every current-valued assumption in this project has
+been wrong at some point by a factor of ten or more without anyone noticing.
+
+### 5H.2 Open loop is not closed loop, measured rather than assumed
+
+`depolarising_current` computes `I = dV * G` with the network held fixed. That
+answer is wrong, and in the direction opposite to intuition.
+
+A cell in a network ought to be *harder* to move than an isolated one, and this
+docstring said so before it was checked. Measured: the current sized for a 20 mV
+shift in AVB produces **+74 mV** once everything settles. With `e_exc` at 0 mV and
+the network resting near -31 mV, excitation feeds back positively and amplifies.
+
+So `solve_for_depolarisation` injects, settles, compares and rescales until the
+achieved shift matches the target. It converges in a few iterations and lands
+within 0.3 mV for AVB, ALM and PLM alike — where the open-loop estimate was two to
+four times too large for all three.
+
+### 5H.3 What it did not fix
+
+**Still no oscillation.** `amp 0.00` at every torque scale, the body still latching
+into a static bend. That is the fourth independent change — polarity coverage
+(§5E), intrinsic RMD dynamics (§5F), calibrated biophysics, re-derived inputs —
+that has not produced a rhythm, and the §5C.9 diagnosis continues to survive each
+one.
+
+The touch response now clears its own background, which it did not before, but the
+network is quiescent enough that clearing a zero background is a weak statement.
+
+What has changed is the ground being stood on. Every earlier result rested on a
+parameter set that could be shown to be wrong; this one rests on a set that agrees
+with the only two cells we can check. That does not make the results right, but it
+removes the most obvious reason they might have been wrong, and it means the next
+negative result is worth more than the last one.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
