@@ -66,10 +66,7 @@ def degrees(c: Connectome) -> list[DegreeRow]:
             gap_n[e.post] += 1
             gap_w[e.post] += e.weight
 
-    return [
-        DegreeRow(i, in_deg[i], out_deg[i], in_w[i], out_w[i], gap_n[i], gap_w[i])
-        for i in ids
-    ]
+    return [DegreeRow(i, in_deg[i], out_deg[i], in_w[i], out_w[i], gap_n[i], gap_w[i]) for i in ids]
 
 
 def _simple_digraph(c: Connectome, synapse_type: SynapseType | None) -> nx.DiGraph:

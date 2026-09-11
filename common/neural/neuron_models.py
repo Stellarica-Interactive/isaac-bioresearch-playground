@@ -267,8 +267,6 @@ class GradedLeakyIntegrator:
         return float(self.params.c_m_pf / np.max(g_total))
 
 
-def prepare(
-    model: GradedLeakyIntegrator, network: NetworkMatrices
-) -> GradedLeakyIntegrator:
+def prepare(model: GradedLeakyIntegrator, network: NetworkMatrices) -> GradedLeakyIntegrator:
     """Solve and cache the threshold potentials so they are computed once."""
     return replace(model, v_threshold_mv=model.threshold_potentials(network))

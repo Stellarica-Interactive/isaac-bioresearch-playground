@@ -57,7 +57,7 @@ from __future__ import annotations
 
 import tomllib
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cached_property, lru_cache
 from importlib.resources import files
 from typing import Any
 
@@ -247,7 +247,21 @@ class ConductanceModel:
         return len(self.state_names)
 
     def index(self, name: str) -> int:
-        return self.state_names.index(name)
+        return self._row[name]
+
+    @cached_property
+    def _row(self) -> dict[str, int]:
+        """Name to row. A tuple scan here was 92,000 calls per 200 ms of simulation."""
+        return {name: i for i, name in enumerate(self.state_names)}
+
+    @cached_property
+    def _gate_names(self) -> tuple[str, ...]:
+        """Gating variables in a fixed order, so their update can be one array op."""
+        return tuple(n for n in self.state_names if n not in ("v", "ca_intra1"))
+
+    @cached_property
+    def _gate_rows(self) -> np.ndarray:
+        return np.array([self._row[n] for n in self._gate_names], dtype=np.int64)
 
     # -- initial conditions ------------------------------------------------
 
@@ -268,6 +282,19 @@ class ConductanceModel:
     def settle(self, state: np.ndarray, *, duration_ms: float = 2000.0) -> np.ndarray:
         """Relax to rest with no input. The model's own resting state, not ours."""
         return self.run(state, duration_ms=duration_ms, i_ext_pa=0.0)
+
+    def resting_state(self, n_cells: int = 1, *, duration_ms: float = 3000.0) -> np.ndarray:
+        """The settled state, cached.
+
+        Settling is expensive -- 60,000 substeps at the default timestep -- and it
+        answers the same question every time, because it has no input and no
+        randomness. ``HybridRuntime.build`` was paying for it twice per
+        construction, once for the state and once to find the resting potential its
+        activation sigmoid is centred on.
+
+        Returns a copy, so a caller mutating its state cannot poison the cache.
+        """
+        return np.repeat(_cached_resting_state(self.model_id, duration_ms), n_cells, axis=1)
 
     # -- the model ---------------------------------------------------------
 
@@ -313,14 +340,18 @@ class ConductanceModel:
         }
         return {name: formula[name]() for name in self.channels}
 
-    def _gates(self, state: np.ndarray) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
+    def _gates(
+        self, state: np.ndarray
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray | float]]:
         """Steady-state values and time constants for every gating variable."""
         p = self.p
         s = {name: state[i] for i, name in enumerate(self.state_names)}
         v = s["v"]
 
         inf: dict[str, np.ndarray] = {}
-        tau: dict[str, np.ndarray] = {}
+        # A constant time constant stays a float: assigning it into the update array
+        # broadcasts, and building a full array for it was measurable overhead.
+        tau: dict[str, np.ndarray | float] = {}
 
         # --- SHL-1 (Kv4) --------------------------------------------------
         inf["m_shal"] = _boltzmann(v, p["vashal"] - p["shalsfhit"], p["kashal"])
@@ -354,14 +385,14 @@ class ConductanceModel:
             + p["ptmshak5"]
         )
         inf["h_shak"] = 1.0 / (1.0 + np.exp((v - p["vishak"] + shift) / p["kishak"]))
-        tau["h_shak"] = np.full_like(v, p["pthshak"])
+        tau["h_shak"] = p["pthshak"]
 
         # --- EGL-36 (Kv3), three kinetic components sharing one activation --
         if "egl36" in self.channels:
             m_egl36 = _boltzmann(v, p["va_egl36"], p["ka_egl36"])
             for i, key in enumerate(("m1_egl36", "m2_egl36", "m3_egl36"), start=1):
                 inf[key] = m_egl36
-                tau[key] = np.full_like(v, p[f"t{i}_egl36"])
+                tau[key] = p[f"t{i}_egl36"]
 
         # --- EGL-2 (EAG-family K) -----------------------------------------
         if "egl2" in self.channels:
@@ -404,7 +435,7 @@ class ConductanceModel:
                 "ckqt3"
             ]
             inf["s_kqt3"] = p["sq1"] + p["sq2"] / (1.0 + np.exp((v + p["sq3"]) / p["sq4"]))
-            tau["s_kqt3"] = np.full_like(v, p["tsq1"] * p["ckqt3"])
+            tau["s_kqt3"] = p["tsq1"] * p["ckqt3"]
 
         # --- IRK (inward rectifier) ---------------------------------------
         # The source writes `(v - va_kir + 30)`, an inactivation-style Boltzmann
@@ -536,7 +567,7 @@ class ConductanceModel:
         # --- KCNL (SK), gated by bulk calcium ------------------------------
         ca = state[self.index("ca_intra1")]
         inf["m_sk"] = ca / (p["k_sk2"] + ca)
-        tau["m_sk"] = np.full_like(v, p["t_sk"])
+        tau["m_sk"] = p["t_sk"]
 
         return inf, tau
 
@@ -561,9 +592,21 @@ class ConductanceModel:
         currents = self.currents(state)
 
         nxt = state.copy()
-        for name, target in inf.items():
-            i = self.index(name)
-            nxt[i] = target + (state[i] - target) * np.exp(-dt_ms / tau[name])
+        # One exponential over every gate at once. Looping did twenty-one separate
+        # np.exp calls on six-element arrays per step, where the per-call overhead
+        # dwarfs the arithmetic.
+        rows = self._gate_rows
+        names = self._gate_names
+        shape = (len(names), state.shape[1] if state.ndim > 1 else 1)
+        # Assigned into a preallocated array rather than stacked from broadcast
+        # views: np.broadcast_to is a Python-level wrapper, and at two calls per
+        # gate per step it cost more than the exponentials it was feeding.
+        target = np.empty(shape, dtype=np.float64)
+        constants = np.empty(shape, dtype=np.float64)
+        for k, name in enumerate(names):
+            target[k] = inf[name]
+            constants[k] = tau[name]
+        nxt[rows] = target + (state[rows] - target) * np.exp(-dt_ms / constants)
 
         # Intracellular calcium: influx from the three calcium currents, with a
         # first-order return to background. The source only accumulates on influx.
@@ -631,3 +674,13 @@ class ConductanceModel:
             if k % every == 0:
                 trace.append(state[0].copy())
         return state, np.array(trace)
+
+
+@lru_cache(maxsize=8)
+def _cached_resting_state(model_id: str, duration_ms: float) -> np.ndarray:
+    """One settled column per model. Deliberately module-level: the result depends
+    only on the published parameters, so it is shared across every instance."""
+    model = ConductanceModel.load(model_id)
+    settled = model.settle(model.initial_state(1), duration_ms=duration_ms)
+    settled.flags.writeable = False
+    return settled

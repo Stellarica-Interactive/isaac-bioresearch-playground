@@ -104,9 +104,7 @@ class HybridRuntime:
     substep_ms: float = DEFAULT_DT_MS
 
     def __post_init__(self) -> None:
-        self.state = self.model.settle(
-            self.model.initial_state(len(self.cells)), duration_ms=3000.0
-        )
+        self.state = self.model.resting_state(len(self.cells))
         # Hand the network the intrinsic cells' true resting potential before
         # anything runs, so the first step does not begin with a spurious jump.
         self.runtime.state[0, self.indices] = self.state[0]
@@ -141,7 +139,7 @@ class HybridRuntime:
         if recentre_threshold:
             # See the module docstring: keep the convention that a cell sits at the
             # midpoint of its output sigmoid at rest.
-            rest = float(model.settle(model.initial_state(1), duration_ms=3000.0)[0, 0])
+            rest = float(model.resting_state()[0, 0])
             thresholds = np.array(
                 runtime.model.v_threshold_mv,  # type: ignore[attr-defined]
                 dtype=np.float64,
