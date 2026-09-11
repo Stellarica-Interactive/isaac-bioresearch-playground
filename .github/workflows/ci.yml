@@ -79,7 +79,9 @@ jobs:
       # rather than retyped. This asserts the committed table still matches that
       # source, so the model cannot silently drift from the published one.
       - name: Imported neuron models match their published source
-        run: python tools/import_neuron_model.py --source nicoletti_2019_rmd_awc --out worm/neural/models/rmd_nicoletti2019.toml --check
+        run: |
+          python tools/import_neuron_model.py --source nicoletti_2019_rmd_awc --out worm/neural/models/rmd_nicoletti2019.toml --check
+          python tools/import_neuron_model.py --source nicoletti_2019_awc --out worm/neural/models/awc_nicoletti2019.toml --check
 
       # Compares our parse against totals published independently of this project.
       - name: Verify every dataset against its published totals

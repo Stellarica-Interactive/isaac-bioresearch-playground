@@ -1207,6 +1207,57 @@ The injected currents should then be derived from the calibrated conductances
 rather than chosen, so that a change in biophysics propagates to them instead of
 silently invalidating them.
 
+### 5G.5 A second measured cell, and it agrees
+
+§5G.4 said the way to turn "a region exists" into "these are the values" was a
+second measured cell. AWC^on is now implemented, and the result is better than
+hoped.
+
+**It is genuinely independent.** AWC carries a different channel complement from
+RMD — EGL-2, KVS-1 and KQT-3 where RMD has EGL-36 — 26 state variables against 22,
+and the two were fitted to separate voltage-clamp data. Nineteen channels are
+shared, which is not a coincidence: *C. elegans* expresses a limited repertoire and
+the same genes recur with different conductances. `common/neural/conductance.py`
+therefore writes each channel once and lets a model name the ones it has, so AWC is
+not a copy of RMD with four edits.
+
+**They agree without being asked to.**
+
+| | resting potential | channels |
+|---|---|---|
+| RMD | −69.487 mV | SHL-1, SHK-1, **EGL-36**, IRK, UNC-2, EGL-19, CCA-1, SLO/BK, KCNL |
+| AWC^on | **−69.180 mV** | SHL-1, SHK-1, **EGL-2, KVS-1, KQT-3**, IRK, UNC-2, EGL-19, CCA-1, SLO/BK, KCNL |
+
+A third of a millivolt apart, from separate fits. Neither was constrained to match
+the other. That is what turns "−69 mV" from one paper's parameter search into a
+property of these neurons, and it is what makes it usable as a constraint on our
+own assumed biophysics.
+
+The behaviours also differ in the right direction: RMD is bistable and AWC is not.
+A brief depolarising pulse leaves RMD latched 23 mV up and leaves AWC back at rest.
+AWC is a chemosensory neuron, not a plateau cell, and getting RMD's behaviour out
+of it would have meant the channel dispatch was not really dispatching. Asserted in
+`test_awc_is_not_bistable`.
+
+**The second constraint selects the same parameters.** Re-running the scan with
+both cells clamped:
+
+| into a measured cell | network median | parameters |
+|---|---|---|
+| **3.66 pA** | **−67.9 mV** | g_leak=10, g_syn=**10**, g_gap=100, e_leak=**−70** |
+| 6.38 pA | −62.5 mV | g_leak=10, g_syn=10, g_gap=30, e_leak=−70 |
+| 203.5 pA | −15.9 mV | *the committed values* |
+
+One combination out of 81 is within budget, and it is the same one the single
+constraint picked. An independent second measurement did not move the answer, which
+is the check §5G.1 could not perform on its own.
+
+What has not changed is §5G.3: two constraints still cannot determine nine
+parameters, and every injected current in the model was chosen against the present
+conductances. The case for changing `parameters.toml` is now much stronger, and
+doing it still requires re-deriving the command drive, the touch current and the
+proprioceptive gain in the same change rather than carrying them across.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

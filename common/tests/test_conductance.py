@@ -220,3 +220,67 @@ def test_recorded_trace_matches_the_plain_run(model: ConductanceModel, rest: np.
     final, trace = model.run_recorded(rest.copy(), duration_ms=20.0, i_ext_pa=10.0)
     assert np.array_equal(plain, final)
     assert trace[-1] == pytest.approx(final[0, 0])
+
+
+# -- the second measured cell --------------------------------------------------
+
+
+def test_awc_is_a_separate_channel_complement() -> None:
+    """AWC^on shares nineteen state variables with RMD and differs in the rest.
+
+    If the channel sets ever collapse onto each other, the two cells stop being
+    independent constraints and the agreement in the next test becomes circular.
+    """
+    awc = ConductanceModel.load("awc_nicoletti2019")
+    rmd = ConductanceModel.load(MODEL)
+    assert "egl36" in rmd.channels and "egl36" not in awc.channels
+    assert {"egl2", "kvs1", "kqt3"} <= set(awc.channels)
+    assert {"egl2", "kvs1", "kqt3"}.isdisjoint(rmd.channels)
+    assert awc.n_state == 26 and rmd.n_state == 22
+
+
+def test_awc_rests_where_rmd_does_without_being_told_to() -> None:
+    """Two cells, different channels, different voltage-clamp data, same answer.
+
+    Neither fit was constrained to agree with the other, so this is the evidence
+    that ~-69 mV is a property of *C. elegans* neurons rather than of one paper's
+    parameter search -- which is what makes it usable as a constraint on our own
+    assumed biophysics (docs/model_assumptions.md 5G).
+    """
+    awc = ConductanceModel.load("awc_nicoletti2019")
+    rest = awc.settle(awc.initial_state(1), duration_ms=4000.0)
+    assert rest[0, 0] == pytest.approx(-69.2, abs=1.5)
+
+    rmd = ConductanceModel.load(MODEL)
+    rmd_rest = rmd.settle(rmd.initial_state(1), duration_ms=3000.0)
+    assert abs(rest[0, 0] - rmd_rest[0, 0]) < 2.0
+
+
+def test_awc_is_not_bistable() -> None:
+    """AWC is a chemosensory neuron, not a plateau cell. Getting RMD's behaviour
+    out of it would mean the channel dispatch is not really dispatching."""
+    awc = ConductanceModel.load("awc_nicoletti2019")
+    rest = awc.settle(awc.initial_state(1), duration_ms=4000.0)
+    after = awc.run(
+        awc.run(rest.copy(), duration_ms=30.0, i_ext_pa=10.0),
+        duration_ms=1000.0,
+        i_ext_pa=0.0,
+    )
+    assert after[0, 0] == pytest.approx(rest[0, 0], abs=1.0)
+
+
+def test_awc_gating_variables_stay_in_range() -> None:
+    awc = ConductanceModel.load("awc_nicoletti2019")
+    state = awc.run(
+        awc.settle(awc.initial_state(1), duration_ms=3000.0),
+        duration_ms=200.0,
+        i_ext_pa=20.0,
+    )
+    gates = [i for i, n in enumerate(awc.state_names) if n not in ("v", "ca_intra1")]
+    assert state[gates].min() >= -1e-9
+    assert state[gates].max() <= 1.0 + 1e-9
+
+
+def test_an_undeclared_model_is_refused() -> None:
+    with pytest.raises(KeyError, match="no channel set declared"):
+        ConductanceModel.load("not_a_model")

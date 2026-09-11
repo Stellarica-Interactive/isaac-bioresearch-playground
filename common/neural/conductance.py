@@ -87,8 +87,83 @@ MODELS_PACKAGE = "worm.neural.models"
 #: a price worth paying.
 DEFAULT_DT_MS = 0.05
 
-#: Order of the state array's first axis. Voltage first so that ``state[0]`` is
-#: the membrane potential for every model, matching the graded runtime.
+#: The ionic currents each published model carries.
+#:
+#: The two 2019 cells share nineteen of their state variables. That is not a
+#: coincidence or a convenience: *C. elegans* expresses a limited channel
+#: repertoire, and the same genes turn up in cell after cell with different
+#: conductances. So the channels are written once and each model names the ones it
+#: has, rather than AWC being a near-copy of RMD with four edits.
+MODEL_CHANNELS: dict[str, tuple[str, ...]] = {
+    "rmd_nicoletti2019": (
+        "shal",
+        "shak",
+        "egl36",
+        "kir",
+        "unc2",
+        "egl19",
+        "cca1",
+        "bk",
+        "bk2",
+        "slo1",
+        "slo2",
+        "sk",
+        "leak",
+        "nca",
+    ),
+    "awc_nicoletti2019": (
+        "shal",
+        "shak",
+        "egl2",
+        "kvs1",
+        "kqt3",
+        "kir",
+        "unc2",
+        "egl19",
+        "cca1",
+        "bk",
+        "bk2",
+        "slo1",
+        "slo2",
+        "sk",
+        "leak",
+        "nca",
+    ),
+}
+
+#: Gating variables contributed by each channel, in addition to ``v`` and calcium.
+CHANNEL_GATES: dict[str, tuple[str, ...]] = {
+    "shal": ("m_shal", "hf_shal", "hs_shal"),
+    "shak": ("m_shak", "h_shak"),
+    "egl36": ("m1_egl36", "m2_egl36", "m3_egl36"),
+    "egl2": ("m_egl2",),
+    "kvs1": ("m_kvs1", "h_kvs1"),
+    "kqt3": ("mf_kqt3", "ms_kqt3", "w_kqt3", "s_kqt3"),
+    "kir": ("m_kir",),
+    "unc2": ("m_unc2", "h_unc2"),
+    "egl19": ("m_egl19", "hs_egl19"),
+    "cca1": ("m_cca1", "h_cca1"),
+    "bk": ("mbk",),
+    "bk2": ("mbk2",),
+    "slo1": ("mslo1",),
+    "slo2": ("mslo2",),
+    "sk": ("m_sk",),
+    "leak": (),
+    "nca": (),
+}
+
+
+def state_names_for(model_id: str) -> tuple[str, ...]:
+    """Voltage first -- so ``state[0]`` is membrane potential for every model,
+    matching the graded runtime -- then each channel's gates, then calcium."""
+    names = ["v"]
+    for channel in MODEL_CHANNELS[model_id]:
+        names.extend(CHANNEL_GATES[channel])
+    names.append("ca_intra1")
+    return tuple(names)
+
+
+#: Kept for callers that named it before there was more than one model.
 RMD_STATE_NAMES: tuple[str, ...] = (
     "v",
     "m_shal",
@@ -149,10 +224,23 @@ class ConductanceModel:
     model_id: str
     p: dict[str, float]
     state_names: tuple[str, ...] = RMD_STATE_NAMES
+    channels: tuple[str, ...] = MODEL_CHANNELS["rmd_nicoletti2019"]
 
     @classmethod
     def load(cls, model_id: str = "rmd_nicoletti2019") -> ConductanceModel:
-        return cls(model_id=model_id, p=load_parameters(model_id))
+        if model_id not in MODEL_CHANNELS:
+            raise KeyError(
+                f"no channel set declared for {model_id!r}. Add it to MODEL_CHANNELS "
+                "after checking which currents the published source actually sums "
+                "into I_tot -- guessing a cell's channel complement is exactly what "
+                "this module must not do."
+            )
+        return cls(
+            model_id=model_id,
+            p=load_parameters(model_id),
+            state_names=state_names_for(model_id),
+            channels=MODEL_CHANNELS[model_id],
+        )
 
     @property
     def n_state(self) -> int:
@@ -184,51 +272,46 @@ class ConductanceModel:
     # -- the model ---------------------------------------------------------
 
     def currents(self, state: np.ndarray) -> dict[str, np.ndarray]:
-        """Every ionic current, in pA. Positive is outward, as in the source."""
+        """Every ionic current this model carries, in pA. Outward is positive."""
         p = self.p
         s = {name: state[i] for i, name in enumerate(self.state_names)}
         v = s["v"]
+        ek, eca = p["ek"], p["eca"]
 
-        i_shal = (
-            p["gshal"]
-            * s["m_shal"] ** 3
-            * (0.7 * s["hf_shal"] + 0.3 * s["hs_shal"])
-            * (v - p["ek"])
-        )
-        i_shak = p["gshak"] * s["m_shak"] * s["h_shak"] * (v - p["ek"])
-        i_egl36 = (
-            p["gegl36"]
-            * (p["a1"] * s["m1_egl36"] + p["a2"] * s["m2_egl36"] + p["a3"] * s["m3_egl36"])
-            * (v - p["ek"])
-        )
-        i_kir = p["gkir"] * s["m_kir"] * (v - p["ek"])
-        i_unc2 = p["gunc2"] * s["m_unc2"] * s["h_unc2"] * (v - p["eca"])
-        i_egl19 = p["gegl19"] * s["m_egl19"] * s["hs_egl19"] * (v - p["eca"])
-        i_cca1 = p["gcca1"] * s["m_cca1"] ** 2 * s["h_cca1"] * (v - p["eca"])
-        i_bk = p["gbk"] * s["mbk"] * s["h_unc2"] * (v - p["ek"])
-        i_bk2 = p["gbk2"] * s["mbk2"] * s["hs_egl19"] * (v - p["ek"])
-        i_slo1 = p["gslo1"] * s["mslo1"] * s["hs_egl19"] * (v - p["ek"])
-        i_slo2 = p["gslo2"] * s["mslo2"] * s["h_unc2"] * (v - p["ek"])
-        i_sk = p["gca"] * s["m_sk"] * (v - p["ek"])
-        i_leak = p["gleak"] * (v - p["eleak"])
-        i_nca = p["gnca"] * (v - p["ena"])
-
-        return {
-            "shal": i_shal,
-            "shak": i_shak,
-            "egl36": i_egl36,
-            "kir": i_kir,
-            "unc2": i_unc2,
-            "egl19": i_egl19,
-            "cca1": i_cca1,
-            "bk": i_bk,
-            "bk2": i_bk2,
-            "slo1": i_slo1,
-            "slo2": i_slo2,
-            "sk": i_sk,
-            "leak": i_leak,
-            "nca": i_nca,
+        formula = {
+            "shal": lambda: (
+                p["gshal"] * s["m_shal"] ** 3 * (0.7 * s["hf_shal"] + 0.3 * s["hs_shal"]) * (v - ek)
+            ),
+            "shak": lambda: p["gshak"] * s["m_shak"] * s["h_shak"] * (v - ek),
+            "egl36": lambda: (
+                p["gegl36"]
+                * (p["a1"] * s["m1_egl36"] + p["a2"] * s["m2_egl36"] + p["a3"] * s["m3_egl36"])
+                * (v - ek)
+            ),
+            "egl2": lambda: p["gegl2"] * s["m_egl2"] * (v - ek),
+            "kvs1": lambda: p["gkvs1"] * s["m_kvs1"] * s["h_kvs1"] * (v - ek),
+            # Fast and slow activation in fixed proportion, gated by two further
+            # slow variables -- KQT-3 is the most elaborate channel in either cell.
+            "kqt3": lambda: (
+                p["gkqt3"]
+                * (0.3 * s["mf_kqt3"] + 0.7 * s["ms_kqt3"])
+                * s["w_kqt3"]
+                * s["s_kqt3"]
+                * (v - ek)
+            ),
+            "kir": lambda: p["gkir"] * s["m_kir"] * (v - ek),
+            "unc2": lambda: p["gunc2"] * s["m_unc2"] * s["h_unc2"] * (v - eca),
+            "egl19": lambda: p["gegl19"] * s["m_egl19"] * s["hs_egl19"] * (v - eca),
+            "cca1": lambda: p["gcca1"] * s["m_cca1"] ** 2 * s["h_cca1"] * (v - eca),
+            "bk": lambda: p["gbk"] * s["mbk"] * s["h_unc2"] * (v - ek),
+            "bk2": lambda: p["gbk2"] * s["mbk2"] * s["hs_egl19"] * (v - ek),
+            "slo1": lambda: p["gslo1"] * s["mslo1"] * s["hs_egl19"] * (v - ek),
+            "slo2": lambda: p["gslo2"] * s["mslo2"] * s["h_unc2"] * (v - ek),
+            "sk": lambda: p["gca"] * s["m_sk"] * (v - ek),
+            "leak": lambda: p["gleak"] * (v - p["eleak"]),
+            "nca": lambda: p["gnca"] * (v - p["ena"]),
         }
+        return {name: formula[name]() for name in self.channels}
 
     def _gates(self, state: np.ndarray) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray]]:
         """Steady-state values and time constants for every gating variable."""
@@ -248,7 +331,7 @@ class ConductanceModel:
                 + np.exp((v - p["ptmshal4"]) / p["ptmshal5"])
             )
             + p["ptmshal6"]
-        ) * p["cashal"]
+        ) * p.get("cashal", p["cshal"])  # RMD names this cashal, AWC cshal
         h_shal = 1.0 / (1.0 + np.exp((v - p["vishal"] + p["shalsfhit"]) / p["kishal"]))
         inf["hf_shal"] = h_shal
         inf["hs_shal"] = h_shal
@@ -274,10 +357,54 @@ class ConductanceModel:
         tau["h_shak"] = np.full_like(v, p["pthshak"])
 
         # --- EGL-36 (Kv3), three kinetic components sharing one activation --
-        m_egl36 = _boltzmann(v, p["va_egl36"], p["ka_egl36"])
-        for i, key in enumerate(("m1_egl36", "m2_egl36", "m3_egl36"), start=1):
-            inf[key] = m_egl36
-            tau[key] = np.full_like(v, p[f"t{i}_egl36"])
+        if "egl36" in self.channels:
+            m_egl36 = _boltzmann(v, p["va_egl36"], p["ka_egl36"])
+            for i, key in enumerate(("m1_egl36", "m2_egl36", "m3_egl36"), start=1):
+                inf[key] = m_egl36
+                tau[key] = np.full_like(v, p[f"t{i}_egl36"])
+
+        # --- EGL-2 (EAG-family K) -----------------------------------------
+        if "egl2" in self.channels:
+            inf["m_egl2"] = _boltzmann(v, p["va_egl2"] - p["stmegl2"], p["ka_egl2"] * p["fegl2"])
+            tau["m_egl2"] = (
+                p["p1tmegl2"] / (1.0 + np.exp((v - p["p2tmegl2"] + p["stmegl2"]) / p["p3tmegl2"]))
+                + p["p4tmegl2"]
+            ) * p["cegl2"]
+
+        # --- KVS-1 (Kv, inactivating) -------------------------------------
+        if "kvs1" in self.channels:
+            inf["m_kvs1"] = _boltzmann(v, p["va_kvs1"] - p["skvs1"], p["ka_kvs1"])
+            tau["m_kvs1"] = (
+                p["p1tmkvs1"] / (1.0 + np.exp(-(v - p["p2tmkvs1"]) / p["p3tmkvs1"])) + p["p4tmkvs1"]
+            ) / 10.0
+            inf["h_kvs1"] = 1.0 / (1.0 + np.exp((v - p["vi_kvs1"] + p["skvs1"]) / p["ki_kvs1"]))
+            tau["h_kvs1"] = (
+                p["p1thkvs1"] / (1.0 + np.exp(-(v - p["p2thkvs1"]) / p["p3thkvs1"])) + p["p4thkvs1"]
+            ) * p["cthkvs1"]
+
+        # --- KQT-3 (KCNQ) -------------------------------------------------
+        # Two activation variables sharing one steady state but with fast and slow
+        # kinetics, plus two further slow gates. Its time constants use a base-10
+        # sigmoid rather than the natural exponential used everywhere else, which is
+        # in the source and is reproduced rather than normalised.
+        if "kqt3" in self.channels:
+            m_kqt3 = _boltzmann(v, p["va_kqt3"] - p["constkqt3"], p["ka_kqt3"])
+            inf["mf_kqt3"] = m_kqt3
+            inf["ms_kqt3"] = m_kqt3
+            tau["mf_kqt3"] = (
+                p["p1tmfkqt3"] / (1.0 + ((v + p["p2tmfkqt3"]) / p["p3tmfkqt3"]) ** 2)
+            ) * p["ckqt3"]
+            tau["ms_kqt3"] = (
+                p["p1tmskqt3"]
+                - p["p2tmskqt3"] / (1.0 + 10.0 ** (p["p3tmskqt3"] * (p["p4tmskqt3"] - v)))
+                - p["p5tmskqt3"] / (1.0 + 10.0 ** (p["p6tmskqt3"] * (v + p["p7tmskqt3"])))
+            ) * p["ckqt3"]
+            inf["w_kqt3"] = p["w1"] + p["w2"] / (1.0 + np.exp((v + p["w3"]) / p["w4"]))
+            tau["w_kqt3"] = (p["tw1"] + p["tw2"] / (1.0 + ((v + p["tw3"]) / p["tw4"]) ** 2)) * p[
+                "ckqt3"
+            ]
+            inf["s_kqt3"] = p["sq1"] + p["sq2"] / (1.0 + np.exp((v + p["sq3"]) / p["sq4"]))
+            tau["s_kqt3"] = np.full_like(v, p["tsq1"] * p["ckqt3"])
 
         # --- IRK (inward rectifier) ---------------------------------------
         # The source writes `(v - va_kir + 30)`, an inactivation-style Boltzmann

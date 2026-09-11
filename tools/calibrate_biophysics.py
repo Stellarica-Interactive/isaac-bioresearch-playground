@@ -13,8 +13,9 @@ showed the answer moves fourteenfold across defensible choices of them, and unti
 recently there was nothing to do about that: no measured quantity in the model
 could tell one choice from another.
 
-§5F supplied one. RMD's resting potential is **−69.5 mV**, measured, and a real
-RMD sits there *while embedded in a real animal*. So the assumed network has a
+§5F supplied one, and AWC^on a second. Their resting potentials are **−69.5 mV**
+and **−69.2 mV**, from separate channel complements fitted to separate data, and a
+real RMD or AWC sits there *while embedded in a real animal*. So the assumed network has a
 number it must reproduce, and it does not: it drags RMD to −22 mV, delivering
 hundreds of picoamps into a cell whose measured bistability survives about four.
 
@@ -34,7 +35,7 @@ grid is affordable.
 What this is not
 ----------------
 
-**It is not a fit.** One constraint cannot determine nine parameters, and this
+**It is not a fit.** Two constraints cannot determine nine parameters, and this
 tool does not pretend otherwise: it reports where in the grid the constraint is
 satisfied, and leaves the choice, and the argument for it, to a human.
 
@@ -59,9 +60,23 @@ from worm.importers.naming import body_wall_muscle_ids
 from worm.loader import load
 from worm.neural.config import RUNTIME_OVERLAYS, build_runtime
 
-#: The six RMD cells, and the resting potential Nicoletti et al. 2019 measured.
-RMD_CELLS = ("RMDDL", "RMDDR", "RMDVL", "RMDVR", "RMDL", "RMDR")
-MEASURED_REST_MV = -69.5
+#: Cells whose resting potential we have from a conductance-based model, and the
+#: value that model settles to with no input.
+#:
+#: Two independent measurements, which matters more than two numbers. RMD and
+#: AWC^on carry different channel complements -- EGL-36 against EGL-2, KVS-1 and
+#: KQT-3 -- and were fitted to separate voltage-clamp data. That they both settle
+#: within a third of a millivolt of -69 mV is not something either fit was told to
+#: do, and it makes "the network should rest near -69 mV" a far stronger claim than
+#: one cell could support.
+MEASURED_CELLS: dict[str, tuple[tuple[str, ...], float]] = {
+    "rmd_nicoletti2019": (("RMDDL", "RMDDR", "RMDVL", "RMDVR", "RMDL", "RMDR"), -69.5),
+    "awc_nicoletti2019": (("AWCL", "AWCR"), -69.2),
+}
+
+#: Kept for callers that predate the second cell.
+RMD_CELLS = MEASURED_CELLS["rmd_nicoletti2019"][0]
+MEASURED_REST_MV = MEASURED_CELLS["rmd_nicoletti2019"][1]
 
 #: Standing bias RMD's plateau bistability survives, pA. Measured in §5F.2: two
 #: stable states at 0 and 2 pA, one only from 4 pA upward.
@@ -97,22 +112,35 @@ def evaluate(settle_ms: float = 3000.0, **overrides: float) -> tuple[float, floa
         dt_ms=1.0,
         parameter_overrides=overrides,
     )
-    idx = np.array([runtime.network.index(c) for c in RMD_CELLS])
+    clamped: list[tuple[np.ndarray, float]] = []
+    for cells_, rest in MEASURED_CELLS.values():
+        present = [c for c in cells_ if c in runtime.network.cell_ids]
+        if present:
+            clamped.append((np.array([runtime.network.index(c) for c in present]), rest))
+
     for _ in range(int(settle_ms)):
-        runtime.state[0, idx] = MEASURED_REST_MV
+        for idx, rest in clamped:
+            runtime.state[0, idx] = rest
         runtime.step()
-    runtime.state[0, idx] = MEASURED_REST_MV
+    for idx, rest in clamped:
+        runtime.state[0, idx] = rest
 
     net = runtime.network
     v, s = runtime.state[0], runtime.state[1]
     # The network's drive decomposes as constant - conductance * V; see
     # common.neural.hybrid.HybridRuntime.network_drive.
-    constant = (net.g_gap @ v + net.g_syn_e_rev @ s)[idx]
-    conductance = (net.gap_row_sum + net.g_syn @ s)[idx]
-    current = constant - conductance * MEASURED_REST_MV
+    constant = net.g_gap @ v + net.g_syn_e_rev @ s
+    conductance = net.gap_row_sum + net.g_syn @ s
 
-    others = [i for i in range(net.n) if i not in set(idx.tolist())]
-    return float(np.median(v[others])), float(np.abs(current).max())
+    worst = 0.0
+    held: set[int] = set()
+    for idx, rest in clamped:
+        current = constant[idx] - conductance[idx] * rest
+        worst = max(worst, float(np.abs(current).max()))
+        held |= set(idx.tolist())
+
+    others = [i for i in range(net.n) if i not in held]
+    return float(np.median(v[others])), worst
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -122,6 +150,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     median, current = evaluate()
+    names = ", ".join(
+        f"{'/'.join(c[:2])}{'...' if len(c) > 2 else ''} at {r:g} mV"
+        for c, r in MEASURED_CELLS.values()
+    )
+    print(f"Constraints: {names}")
     print("With the committed parameters:")
     print(f"  network resting median       {median:8.1f} mV")
     print(f"  current into RMD held at rest {current:7.1f} pA")
@@ -152,8 +185,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{cur:8.2f}pA {med:10.1f}mV  {summary}{flag}")
 
     print(
-        "\nA region satisfying the constraint is not a fitted parameter set. One "
-        "measured cell cannot determine nine parameters, and every injected current "
+        "\nA region satisfying the constraint is not a fitted parameter set. Two "
+        "measured cells cannot determine nine parameters, and every injected current "
         "in the model was chosen against the old conductances -- see the module "
         "docstring before changing anything."
     )
