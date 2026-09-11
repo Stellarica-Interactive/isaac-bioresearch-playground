@@ -35,6 +35,14 @@ grid is affordable.
 What this is not
 ----------------
 
+**It measures a clamped state, not an equilibrium.** The number below is the
+current needed to *hold* a measured cell where its measurement says it sits. It is
+not evidence that the network would rest there, and it must not be read as one:
+free of any clamp the network settles at -31.3 mV with the committed parameters,
+some 38 mV away. See docs/model_assumptions.md 5K, which corrects an earlier
+reading of exactly this output. A correct optimisation target is the *free*
+resting potential.
+
 **It is not a fit.** Two constraints cannot determine nine parameters, and this
 tool does not pretend otherwise: it reports where in the grid the constraint is
 satisfied, and leaves the choice, and the argument for it, to a human.

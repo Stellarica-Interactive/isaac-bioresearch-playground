@@ -1140,7 +1140,7 @@ survives about 4 pA.
 
 Scanning `g_leak`, `g_syn`, `g_gap` and `e_leak`:
 
-| into RMD | network median | parameters |
+| into RMD | network median *while clamped* | parameters |
 |---|---|---|
 | **3.9 pA** | **−67.8 mV** | g_leak=10, g_syn=**10**, g_gap=100, e_leak=**−70** |
 | 8.7 pA | −59.7 mV | g_leak=10, g_syn=10, g_gap=30, e_leak=−70 |
@@ -1148,8 +1148,13 @@ Scanning `g_leak`, `g_syn`, `g_gap` and `e_leak`:
 | 209 pA | −15.5 mV | *the committed values* |
 
 Two changes carry it: **`g_syn` tenfold lower**, and **`e_leak` at −70 mV**. The
-network then settles at −67.8 mV, within 2 mV of RMD's measured resting potential
-— which nothing in the search asked it to do.
+network then sits at −67.8 mV *while the measured cells are clamped there*, within
+2 mV of RMD's own resting potential.
+
+**That is a clamped state, not an equilibrium, and §5K corrects the reading of it.**
+Released, the network returns to −31.3 mV. The figure below is what the network
+does when held against the measurement, which is the right thing for the scan to
+report and the wrong thing to describe as where the network rests.
 
 Two things in that table are worth noticing. Raising `g_leak` makes matters
 *worse*, not better, because stiffer neighbours resist being pulled toward the
@@ -1242,7 +1247,7 @@ of it would have meant the channel dispatch was not really dispatching. Asserted
 **The second constraint selects the same parameters.** Re-running the scan with
 both cells clamped:
 
-| into a measured cell | network median | parameters |
+| into a measured cell | network median *while clamped* | parameters |
 |---|---|---|
 | **3.66 pA** | **−67.9 mV** | g_leak=10, g_syn=**10**, g_gap=100, e_leak=**−70** |
 | 6.38 pA | −62.5 mV | g_leak=10, g_syn=10, g_gap=30, e_leak=−70 |
@@ -1496,6 +1501,77 @@ cannot act.
 
 The magnitudes are also a seventh of a millivolt. They are reported relative to the
 network for the reason above, and they should not be quoted as absolute.
+
+## 5K. Correction: the calibrated network does not rest where the measured cells do
+
+§5G reported that the calibrated parameters bring the network to −67.8 mV, "within
+2 mV of RMD's measured resting potential — which nothing in the search asked it to
+do". That reading was wrong, and the qualifier in §5G.3 ("satisfying the clamped
+constraint is necessary, not sufficient") was not strong enough.
+
+### 5K.1 What the network actually does
+
+Started from three different places, with the committed parameters:
+
+| | network median |
+|---|---|
+| settle freely | **−31.3 mV** |
+| settle with the measured cells clamped at −69.5 mV | −67.8 mV |
+| the same, then release the clamp for 3 s | −52.4 mV, still drifting |
+| start **every** cell at −70 mV and settle | **−31.4 mV** |
+
+There is one stable operating point and it is **−31.3 mV**, reached from above and
+from below. The −67.8 mV figure is a *clamped* state: it exists while the measured
+cells are externally held there and decays once they are not.
+
+`tools/calibrate_biophysics.py` does exactly what its docstring says — "hold RMD
+where the measurement says it sits, let the rest of the network settle around it"
+— and reports that state honestly. The error was in the prose around it, which
+described the result as where the network rests.
+
+### 5K.2 What that changes
+
+**Still true:**
+
+* RMD and AWC^on rest at −69.487 and −69.180 mV, independently fitted (§5G.5).
+* With the old parameters the network delivered 209 pA into a clamped RMD, and
+  with the new ones 3.66 pA — a genuine fifty-fold reduction in the discrepancy.
+* The new parameters improve signal propagation elevenfold and muscle drive
+  fivefold (§5G.2). That argument never depended on the resting potential.
+
+**No longer claimed:** that the calibrated network agrees with the measured cells.
+It does not. Free of any clamp it rests at −31.3 mV, some 38 mV from where both
+measured cells sit, and a released RMD equilibrates at −36.8 to −50.8 mV — outside
+the roughly −65 mV its bistability needs (§5F.2).
+
+So the calibration reduced the disagreement without resolving it, and the
+oscillator remains blocked for the reason §5F gave: the surroundings hold the
+measured cell out of the range where its measured behaviour lives.
+
+### 5K.3 The objective was the wrong one
+
+Clamping a cell and measuring the current needed to hold it there asks "how far is
+the network from the measurement?" — a useful diagnostic, and a bad optimisation
+target, because a parameter set can minimise it without the free network moving at
+all. Two parameters reduced it fiftyfold while the resting potential moved from
+−15.5 mV to −31.3 mV: better, and less than half the distance.
+
+A correct objective is the **free** resting potential: settle with nothing clamped
+and compare the median against −69 mV. That is a slower evaluation, because it
+cannot stop early, and it is the one that would actually constrain the parameters.
+§5G's scan should be re-run against it before anything further is concluded from
+those numbers.
+
+### 5K.4 Why it was not caught sooner
+
+The contradiction was visible in the numbers the whole time: the scan reported
+3.66 pA into a clamped RMD, and a separate run reported 132.8 pA into RMD at the
+same voltage under the same parameters. Two measurements of the same quantity
+differing by a factor of 36, sitting in the same document, four sections apart.
+
+They differ because one clamps during the settle and the other does not — an
+ordering difference with no visible trace in either result. It surfaced only when
+the two were computed side by side and the disagreement could not be ignored.
 
 ## 6. Decisions taken, and what remains open
 
