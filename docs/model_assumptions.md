@@ -1421,6 +1421,82 @@ Resolving it means reading the paper's parameter tables — which is precisely w
 the 2019 errata were — or asking the authors, who are reachable and whose code is
 otherwise careful. The latter is the better route and costs an email.
 
+## 5J. Chemotaxis: the connectome computes the right rule
+
+The sensory half of milestone W3. A food source, the concentration at the nose,
+and the amphid chemosensors — with the one thing that is easy to get wrong got
+right: the neurons report the **time derivative** of concentration, not its value.
+
+The animal does not steer toward food. It cannot: its head is a couple of hundred
+microns across and the gradient over that width is nothing. It runs, pirouettes,
+and biases *when* it pirouettes by whether concentration is rising or falling
+(Pierce-Shimomura, Morse & Lockery 1999). So `worm/body/chemotaxis.py` adapts —
+each sensor tracks a slow estimate of recent concentration and responds to the
+departure from it — and a worm sitting in a uniform field goes quiet however
+strong the field is.
+
+### 5J.1 The result
+
+AIY promotes runs and AIB promotes turns, so `AIY − AIB` is the quantity that
+decides behaviour. Measured against an identical run with no gradient, with the
+network-wide common mode removed:
+
+| stimulus | AIY | AIB | AIY−AIB | |
+|---|---|---|---|---|
+| **AWC, rising** | +0.040 | −0.108 | **+0.148** | **run** |
+| **AWC, falling** | −0.032 | +0.102 | **−0.135** | **turn** |
+
+That is the chemotaxis rule. Concentration rising suppresses turning; concentration
+falling promotes it. It comes out of measured wiring carrying measured signs, and
+nothing was tuned to produce it: the connectome has `AWC → AIY` **inhibitory**
+(weights 22, 12, 22) and `AWC → AIB` **excitatory** (12, 2, 3, 18), AWC is an OFF
+cell, and the arithmetic follows.
+
+This is the clearest case so far of the project's central claim doing any work.
+
+### 5J.2 Three ways it was nearly missed or got wrong
+
+**The signal is differential and sits on a common-mode shift.** The first two
+measurements reported "no antagonism" for every stimulus, because all groups moved
+together: under AWC alone everything dropped about 0.07 mV, AIY dropped 0.03 and
+AIB dropped 0.18. Read as absolute change that is "both down, no antagonism". Read
+relative to the network it is AIY up, AIB down — the correct answer, 0.15 mV of
+signal on 0.07 mV of drift.
+
+That is the **third** time the same mistake has appeared here: the `travel` metric
+of §5C.4, the touch background of §5D.1b, and this. The pattern is always a
+quantity that only means something as a difference, measured as an absolute.
+
+**Driving every sensor from one number inverts the answer.** AWA/AWC answer
+volatile odorants and ASE water-soluble ones. A single "food" scalar driving all
+six makes the ON and OFF cells fight:
+
+| sensors driven | AIY−AIB, rising | reads as |
+|---|---|---|
+| AWC only | **+0.148** | run — correct |
+| all six | **−0.057** | turn — inverted |
+
+`Chemosensation.build` therefore selects a modality and defaults to AWC rather
+than to everything. A model is entitled to lump molecules together; it is not
+entitled to drive cells that answer different molecules from the same signal and
+call the sum a food response.
+
+**AWA gives the opposite sign to AWC** (rising → turn). Its projections to AIY and
+AIZ carry no predicted polarity and are excluded, so what remains is an
+unrepresentative fragment of that pathway. The same coverage problem as PLM in
+§5D.2, on a different circuit.
+
+### 5J.3 What this is not
+
+**It is not chemotaxis.** The behaviour needs runs and pirouettes, which need
+working forward locomotion and reversals, and §5C establishes we have neither. What
+is demonstrated is that the sensory-to-interneuron half computes the correct
+decision variable. Whether the animal would then act on it is untested, because it
+cannot act.
+
+The magnitudes are also a seventh of a millivolt. They are reported relative to the
+network for the reason above, and they should not be quoted as absolute.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

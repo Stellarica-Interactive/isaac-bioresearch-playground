@@ -171,6 +171,21 @@ parser.add_argument(
     "changes no number a run reports.",
 )
 parser.add_argument(
+    "--food",
+    default="",
+    help="Place a food source at X,Y in body lengths from the start, e.g. 3,0. "
+    "The amphid chemosensors then report the CHANGE in concentration as the "
+    "animal moves -- not the concentration -- because that is the quantity a "
+    "biased random walk runs on. Producing chemotaxis needs working locomotion, "
+    "which 5C says we do not have; this is the sensory half.",
+)
+parser.add_argument(
+    "--food-mv",
+    type=float,
+    default=20.0,
+    help="Depolarisation a full-scale concentration change produces, mV.",
+)
+parser.add_argument(
     "--no-grid",
     action="store_true",
     help="hide the checkerboard. It is scenery with no collider, so this changes "
@@ -204,6 +219,12 @@ from common.neural.stimulus import (  # noqa: E402
     solve_for_depolarisation,
 )
 from common.neural.synapses import UnknownSignPolicy  # noqa: E402
+from worm.body.chemotaxis import (  # noqa: E402
+    CHEMOSENSORS,
+    DEFAULT_DECAY_BODY_LENGTHS,
+    Chemosensation,
+    FoodSource,
+)
 from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import MuscleModel, MuscleParameters  # noqa: E402
@@ -282,6 +303,21 @@ def main() -> int:
         solve_for_depolarisation(runtime, command_cells, args.command_mv) if command_cells else {}
     )
 
+    food = None
+    chemo = None
+    if args.food:
+        fx, fy = (float(v) for v in args.food.split(","))
+        food = FoodSource(
+            x_m=fx * plan.total_length_m,
+            y_m=fy * plan.total_length_m,
+            decay_m=DEFAULT_DECAY_BODY_LENGTHS * plan.total_length_m,
+        )
+        sensor_cells = [s.cell for s in CHEMOSENSORS if s.cell in runtime.network.cell_ids]
+        chemo = Chemosensation.build(
+            cells=runtime.network.cell_ids,
+            per_cell_pa=solve_for_depolarisation(runtime, sensor_cells, args.food_mv),
+        )
+
     receptor_cells = [r.cell for r in TOUCH_RECEPTORS if r.cell in runtime.network.cell_ids]
     per_cell = solve_for_depolarisation(runtime, receptor_cells, args.touch_mv)
     touch = TouchField.build(plan, cells=runtime.network.cell_ids, per_cell_pa=per_cell)
@@ -304,6 +340,12 @@ def main() -> int:
             if args.probe
             else ""
         )
+        + (
+            f"\n  food at ({args.food}) BL: {', '.join(chemo.cells)} at "
+            f"{args.food_mv:g} mV per unit change"
+            if chemo is not None
+            else ""
+        )
     )
 
     dt = 1.0 / args.physics_hz
@@ -323,6 +365,8 @@ def main() -> int:
             plan=plan,
             runtime=runtime,
             touch=touch,
+            food=food,
+            chemo=chemo,
             rng=np.random.default_rng(args.seed),
             noise_pa=args.noise_pa,
             bridge=bridge,
@@ -352,6 +396,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     plan: BodyPlan,
     runtime: NeuralRuntime,
     touch: TouchField,
+    food: FoodSource | None,
+    chemo: Chemosensation | None,
     rng: np.random.Generator,
     noise_pa: float,
     bridge: MuscleDrive,
@@ -425,6 +471,13 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         # --- body -> nervous system -------------------------------------
         runtime.clear_inputs()
         runtime.inject_many(command)
+        if chemo is not None and food is not None:
+            # Sampled at the nose, because that is where the amphid openings
+            # are, and because a worm swinging its head samples a gradient the
+            # body centre never sees.
+            nose = np.asarray(links.get_world_poses()[0])[0, :2]
+            chemo.step(food.concentration(nose), dt_ms=dt * 1000.0)
+            runtime.inject_many(chemo.currents())
         if not args.no_proprioception:
             runtime.inject_many(proprio.currents(angles))
         if sham is not None:
