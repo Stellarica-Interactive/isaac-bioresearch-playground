@@ -33,17 +33,34 @@ Not yet done; recorded so it is not forgotten.
 
 **Choose a dataset, with reasons.** Do not default to the biggest one.
 
-| | FAFB / FlyWire | BANC |
-|---|---|---|
-| Extent | female adult fly **brain**, ~140k neurons | brain **plus ventral nerve cord**, ~158k neurons |
-| Motor output | descending neurons present; the motor neurons they drive are **not** | includes the nerve cord where leg and wing motor neurons live |
-| Maturity | extensively annotated and published | newer |
+| | FAFB / FlyWire | BANC | male CNS (mCNS) |
+|---|---|---|---|
+| Extent | female adult **brain**, ~140k neurons | female, brain **plus ventral nerve cord**, ~158k neurons | male, brain and optic lobes **plus ventral nerve cord**, 166,691 neurons |
+| Motor output | descending neurons present; the motor neurons they drive are **not** | includes the nerve cord where leg and wing motor neurons live | same — descending neurons and the motor neurons they drive sit in one volume |
+| Maturity | extensively annotated and published | newer | published Sept 2026; proofread throughout, 11,691 annotated cell types |
 
 The worm taught this lesson concretely: a brain-only reconstruction cannot
-produce locomotion, however good it is. BANC is therefore the likely choice for
-sensorimotor work — but compare annotation quality, sensory and motor coverage,
-neurotransmitter predictions, and downloadable fields first, and write the
-comparison down.
+produce locomotion, however good it is. That rules out FlyWire alone and leaves
+two whole-CNS candidates — compare annotation quality, sensory and motor
+coverage, neurotransmitter predictions, and downloadable fields first, and write
+the comparison down.
+
+**The male CNS connectome (added to this list, not yet evaluated).** Berg et al.
+released the first complete central nervous system of an adult *male* fly —
+brain, optic lobes and ventral nerve cord in one seamless volume, 166,691
+neurons, from Janelia's FlyEM team, the MRC LMB / Cambridge Drosophila
+Connectomics Group and Google Research, whose flood-filling segmentation did the
+tracing that would otherwise be manual. It is CC-BY, reachable through neuPrint
+(`neuprint-python`) as well as bulk download, and because every previous adult
+fly connectome was female it ships alongside a cross-matched comparison to the
+female brain.
+
+Two things make it worth weighing against BANC rather than filing under
+"interesting": it is a full CNS, which is the property BANC was chosen for, and
+its cell typing is unusually complete. The catch is the same one that applies to
+every dataset here — cross-sex circuit comparisons are only meaningful if the
+annotations line up, so the comparison above still has to be done rather than
+assumed. Nothing about this changes the F0 rule: pick with reasons, in writing.
 
 **Then, before simulating anything:** load a static download (not repeated Codex
 queries), write our own normalized importer reusing `common/data/schemas.py`,
@@ -67,4 +84,5 @@ event-based.
 
 Starting points for the data: [FlyWire / Codex](https://codex.flywire.ai/),
 Dorkenwald et al. *Nature* 634:124–138 (2024), Schlegel et al. *Nature*
-634:139–152 (2024). See [../docs/references.md](../docs/references.md).
+634:139–152 (2024); [male CNS](https://www.janelia.org/project-team/flyem/male-cns-connectome),
+Berg et al. *Cell* 189:5504–5526 (2026). See [../docs/references.md](../docs/references.md).

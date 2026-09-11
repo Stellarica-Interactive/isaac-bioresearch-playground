@@ -340,3 +340,5 @@ in [model_assumptions.md](model_assumptions.md) §6.2.
 - **FlyWire / Codex** — <https://codex.flywire.ai/>
 - Dorkenwald S, et al. **Neuronal wiring diagram of an adult brain.** *Nature* 634:124–138 (2024). doi:[10.1038/s41586-024-07558-y](https://doi.org/10.1038/s41586-024-07558-y)
 - Schlegel P, et al. **Whole-brain annotation and multi-connectome cell typing of *Drosophila*.** *Nature* 634:139–152 (2024). doi:[10.1038/s41586-024-07686-5](https://doi.org/10.1038/s41586-024-07686-5)
+- **Male CNS connectome (mCNS)** — <https://www.janelia.org/project-team/flyem/male-cns-connectome>, neuPrint at <https://neuprint.janelia.org> (CC-BY). First complete CNS — brain, optic lobes and ventral nerve cord — of an adult *male* fly: 166,691 neurons, 11,691 cell types, with a cross-matched comparison to the female brain. Janelia FlyEM, MRC LMB / Cambridge Drosophila Connectomics, and Google Research.
+- Berg S, et al. **Sexual dimorphism in the complete *Drosophila* male central nervous system connectome.** *Cell* 189:5504–5526 (2026). doi:[10.1016/j.cell.2026.08.015](https://doi.org/10.1016/j.cell.2026.08.015)

@@ -1126,6 +1126,87 @@ neighbours; a frozen current cannot. With up to 3.8 nS of gap conductance on
 1.2 pF, removing the restoring force is fatal. Splitting the drive into a constant
 and a conductance fixes it, and is also simply the more faithful decomposition.
 
+## 5G. Calibrating the assumed parameters against the measured cell
+
+§5F left a well-posed problem for the first time: nine assumed parameters, and one
+measured quantity capable of judging them. `tools/calibrate_biophysics.py` applies
+it. Hold RMD where the measurement says it sits, let the network settle around it,
+and read off how much current the network pushes into a cell whose bistability
+survives about 4 pA.
+
+**As committed, the model is over budget by 52x** — 209 pA against 4.
+
+### 5G.1 A consistent region exists
+
+Scanning `g_leak`, `g_syn`, `g_gap` and `e_leak`:
+
+| into RMD | network median | parameters |
+|---|---|---|
+| **3.9 pA** | **−67.8 mV** | g_leak=10, g_syn=**10**, g_gap=100, e_leak=**−70** |
+| 8.7 pA | −59.7 mV | g_leak=10, g_syn=10, g_gap=30, e_leak=−70 |
+| 10.3 pA | −64.4 mV | g_leak=10, g_syn=10, g_gap=100, e_leak=−60 |
+| 209 pA | −15.5 mV | *the committed values* |
+
+Two changes carry it: **`g_syn` tenfold lower**, and **`e_leak` at −70 mV**. The
+network then settles at −67.8 mV, within 2 mV of RMD's measured resting potential
+— which nothing in the search asked it to do.
+
+Two things in that table are worth noticing. Raising `g_leak` makes matters
+*worse*, not better, because stiffer neighbours resist being pulled toward the
+measured cell. And a *high* gap conductance helps, because strong electrical
+coupling is what lets one measured cell drag the network toward a plausible
+operating point.
+
+### 5G.2 It is not deaf, it is better
+
+The obvious worry about weakening synapses tenfold is that the network stops
+conducting anything. The opposite happens:
+
+| | committed | calibrated |
+|---|---|---|
+| AVB drive reaching AVAL | 3.74 mV | **41.33 mV** |
+| peak muscle drive under command | 0.00398 | **0.02138** |
+
+Signal propagation improves elevenfold and muscle drive fivefold. The assumed
+parameter set was **over-shunted**: with `g_syn` ten times `g_leak`, every cell was
+loaded so heavily by its own synapses that signals died within a hop or two. That
+is a plausible contributor to the tiny responses of §5D — a network sitting near
+`E_exc` with a huge synaptic conductance has very little room to move.
+
+### 5G.3 Why the parameters were not changed
+
+**One constraint cannot determine nine parameters.** The region above is where the
+constraint is satisfied, not a fitted set, and this is recorded rather than acted
+on.
+
+Three specific reasons to hold:
+
+1. **Every injected current in the model is tied to the old conductances.** The
+   command drive (500 pA), the touch current (20 pA) and the proprioceptive gain
+   (400 pA/rad) were each chosen against the present `g_syn`. Lower it tenfold and
+   the same 500 pA drives AVB to **+100 mV**, which is not a neuron. They must be
+   re-derived together, not carried across.
+2. **Clamped and free are different questions.** The scan holds RMD at −69.5 mV and
+   measures the current. Released inside the hybrid runtime, RMD and the network
+   equilibrate at **−41.8 mV** — better than the −22.8 mV of the committed set, and
+   still short of the −65 mV its bistability needs. Satisfying the clamped
+   constraint is necessary, not sufficient.
+3. **The oscillation question is still answered no.** Under the calibrated values
+   the hybrid network's sustained variation is 3.6e−2 mV with a single
+   mean-crossing over 2.5 s. Better than before, and not a rhythm.
+
+### 5G.4 What would settle it
+
+A second measured cell. `AWC.ode` is already fetched, hashed and recorded in
+`sources.toml` alongside RMD; implementing it gives an independent resting
+potential and a second constraint, which is the difference between "a region
+exists" and "these are the values". Nicoletti et al. 2024 adds six more, including
+**VB6** — one of the B-type cells the proprioceptive loop drives.
+
+The injected currents should then be derived from the calibrated conductances
+rather than chosen, so that a change in biophysics propagates to them instead of
+silently invalidating them.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
