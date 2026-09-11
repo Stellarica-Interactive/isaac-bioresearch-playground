@@ -56,6 +56,38 @@ gigaohm input resistances Goodman et al. 1998 report. That is a consistency
 check, not a measurement: no per-neuron leak conductance has been measured."""
 improvement = "Whole-cell patch clamp per neuron class; currently exists for very few."
 
+[parameters.v_threshold_offset_mv]
+value = 20.0
+unit = "mV"
+confidence = "constrained"
+source = "This project; see docs/model_assumptions.md 5L."
+note = """
+How far above its own resting potential each cell's activation sigmoid is centred.
+
+With an offset of zero -- the original behaviour -- every cell sits at the midpoint
+of its output curve at rest, so every synapse in the network is about 9% open
+permanently, and with e_exc at 0 mV that holds the whole network near -31 mV. A
+resting neuron does not tonically release transmitter at 9% of maximum, and the
+consequence was not small: the network sat 38 mV away from the two cells whose
+resting potential has actually been measured.
+
+At 20 mV the network rests at -49.4 mV, against -31.3 mV with no offset and the
+-69 mV both measured cells sit at. So this closes rather more than half the gap,
+not all of it; about 40 mV would close it entirely and has not been tested for side
+effects.
+
+It also changes behaviour rather than merely repositioning the model. Under a
+command drive alone -- no noise, no stimulus -- the body now shows sustained
+bending where every earlier run froze into one posture, though the bend still does
+not propagate head to tail. See 5L.3.
+
+Marked `constrained` rather than `assumed` because it is set by agreement with two
+measured resting potentials, not chosen. It is still a modelling device: nobody has
+measured where a C. elegans neuron's release curve sits relative to its rest."""
+improvement = """
+Per-neuron measurements of transmitter release as a function of membrane potential.
+These exist for very few synapses anywhere."""
+
 [parameters.e_leak_mv]
 value = -70.0
 unit = "mV"

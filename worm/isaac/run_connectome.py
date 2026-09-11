@@ -106,13 +106,17 @@ parser.add_argument(
     "Behaviour that survives this never depended on the biology.",
 )
 parser.add_argument(
-    "--noise-pa",
+    "--noise-mv",
     type=float,
     default=0.0,
-    help="Std of a fluctuating current injected into every cell, pA, resampled "
-    "each neural step. A real nervous system is not noiseless, and this model's "
+    help="Std of a fluctuating membrane-potential wobble, mV, resampled each "
+    "neural step. A real nervous system is not noiseless, and this model's "
     "perfectly symmetric resting state is partly an artefact of determinism. "
-    "The magnitude is ASSUMED, not measured.",
+    "In millivolts rather than picoamps for the reason in common/neural/stimulus: "
+    "AS7, AS8, AS9 and RMFR carry only leak conductance in this model -- every one "
+    "of their inputs is unsigned and excluded -- so a flat 20 pA drove them to "
+    "about 2000 mV, and since AS innervates body muscle the animal folded into "
+    "spirals. The magnitude is ASSUMED, not measured.",
 )
 parser.add_argument("--seed", type=int, default=0, help="seed for --noise-pa")
 parser.add_argument(
@@ -217,6 +221,7 @@ from common.neural.runtime import NeuralRuntime  # noqa: E402
 from common.neural.stimulus import (  # noqa: E402
     scale_for_depolarisation,
     solve_for_depolarisation,
+    total_conductance,
 )
 from common.neural.synapses import UnknownSignPolicy  # noqa: E402
 from worm.body.chemotaxis import (  # noqa: E402
@@ -327,7 +332,7 @@ def main() -> int:
         f"{' (DISABLED)' if args.no_proprioception else ''}"
         f"\n  proprioceptive gain: {args.proprioceptive_mv:g} mV/rad"
         f" = {proprio.gain_pa_per_rad:.1f} pA/rad"
-        f"\n  noise: {args.noise_pa:g} pA std (seed {args.seed})"
+        f"\n  noise: {args.noise_mv:g} mV std (seed {args.seed})"
         f"\n  command drive: {', '.join(command) or 'none'} at "
         f"{args.command_mv:g} mV = "
         f"{np.mean(list(command.values())) if command else 0.0:.1f} pA "
@@ -352,6 +357,14 @@ def main() -> int:
     neural_substeps = max(1, int(round(dt * 1000.0 / args.neural_dt_ms)))
     print(f"  {neural_substeps} neural steps per physics step")
 
+    # Noise as a per-cell current sized for a common voltage wobble, so a cell with
+    # almost no conductance is not flung across the physiological range.
+    noise_scale = (
+        np.asarray([args.noise_mv * g for g in total_conductance(runtime)], dtype=np.float64)
+        if args.noise_mv
+        else np.zeros(runtime.network.n)
+    )
+
     # The neural state at rest, so every condition in a sweep starts from the same
     # nervous system rather than inheriting the previous one's.
     rest_state = runtime.state.copy()
@@ -368,7 +381,7 @@ def main() -> int:
             food=food,
             chemo=chemo,
             rng=np.random.default_rng(args.seed),
-            noise_pa=args.noise_pa,
+            noise_scale=noise_scale,
             bridge=bridge,
             proprio=proprio,
             command=command,
@@ -399,7 +412,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     food: FoodSource | None,
     chemo: Chemosensation | None,
     rng: np.random.Generator,
-    noise_pa: float,
+    noise_scale: np.ndarray,
     bridge: MuscleDrive,
     proprio: Proprioception,
     command: dict[str, float],
@@ -558,12 +571,12 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
         # --- nervous system ---------------------------------------------
         for _ in range(neural_substeps):
-            if noise_pa:
+            if noise_scale.any():
                 # Injected as a current rather than added inside the integrator, so
                 # the runtime stays bit-for-bit deterministic and this is visibly an
                 # input to the model rather than a change to it. Resampled per
                 # neural step; the magnitude is ours, not a measurement.
-                runtime.i_ext_pa += rng.normal(0.0, noise_pa, size=runtime.network.n)
+                runtime.i_ext_pa += noise_scale * rng.standard_normal(runtime.network.n)
             runtime.step()
             if lesion_idx.size:
                 # Hold ablated cells at rest so they transmit nothing. Applied

@@ -151,6 +151,37 @@ def evaluate(settle_ms: float = 3000.0, **overrides: float) -> tuple[float, floa
     return float(np.median(v[others])), worst
 
 
+def evaluate_free(settle_ms: float = 4000.0, **overrides: float) -> tuple[float, float]:
+    """``(resting median mV, spread mV)`` with **nothing clamped**.
+
+    The objective :func:`evaluate` should have been. Clamping a cell and measuring
+    the current needed to hold it there asks how far the network is from the
+    measurement, which is a diagnostic; a parameter set can minimise it while the
+    free network barely moves. This settles everything and reads off where it
+    actually rests, which is the quantity that has to equal about -69 mV.
+
+    Slower, because it cannot stop early.
+    """
+    connectome, _ = load("cook_2019_herm", annotations=RUNTIME_OVERLAYS)
+    muscles = body_wall_muscle_ids()
+    cells = tuple(
+        c.id for c in connectome.cells if c.category is CellCategory.NEURON or c.id in muscles
+    )
+    runtime, _ = build_runtime(
+        "cook_2019_herm",
+        unknown_sign=UnknownSignPolicy.EXCLUDE,
+        cells=cells,
+        connectome=connectome,
+        dt_ms=1.0,
+        parameter_overrides=overrides,
+    )
+    runtime.run(settle_ms)
+    v = runtime.state[0]
+    if not np.all(np.isfinite(v)):
+        return float("nan"), float("nan")
+    return float(np.median(v)), float(np.percentile(v, 90) - np.percentile(v, 10))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--scan", action="store_true", help="search the grid")

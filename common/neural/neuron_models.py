@@ -33,6 +33,7 @@ carries its own provenance, and ``docs/neural_runtime.md`` for the derivation.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, replace
 from typing import Protocol, runtime_checkable
 
@@ -76,6 +77,10 @@ class GradedLeakyIntegratorParameters:
     et al. 1998 report 0.5-3 pF, so 1 pF is inside the measured range -- though
     applying a single figure to every neuron is still an assumption."""
 
+    v_threshold_offset_mv: float = 20.0
+    """How far above rest each cell's activation sigmoid sits. See
+    ``worm/neural/parameters.toml``; zero restores the original half-active rest."""
+
     g_leak_ps: float = 10.0
     """Leak conductance. ASSUMED. Gives a membrane time constant of 100 ms in
     isolation, which is consistent with the gigaohm input resistances reported by
@@ -118,6 +123,26 @@ class GradedLeakyIntegratorParameters:
         """
         half_rise = 0.5 * self.a_r_per_ms
         return half_rise / (half_rise + self.a_d_per_ms)
+
+    @property
+    def s_at_rest(self) -> float:
+        """Steady-state synaptic activation of a cell sitting at its own rest.
+
+        With the sigmoid centred ``v_threshold_offset_mv`` above resting potential,
+        a resting cell's sigmoid argument is ``-offset`` **whatever its resting
+        potential turns out to be**, so this is a constant rather than something to
+        solve for -- which is what keeps the equilibrium solve in
+        :meth:`GradedLeakyIntegrator.threshold_potentials` exact.
+
+        Getting this wrong is not subtle in its consequences but is invisible in its
+        symptoms: using ``s_at_half_activation`` here while the sigmoid is offset
+        makes the computed resting state not actually a resting state, so every run
+        silently begins with a transient. ``test_initial_state_is_a_true_equilibrium``
+        exists for that.
+        """
+        phi = 1.0 / (1.0 + math.exp(self.beta_per_mv * self.v_threshold_offset_mv))
+        rise = phi * self.a_r_per_ms
+        return rise / (rise + self.a_d_per_ms)
 
     def with_overrides(self, **kwargs: float) -> GradedLeakyIntegratorParameters:
         return replace(self, **kwargs)
@@ -186,14 +211,23 @@ class GradedLeakyIntegrator:
             A = diag(G_leak + rowsum(Ggap) + s* rowsum(Gsyn)) - Ggap
             b = G_leak E_leak + s* rowsum(Gsyn o E) + I_ext
 
-        Setting each neuron's threshold to its own resting potential centres every
-        neuron in the responsive part of its sigmoid. **This is an assumption**, not
-        a measurement -- nobody has measured resting potentials across the worm's
-        nervous system.
+        The sigmoid is then centred ``v_threshold_offset_mv`` **above** that resting
+        potential, so a cell at rest is quiet rather than half-active.
+
+        Centring it exactly on rest -- the original behaviour, and still available
+        by setting the offset to zero -- leaves every synapse in the network about
+        9% open permanently. With ``e_exc`` at 0 mV that holds the network near
+        -31 mV, some 38 mV from the two cells whose resting potential has been
+        measured. See docs/model_assumptions.md 5L.
+
+        **Both the resting potentials and the offset are assumptions**, not
+        measurements: nobody has measured resting potentials across the worm's
+        nervous system, nor where a neuron's release curve sits relative to its own
+        rest.
         """
         p = self.params
         n = network.n
-        s_star = p.s_at_half_activation
+        s_star = p.s_at_rest
         i_ext = np.zeros(n) if i_ext is None else np.asarray(i_ext, dtype=np.float64)
 
         diag = p.g_leak_ns + network.gap_row_sum + s_star * network.g_syn.sum(axis=1)
@@ -208,9 +242,13 @@ class GradedLeakyIntegrator:
         initialise from. This one is self-consistent and reproducible, which is the
         most that can be claimed for it.
         """
-        v_th = self._thresholds(network)
-        s = np.full(network.n, self.params.s_at_half_activation)
-        return np.vstack([v_th.copy(), s])
+        # The threshold is the resting potential *plus* the offset, so the resting
+        # voltage is the threshold minus it. These were the same quantity until the
+        # sigmoid was moved off rest, and conflating them starts every cell 20 mV
+        # depolarised -- which looks like a resting potential, just the wrong one.
+        v_rest = self._thresholds(network) - self.params.v_threshold_offset_mv
+        s = np.full(network.n, self.params.s_at_rest)
+        return np.vstack([v_rest, s])
 
     def _thresholds(self, network: NetworkMatrices) -> np.ndarray:
         if self.v_threshold_mv is not None:
@@ -262,11 +300,14 @@ class GradedLeakyIntegrator:
         hub neuron with a hundred partners can be more than a thousand times faster
         than an isolated one, so the busiest cell decides.
         """
-        s = np.full(network.n, self.params.s_at_half_activation)
+        s = np.full(network.n, self.params.s_at_rest)
         g_total = self.total_conductance(s, network)
         return float(self.params.c_m_pf / np.max(g_total))
 
 
 def prepare(model: GradedLeakyIntegrator, network: NetworkMatrices) -> GradedLeakyIntegrator:
     """Solve and cache the threshold potentials so they are computed once."""
-    return replace(model, v_threshold_mv=model.threshold_potentials(network))
+    return replace(
+        model,
+        v_threshold_mv=model.threshold_potentials(network) + model.params.v_threshold_offset_mv,
+    )

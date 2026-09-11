@@ -1573,6 +1573,108 @@ They differ because one clamps during the settle and the other does not — an
 ordering difference with no visible trace in either result. It surfaced only when
 the two were computed side by side and the disagreement could not be ignored.
 
+## 5L. Cells were never quiet at rest, and the latch breaks when they are
+
+§5K left the network resting 38 mV away from the two cells whose resting potential
+has been measured, and concluded the calibration had reduced the disagreement
+without resolving it. The cause turned out not to be a parameter value.
+
+### 5L.1 The error
+
+`threshold_potentials` centred each cell's activation sigmoid **on that cell's own
+resting potential**. Every cell therefore sat at the midpoint of its output curve
+at rest, and with the committed rates that means a synaptic activation of
+
+    s = (a_r/2) / (a_d + a_r/2) = 0.0909
+
+for all 397 cells, permanently. **Every synapse in the network was 9% open at
+rest.** With `e_exc` at 0 mV, that standing conductance is what held the network
+near −31 mV.
+
+A resting neuron does not tonically release transmitter at 9% of maximum. The
+choice was labelled an assumption in the code from the beginning — "setting each
+neuron's threshold to its own resting potential centres every neuron in the
+responsive part of its sigmoid" — and it was the wrong one. It was not visible as
+an error because it produced a self-consistent, reproducible resting state; it was
+only visible against a cell whose real resting potential is known.
+
+`v_threshold_offset_mv` now places the sigmoid above rest, so a resting cell is
+quiet:
+
+| offset | s at rest | free resting potential |
+|---|---|---|
+| 0 (the old behaviour) | 0.0909 | −31.3 mV |
+| **20 (committed)** | **0.0149** | **−49.4 mV** |
+| 30 | 0.0046 | −60.9 mV |
+| 40 | 0.0013 | −66.9 mV |
+
+**A correction to an earlier number.** A prototype of this reported the network
+resting at −69.5 mV at a 20 mV offset, matching RMD exactly. That was measured by
+offsetting a threshold which had itself been solved assuming cells sit at half
+activation — an inconsistent state. Once the solve is made self-consistent the
+answer moves to −49.4 mV. Twenty millivolts of offset closes rather more than half
+the gap, not all of it; closing it entirely needs about 40 mV, which has not been
+tested for side effects and is not committed.
+
+### 5L.2 Two defects the tests caught
+
+**The equilibrium stopped being an equilibrium.** `threshold_potentials` solves a
+linear system for the resting voltage *given* a synaptic activation, and it was
+still being handed `s_at_half_activation` while the sigmoid had moved. The solved
+state was therefore not a rest state and every run silently began with a transient.
+
+The fix is exact rather than iterative, which is worth knowing: with the sigmoid
+offset from rest, a resting cell's sigmoid argument is `−offset` **whatever its
+resting potential turns out to be**, so the resting activation is a constant that
+can be computed in closed form. `test_initial_state_is_a_true_equilibrium` now
+holds to 1.3e−12 mV.
+
+**`initial_state` started every cell 20 mV depolarised.** It read the resting
+voltage out of the cached threshold, which had been the same quantity until the
+sigmoid moved. The symptom is a plausible-looking resting potential that is simply
+the wrong one — caught by an isolated-neuron test asserting rest at `e_leak`.
+
+Both were found by tests written earlier for other reasons, which is the argument
+for having written them.
+
+### 5L.3 What changed in behaviour
+
+**The latch is broken.** Under a command drive and nothing else — no noise, no
+touch — the body now shows sustained bending: `amp` of 0.72, 1.23, 0.69 and 4.71
+degrees at five-second intervals over twenty seconds, with the bend cycling
+between 0.3 and 9.1 degrees. Every earlier run reported `amp 0.00` and a body
+frozen in one posture (§5C.4).
+
+**It is the loop, not the nervous system.** The network in isolation, with no body
+and no proprioception, still settles: sustained variation 0.002 mV with a single
+mean-crossing under every drive tried. So the oscillation is neuromechanical —
+body bends, proprioception reports it, motor neurons drive muscle, the body bends
+differently. That is the right *kind* of mechanism: §5C.5 records that the ventral
+cord chain conducts a wave rather than generating one, and Wen et al. 2012 describe
+forward locomotion as neuromechanical rather than central.
+
+**It is still not a gait.** `travel` remains −0.00: the body oscillates in place
+without the bend propagating head to tail. Oscillation without propagation.
+
+### 5L.4 Two things that are now incomparable
+
+**Every touch and chemotaxis magnitude in §5D and §5J** was measured on a network
+resting at −31 mV with synapses 9% open. The network is now considerably more
+excitable — the background swing over a two-second window with no stimulus at all
+has gone from about 2 mV to 24 mV — so those numbers cannot be compared against
+new ones. The conclusions they support are unaffected, since all were relative
+comparisons against their own controls, but the figures should not be quoted across
+the change.
+
+**Noise had to move to millivolts too**, and for a reason worth recording: AS7,
+AS8, AS9 and RMFR carry only leak conductance in this model, because every one of
+their inputs is unsigned and excluded under `EXCLUDE`. A flat 20 pA of noise drove
+them to roughly 1500 mV, and since AS innervates body wall muscle the animal folded
+into spirals. `--noise-pa` is now `--noise-mv`, scaled per cell by conductance.
+That is the fourth injected current to need this treatment, after the command
+drive, the touch current and the proprioceptive gain — and it was missed in the
+same change that fixed the other three.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
