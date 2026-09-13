@@ -71,6 +71,21 @@ parser.add_argument(
 )
 parser.add_argument("--sensing-offset", type=float, default=None)
 parser.add_argument(
+    "--receptive-fraction",
+    type=float,
+    default=None,
+    help="Fraction of the body each B-type neuron integrates curvature over. "
+    "Boyle, Berri & Cohen use half; this model used a single joint. Comma-sweep "
+    "is not supported -- pass one value.",
+)
+parser.add_argument(
+    "--asymmetric-proprioception",
+    action="store_true",
+    help="Use Boyle, Berri & Cohen's dorsal stretch/compression asymmetry. Off by "
+    "default because it was measured here to latch this model: amp falls from 0.70 "
+    "degrees to 0.00. See docs/model_assumptions.md 5M.",
+)
+parser.add_argument(
     "--command",
     default="AVBL,AVBR",
     help="Forward-locomotion command interneurons to hold depolarised. This is "
@@ -286,6 +301,8 @@ def main() -> int:
         connectome,
         plan,
         **({"offset": args.sensing_offset} if args.sensing_offset else {}),
+        **({"receptive_fraction": args.receptive_fraction} if args.receptive_fraction else {}),
+        asymmetric=args.asymmetric_proprioception,
     )
     b_type = [c for c in proprio.targets if c in runtime.network.cell_ids]
     proprio = replace(

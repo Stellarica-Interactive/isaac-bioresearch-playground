@@ -43,11 +43,37 @@ from worm.body.geometry import QUADRANTS, BodyPlan, parse_muscle, segment_of_mus
 #: backward locomotion and are left out of a forward-crawling model.
 PROPRIOCEPTIVE_CLASSES = ("VB", "DB")
 
-#: How far anterior of its own position a neuron senses curvature, in segments.
+#: How far anterior of its own position a neuron starts sensing, in segments.
 #: ASSUMED. Wen et al. describe B-type neurons responding to the curvature of the
-#: region anterior to them; the size of that region in segment units is our
-#: choice, and it largely sets the wavelength the loop settles into.
+#: region anterior to them; the size of that region in segment units is our choice.
 DEFAULT_SENSING_OFFSET = 2.0
+
+#: How far the receptive field extends, as a fraction of the body. One joint.
+#:
+#: Boyle, Berri & Cohen 2012 use ``N_SR = M/2`` -- a stretch receptor field
+#: spanning half the animal -- and their model undulates where this one does not,
+#: so it was worth trying. **Measured here, it is worse:** half the body latches
+#: this model, amp 0.00 against 0.70 degrees, and so does their dorsal asymmetry
+#: independently. Either alone is enough to stop it.
+#:
+#: That is not evidence against their model. Their receptive field and asymmetry
+#: are fitted together with binary hysteretic B-class neurons, their own muscle
+#: model, a spring-rod body and their drag; lifting two components out of a tuned
+#: system has no reason to work. The alternative reading -- that 0.70 degrees of
+#: amplitude is a marginal instability rather than a mechanism -- is at least as
+#: likely. Both settings stay reachable because the comparison is the useful part.
+#: See docs/model_assumptions.md 5M.
+DEFAULT_RECEPTIVE_FRACTION = 1 / 24
+
+#: Directional asymmetry of the stretch response, from the same source, their
+#: equation 13: ventral receptors respond linearly, dorsal ones are suppressed
+#: when stretched and amplified when compressed. **Their fitted values, not
+#: measured ones.** Included because a symmetric feedback law cannot distinguish
+#: bending one way from the other, and the asymmetry is part of what breaks the
+#: symmetry their model needs.
+DORSAL_STRETCH_GAIN = 0.8
+DORSAL_COMPRESS_GAIN = 1.2
+VENTRAL_GAIN = 1.0
 
 #: Current injected per radian of sensed curvature, pA. ASSUMED, and the single
 #: parameter that decides whether the loop oscillates at all.
@@ -159,9 +185,23 @@ class Proprioception:
     """B-type motor neurons, ordered to match :attr:`sensed_segment`."""
 
     sensed_segment: np.ndarray
-    """Which joint's curvature each target neuron reads."""
+    """First joint of each target's receptive field, anterior-most."""
 
     gain_pa_per_rad: float = DEFAULT_PROPRIOCEPTIVE_GAIN
+
+    receptive_joints: int = 1
+    """How many joints each neuron integrates over, starting at
+    :attr:`sensed_segment` and running posteriorly.
+
+    One reproduces the original single-joint reading. Boyle, Berri & Cohen use
+    half the body, and their model undulates where this one does not."""
+
+    asymmetric: bool = False
+    """Whether dorsal receptors use the directional gains of
+    :data:`DORSAL_STRETCH_GAIN` and :data:`DORSAL_COMPRESS_GAIN`.
+
+    Off by default: measured here, it latches the model. See
+    :data:`DEFAULT_RECEPTIVE_FRACTION`."""
 
     @classmethod
     def build(
@@ -172,6 +212,8 @@ class Proprioception:
         offset: float = DEFAULT_SENSING_OFFSET,
         gain_pa_per_rad: float = DEFAULT_PROPRIOCEPTIVE_GAIN,
         classes: tuple[str, ...] = PROPRIOCEPTIVE_CLASSES,
+        receptive_fraction: float = DEFAULT_RECEPTIVE_FRACTION,
+        asymmetric: bool = False,
     ) -> Proprioception:
         positions = neuron_body_positions(connectome, plan)
         by_class = {
@@ -190,19 +232,39 @@ class Proprioception:
             0,
             plan.n_joints - 1,
         )
-        return cls(tuple(chosen), sensed, gain_pa_per_rad)
+        receptive = max(1, int(round(receptive_fraction * plan.n_joints)))
+        return cls(
+            tuple(chosen),
+            sensed,
+            gain_pa_per_rad,
+            receptive_joints=receptive,
+            asymmetric=asymmetric,
+        )
 
     def currents(self, joint_angles_rad: np.ndarray) -> dict[str, float]:
         """Curvature to injected current, one entry per target neuron.
 
-        DB neurons drive dorsal muscle and VB ventral, so the two read opposite
-        signs of the same bend: each is excited by the body bending toward its own
-        side, which is what makes the feedback recruit the next segment rather
-        than fight it.
+        Each neuron integrates curvature over a stretch of body starting anterior
+        to itself, rather than reading a single joint. DB neurons drive dorsal
+        muscle and VB ventral, so the two read opposite signs of the same bend:
+        each is excited by the body bending toward its own side, which is what
+        makes the feedback recruit the next segment rather than fight it.
+
+        Dorsal receptors respond asymmetrically to stretch and compression
+        (Boyle, Berri & Cohen 2012, eq. 13). A symmetric law cannot tell bending
+        one way from the other.
         """
         angles = np.asarray(joint_angles_rad, dtype=np.float64)
         out: dict[str, float] = {}
-        for cell, segment in zip(self.targets, self.sensed_segment, strict=True):
-            sign = 1.0 if cell.startswith("DB") else -1.0
-            out[cell] = self.gain_pa_per_rad * sign * float(angles[segment])
+        for cell, start in zip(self.targets, self.sensed_segment, strict=True):
+            window = angles[int(start) : int(start) + self.receptive_joints]
+            if window.size == 0:
+                window = angles[int(start) : int(start) + 1]
+            dorsal = cell.startswith("DB")
+            sign = 1.0 if dorsal else -1.0
+            if self.asymmetric and dorsal:
+                gain = np.where(window > 0.0, DORSAL_STRETCH_GAIN, DORSAL_COMPRESS_GAIN)
+            else:
+                gain = np.full_like(window, VENTRAL_GAIN)
+            out[cell] = float(self.gain_pa_per_rad * sign * np.mean(gain * window))
         return out

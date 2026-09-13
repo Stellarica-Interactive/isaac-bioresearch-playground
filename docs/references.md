@@ -281,6 +281,18 @@ Oscillator units exist along the body, not only in the head. Relevant because ou
 closed loop currently contains no intrinsic oscillator anywhere and latches into a
 static bend as a result.
 
+**Boyle JH, Berri S, Cohen N. Gait modulation in *C. elegans*: an integrated
+neuromechanical model.** *Frontiers in Computational Neuroscience* 6:10 (2012).
+doi:[10.3389/fncom.2012.00010](https://doi.org/10.3389/fncom.2012.00010)
+A neuromechanical model with **no central pattern generator** that undulates from
+proprioceptive feedback alone — the same architecture as this project, and one
+that works. Its oscillator is bistable B-class motor neurons with hysteresis
+(`ε_hys = 0.5`, switching on at 0.75 and off at 0.25), reset by antagonistic D-class
+inhibition. Its stretch receptive fields span half the body and its dorsal
+receptors are asymmetric (gain 0.8 stretched, 1.2 compressed). §5M of
+[model_assumptions.md](model_assumptions.md) records what happened when two of
+those were imported here, and why the third was not.
+
 ---
 
 ## The neuromuscular junction

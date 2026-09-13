@@ -1675,6 +1675,90 @@ That is the fourth injected current to need this treatment, after the command
 drive, the touch current and the proprioceptive gain — and it was missed in the
 same change that fixed the other three.
 
+## 5M. Borrowing from a model that works, and failing
+
+Boyle, Berri & Cohen 2012 built a *C. elegans* neuromechanical model with **no
+central pattern generator** that produces undulation from proprioceptive feedback
+alone — the same architecture as this one, and theirs works. That makes the
+difference between the two models the most informative thing available without new
+data, so it was worth reading their equations and importing what transfers.
+
+Their mechanism, from the Materials and Methods (verified across two independent
+readings of the paper, since a summary of a source has twice been wrong here):
+
+* **B-class motor neurons are binary with hysteresis:** `S_nk = 1 if I_nk > 0.5 +
+  ε_hys(0.5 − S_nk)`, with `ε_hys = 0.5`, so a neuron switches on at 0.75 and off
+  at 0.25. Ours are graded, with no switching and no hysteresis.
+* **Stretch receptive fields span half the body**, `N_SR = M/2`. Ours read a single
+  joint, two segments anterior.
+* **Dorsal receptors are asymmetric** (eq. 13): gain 0.8 when stretched, 1.2 when
+  compressed, ventral 1.0. Ours were symmetric.
+* Muscle time constant 100 ms against our 60 ms.
+
+Their own account of the oscillator is bistable VB neurons reset by antagonistic
+VD inhibition, with proprioception coupling segments — bistability plus mutual
+inhibition, the half-centre mechanism, located in the **motor neurons** rather
+than the head.
+
+### 5M.1 Importing two of the four made it worse
+
+The receptive field and the asymmetry were implemented. Both are their fitted
+modelling choices rather than measurements, and both are recorded as such.
+
+Measured, at torque 3e-3 over 15 s:
+
+| configuration | amp | verdict |
+|---|---|---|
+| single joint, symmetric *(this model)* | **0.70°** | oscillates |
+| single joint, **asymmetric** | 0.00° | latched |
+| **half body**, symmetric | 0.00° | latched |
+| half body, asymmetric *(Boyle's pair)* | 0.00° | latched |
+
+**Either change alone extinguishes the oscillation**, and a sweep of receptive
+field length — 1/24, 1/8, 1/4, 1/2 of the body — gives `amp 0.00` at every value
+above a single joint.
+
+Both were reverted to the settings this model measures as better, and both stay
+reachable behind `receptive_fraction` and `--asymmetric-proprioception`.
+
+### 5M.2 Two readings, and the less flattering one is as likely
+
+**Their components do not transfer.** The receptive field and asymmetry are fitted
+*together with* binary hysteretic B-neurons, their muscle model, a spring-rod body
+and their drag law. Lifting two pieces out of a tuned system and dropping them into
+a different one has no reason to work; their asymmetry presumably compensates for
+something specific to their setup. Averaging curvature over half the body also
+makes neighbouring neurons see nearly the same signal, which removes the spatial
+differences a wave has to propagate through — an effect their summed,
+directionally-organised formulation may not share.
+
+**Or this model's oscillation is fragile.** 0.70° of amplitude that any change
+extinguishes may be a marginal instability rather than a mechanism. Nothing here
+distinguishes the two readings, and the second is not the one to hope for.
+
+### 5M.3 What it does support
+
+The one component not imported is the one their paper identifies as the
+oscillator: **binary B-class motor neurons with hysteresis**. Ours are graded.
+
+That is consistent with everything else in this document. §5C.9 found the graded
+model has no limit cycle anywhere; §5F found that giving RMD its measured
+bistability does not help because RMD is in the head and the network holds it out
+of range; §5L found that the only sustained bending this model has ever produced
+comes from the body, not the nervous system. Every attempt to obtain a rhythm
+without bistability in the *motor* neurons has failed, and Boyle et al. did not
+attempt one — they assumed the bistability.
+
+So the question is whether real B-type motor neurons have it. **VB6 in Nicoletti
+et al. 2024 is the one published conductance-based model of a B-class cell**, and
+its channel-to-conductance mapping is the ambiguity of §5I. That datum would
+settle whether the rhythm can be attributed to biology or has to be attributed to
+a modelling choice — which is the whole question this project exists to ask.
+
+Adding hysteresis to B-neurons on Boyle's authority would very likely produce a
+gait. It is not done here, because the rhythm would then be theirs rather than the
+connectome's, and saying so afterwards is much harder than not doing it.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

@@ -146,13 +146,62 @@ def test_feedback_sign_is_opposite_for_dorsal_and_ventral() -> None:
     fights itself rather than recruiting the next segment.
     """
     proprio = Proprioception(
-        targets=("DB3", "VB4"), sensed_segment=np.array([5, 5]), gain_pa_per_rad=100.0
+        targets=("DB3", "VB4"),
+        sensed_segment=np.array([5, 5]),
+        gain_pa_per_rad=100.0,
+        asymmetric=False,
     )
     angles = np.zeros(BodyPlan().n_joints)
     angles[5] = 0.2
     currents = proprio.currents(angles)
     assert currents["DB3"] == pytest.approx(20.0)
     assert currents["VB4"] == pytest.approx(-20.0)
+
+
+def test_dorsal_receptors_respond_asymmetrically() -> None:
+    """Suppressed when stretched, amplified when compressed.
+
+    Boyle, Berri & Cohen 2012 eq. 13, and their fitted values rather than measured
+    ones. A symmetric law cannot tell bending one way from the other, and the
+    asymmetry is part of what lets their model break symmetry and undulate.
+    """
+    proprio = Proprioception(
+        targets=("DB3", "VB4"),
+        sensed_segment=np.array([5, 5]),
+        gain_pa_per_rad=100.0,
+        asymmetric=True,
+    )
+    plan = BodyPlan()
+    bent, folded = np.zeros(plan.n_joints), np.zeros(plan.n_joints)
+    bent[5], folded[5] = 0.2, -0.2
+
+    assert proprio.currents(bent)["DB3"] == pytest.approx(100.0 * 0.8 * 0.2)
+    assert proprio.currents(folded)["DB3"] == pytest.approx(-100.0 * 1.2 * 0.2)
+    # Ventral receptors stay linear, so the two sides are not mirror images.
+    assert proprio.currents(bent)["VB4"] == pytest.approx(-20.0)
+    assert abs(proprio.currents(bent)["DB3"]) != pytest.approx(abs(proprio.currents(bent)["VB4"]))
+
+
+def test_receptive_field_spans_a_stretch_of_body() -> None:
+    """Half the body, following Boyle et al.'s N_SR = M/2.
+
+    This model previously read one joint two segments ahead. In a feedback loop
+    that is not a detail: one segment reports local curvature, half a body reports
+    the shape of the wave.
+    """
+    connectome, _ = load("cook_2019_herm")
+    plan = BodyPlan()
+    wide = Proprioception.build(connectome, plan, receptive_fraction=0.5)
+    assert wide.receptive_joints == pytest.approx(plan.n_joints // 2, abs=1)
+
+    narrow = Proprioception.build(connectome, plan)
+    assert narrow.receptive_joints == 1, "the default is one joint; see 5M"
+
+    # A bend outside the window must not be felt; one inside it must.
+    angles = np.zeros(plan.n_joints)
+    angles[wide.sensed_segment[0] + 1] = 0.3
+    assert wide.currents(angles)[wide.targets[0]] != 0.0
+    assert narrow.currents(angles)[narrow.targets[0]] == 0.0
 
 
 def test_a_straight_body_injects_nothing() -> None:
