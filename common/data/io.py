@@ -176,9 +176,7 @@ def load_connectome(src: Path) -> Connectome:
                 "or checked out with CRLF line endings — see .gitattributes."
             )
 
-    sources = {
-        k: Provenance.from_dict(v) for k, v in (meta.get("sources") or {}).items()
-    }
+    sources = {k: Provenance.from_dict(v) for k, v in (meta.get("sources") or {}).items()}
     provenance = Provenance.from_dict(meta["provenance"])
 
     cells = tuple(
@@ -189,9 +187,7 @@ def load_connectome(src: Path) -> Connectome:
             # (Wang et al. 2024), applied at load time by an overlay.
             class_name=None,
             source_labels=tuple(x for x in row["source_labels"].split(MULTI_SEP) if x),
-            field_sources=(
-                {"category": row["category_source"]} if row["category_source"] else {}
-            ),
+            field_sources=({"category": row["category_source"]} if row["category_source"] else {}),
         )
         for row in _read_csv(cells_csv, CELL_COLUMNS, src / CELLS_FILE)
     )
@@ -225,7 +221,5 @@ def load_connectome(src: Path) -> Connectome:
 def _read_csv(text: str, expected: Sequence[str], path: Path) -> list[Mapping[str, str]]:
     reader = csv.DictReader(io.StringIO(text, newline=""))
     if tuple(reader.fieldnames or ()) != tuple(expected):
-        raise ValueError(
-            f"{path}: expected columns {list(expected)}, found {reader.fieldnames}"
-        )
+        raise ValueError(f"{path}: expected columns {list(expected)}, found {reader.fieldnames}")
     return list(reader)

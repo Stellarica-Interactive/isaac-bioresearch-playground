@@ -159,8 +159,12 @@ class TestValidation:
             [neuron("A"), neuron("B")],
             [
                 Connection(
-                    "A", "B", SynapseType.CHEMICAL, 1,
-                    sign=Sign.EXCITATORY, sign_confidence=Confidence.MEASURED,
+                    "A",
+                    "B",
+                    SynapseType.CHEMICAL,
+                    1,
+                    sign=Sign.EXCITATORY,
+                    sign_confidence=Confidence.MEASURED,
                 )
             ],
         )

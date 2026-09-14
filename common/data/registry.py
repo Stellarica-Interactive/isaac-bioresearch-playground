@@ -68,9 +68,7 @@ def get_importer(dataset_id: str) -> ConnectomeImporter:
     try:
         return _REGISTRY[dataset_id]
     except KeyError:
-        raise KeyError(
-            f"unknown dataset {dataset_id!r}; known: {sorted(_REGISTRY)}"
-        ) from None
+        raise KeyError(f"unknown dataset {dataset_id!r}; known: {sorted(_REGISTRY)}") from None
 
 
 def list_datasets() -> list[str]:

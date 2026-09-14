@@ -71,6 +71,25 @@ parser.add_argument(
 )
 parser.add_argument("--sensing-offset", type=float, default=None)
 parser.add_argument(
+    "--hysteresis-mv",
+    type=float,
+    default=0.0,
+    help="HYPOTHESIS TEST, not biology. Give the B-type motor neurons a bistable "
+    "output with this dead-band width, as Boyle, Berri & Cohen do. Three lines of "
+    "evidence (5C.9, 5M, 5P) say this is the missing ingredient; this finds out. "
+    "If a gait appears it is Boyle's, not the connectome's. Off by default and "
+    "must stay that way -- see common/neural/hysteresis.py.",
+)
+parser.add_argument(
+    "--hysteresis-binary",
+    action="store_true",
+    help="Emit Boyle's literal 0 and 1 from the latch instead of matching the "
+    "graded activation it replaces. These cells' graded output never leaves the "
+    "bottom sixth of its range, so this multiplies muscle drive several-fold as "
+    "well as adding memory -- it answers the gain question, not the bistability "
+    "one. Kept because that is also worth knowing, separately.",
+)
+parser.add_argument(
     "--seed-wave",
     type=float,
     default=0.0,
@@ -268,6 +287,7 @@ from isaacsim.core.experimental.prims import Articulation, RigidPrim  # noqa: E4
 from isaacsim.core.simulation_manager import SimulationManager  # noqa: E402
 
 from common.data.schemas import CellCategory, Connectome, Sign  # noqa: E402
+from common.neural.hysteresis import Hysteresis  # noqa: E402
 from common.neural.runtime import NeuralRuntime  # noqa: E402
 from common.neural.stimulus import (  # noqa: E402
     scale_for_depolarisation,
@@ -532,6 +552,35 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     if args.armature:
         articulation.set_dof_armatures(args.armature)
 
+    switch = None
+    if args.hysteresis_mv:
+        # Built at the *driven* operating point, not the quiet one. The dead band
+        # has to straddle the voltages these cells actually visit; centred anywhere
+        # else it does not switch, and a population stuck at one state is a null
+        # result about the centring rather than about bistability. The first
+        # version centred it on the activation threshold -- 30 mV above rest since
+        # 5N -- which silenced every B-type cell and made two band widths produce
+        # byte-identical runs.
+        before = runtime.state.copy()
+        runtime.inject_many(command)
+        runtime.run(2000.0)
+        switch = Hysteresis.build(
+            runtime,
+            proprio.targets,
+            width_mv=args.hysteresis_mv,
+            binary_output=args.hysteresis_binary,
+        )
+        centre = 0.5 * (switch.on_mv + switch.off_mv)
+        runtime.state[...] = before
+        print(
+            f"  HYPOTHESIS TEST: {len(switch.cells)} B-type neurons made bistable, "
+            f"dead band {args.hysteresis_mv:g} mV centred on the driven operating "
+            f"point ({centre.min():.1f} to {centre.max():.1f} mV), emitting "
+            f"{switch.off_output.mean():.3f}/{switch.on_output.mean():.3f}"
+            + (" (Boyle's binary scale -- GAIN IS CONFOUNDED)" if args.hysteresis_binary else "")
+            + ". A gait here is Boyle's, not the connectome's."
+        )
+
     start = _centroid(links)
     touching = False
     # Rolling history, so a touch is always reported against what the network was
@@ -545,6 +594,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     order = np.argsort(proprio.sensed_segment[: len(motor_cells)])
     motor_idx = np.array([runtime.network.index(motor_cells[i]) for i in order], dtype=np.int64)
     motor_trace: list[np.ndarray] = []
+    # Voltage alongside activation, because the question of whether a dead band
+    # is placed where the cells actually go can only be answered in millivolts.
+    motor_v: list[np.ndarray] = []
     drive_reference: np.ndarray | None = None
     drive_at_contact: np.ndarray | None = None
     peak: dict[str, float] = {}
@@ -656,6 +708,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 # neural step; the magnitude is ours, not a measurement.
                 runtime.i_ext_pa += noise_scale * rng.standard_normal(runtime.network.n)
             runtime.step()
+            if switch is not None:
+                switch.apply(runtime)
             if lesion_idx.size:
                 # Hold ablated cells at rest so they transmit nothing. Applied
                 # after the step rather than by deleting them, so the anatomy is
@@ -692,6 +746,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             history.append(angles.copy())
             if motor_idx.size:
                 motor_trace.append(runtime.state[1, motor_idx].copy())
+                motor_v.append(runtime.state[0, motor_idx].copy())
             continue
 
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
@@ -715,6 +770,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         history.append(angles.copy())
         if motor_idx.size:
             motor_trace.append(runtime.state[1, motor_idx].copy())
+            motor_v.append(runtime.state[0, motor_idx].copy())
         # Keep the animal in frame; it travels several body lengths.
         if len(history) % 4 == 0:
             camera.follow(_centroid(links))
@@ -724,10 +780,13 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             _report(t, start, links, plan, angles, history)
 
     _report(args.seconds, start, links, plan, angles, history, final=True)
+    if switch is not None:
+        print(f"         latched high at the end: {100 * switch.fraction_on:.0f}% of them")
     if motor_trace and args.dump_motor:
         np.savez_compressed(
             args.dump_motor,
             activation=np.array(motor_trace),
+            voltage_mv=np.array(motor_v),
             angles=np.array(history),
             cells=np.array([motor_cells[i] for i in order]),
             sensed=proprio.sensed_segment[: len(motor_cells)][order],

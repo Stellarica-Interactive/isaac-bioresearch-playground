@@ -56,6 +56,11 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Ruff formats fenced code blocks inside Markdown as of 0.16. Left on, a routine
+# `ruff format` silently rewrites the documentation -- flattening the aligned
+# comments that make the worked examples in docs/ readable, in the same commit as
+# an unrelated code change. Prose is not this formatter's job.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

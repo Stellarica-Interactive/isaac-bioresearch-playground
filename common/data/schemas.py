@@ -594,7 +594,11 @@ class Connectome:
         if synapse_type is not SynapseType.ELECTRICAL:
             for e in self.chemical():
                 g.add_edge(
-                    e.pre, e.post, key="chemical", weight=e.weight, sign=str(e.sign),
+                    e.pre,
+                    e.post,
+                    key="chemical",
+                    weight=e.weight,
+                    sign=str(e.sign),
                     synapse_type="chemical",
                 )
         if synapse_type is not SynapseType.CHEMICAL:
