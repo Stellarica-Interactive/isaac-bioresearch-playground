@@ -115,7 +115,11 @@ def test_the_two_output_levels_match_the_graded_model_they_replace() -> None:
     # if the cell were held at the upper switch point. Voltage-clamped, because an
     # unclamped cell relaxes off the switch point and settles somewhere else --
     # which is the whole reason the latch has to state its output explicitly.
-    for _ in range(200_000):
+    # 20_000 steps at dt 0.1 ms is 2 s, ten activation time constants (a_d = 5e-3
+    # per ms). The error plateaus at 3.4e-6 there and does not improve with ten
+    # times more, against a tolerance of 1e-3 -- the original 200_000 cost 50 s of
+    # suite time to buy nothing.
+    for _ in range(20_000):
         runtime.state[0, switch.indices] = switch.on_mv
         runtime.step()
     assert np.allclose(runtime.state[1, switch.indices], switch.on_output, atol=1e-3)

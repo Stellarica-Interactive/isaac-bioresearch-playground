@@ -376,8 +376,12 @@ def main() -> int:
     proprio = Proprioception.build(
         connectome,
         plan,
-        **({"offset": args.sensing_offset} if args.sensing_offset else {}),
-        **({"receptive_fraction": args.receptive_fraction} if args.receptive_fraction else {}),
+        **({"offset": args.sensing_offset} if args.sensing_offset is not None else {}),
+        **(
+            {"receptive_fraction": args.receptive_fraction}
+            if args.receptive_fraction is not None
+            else {}
+        ),
         asymmetric=args.asymmetric_proprioception,
     )
     b_type = [c for c in proprio.targets if c in runtime.network.cell_ids]
@@ -524,7 +528,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         ),
     )
     drag = GroundDrag(
-        plan, DragParameters(**({"ratio": args.drag_ratio} if args.drag_ratio else {}))
+        plan, DragParameters(**({"ratio": args.drag_ratio} if args.drag_ratio is not None else {}))
     )
 
     root_path, joint_paths = build_scene(plan, self_collision=args.self_collision)
