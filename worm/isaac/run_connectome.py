@@ -71,6 +71,42 @@ parser.add_argument(
 )
 parser.add_argument("--sensing-offset", type=float, default=None)
 parser.add_argument(
+    "--seed-wave",
+    type=float,
+    default=0.0,
+    help="Drive the body with the scripted travelling wave for this many seconds, "
+    "then hand over to the connectome. The question it answers is whether the loop "
+    "can SUSTAIN a wave it did not create, which is different from whether it can "
+    "start one. The proprioceptive input is 97% one signal when the body bends in a "
+    "single mode (5O), so starting it in a wave is the only way to ask.",
+)
+parser.add_argument(
+    "--dump-motor",
+    default="",
+    help="Save the B-type motor neuron activations and joint angles to a .npz for "
+    "offline analysis. Summary statistics hide the shape of a signal; a travelling "
+    "wave, a standing oscillation and disorganised activity can all produce the "
+    "same adjacent correlation.",
+)
+parser.add_argument(
+    "--param",
+    action="append",
+    default=[],
+    metavar="NAME=VALUE",
+    help="Override a biophysical parameter for this run, repeatable, e.g. "
+    "--param g_gap_ps=30. Seven of eleven are still ASSUMED (see "
+    "worm/neural/parameters.toml), so being able to sweep any of them from the "
+    "command line is how their influence gets measured rather than argued about.",
+)
+parser.add_argument(
+    "--threshold-offset-mv",
+    type=float,
+    default=None,
+    help="Shorthand for --param v_threshold_offset_mv=VALUE. Committed value is in "
+    "parameters.toml; raising it hyperpolarises the network toward the measured "
+    "-69 mV at the cost of resting diversity. See model_assumptions 5N.",
+)
+parser.add_argument(
     "--receptive-fraction",
     type=float,
     default=None,
@@ -247,7 +283,11 @@ from worm.body.chemotaxis import (  # noqa: E402
 )
 from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
-from worm.body.muscles import MuscleModel, MuscleParameters  # noqa: E402
+from worm.body.muscles import (  # noqa: E402
+    MuscleModel,
+    MuscleParameters,
+    sine_wave_drive,
+)
 from worm.body.neural_bridge import MuscleDrive, Proprioception  # noqa: E402
 from worm.body.touch import TOUCH_RECEPTORS, TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
@@ -262,6 +302,19 @@ from worm.isaac.stage import (  # noqa: E402
 )  # noqa: E402
 from worm.loader import load  # noqa: E402
 from worm.neural.config import RUNTIME_OVERLAYS, build_runtime  # noqa: E402
+
+
+def _parameter_overrides() -> dict[str, float] | None:
+    """Biophysical overrides for this run, from ``--param`` and the shorthands."""
+    out: dict[str, float] = {}
+    for item in args.param:
+        name, _, value = item.partition("=")
+        if not value:
+            raise SystemExit(f"--param expects NAME=VALUE, got {item!r}")
+        out[name.strip()] = float(value)
+    if args.threshold_offset_mv is not None:
+        out["v_threshold_offset_mv"] = args.threshold_offset_mv
+    return out or None
 
 
 def main() -> int:
@@ -285,6 +338,7 @@ def main() -> int:
         cells=cells,
         connectome=connectome,
         dt_ms=args.neural_dt_ms,
+        parameter_overrides=_parameter_overrides(),
     )
     print(report.summary())
 
@@ -484,6 +538,12 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     # and with --noise-pa on it reported pure noise as a reversal.
     command_history: list[tuple[float, dict[str, float]]] = []
     contact_started_at = 0.0
+    # B-type motor neurons ordered head to tail, so a phase gradient along the
+    # chain is a gradient along the body rather than along an arbitrary index.
+    motor_cells = [c for c in proprio.targets if c in runtime.network.cell_ids]
+    order = np.argsort(proprio.sensed_segment[: len(motor_cells)])
+    motor_idx = np.array([runtime.network.index(motor_cells[i]) for i in order], dtype=np.int64)
+    motor_trace: list[np.ndarray] = []
     drive_reference: np.ndarray | None = None
     drive_at_contact: np.ndarray | None = None
     peak: dict[str, float] = {}
@@ -603,6 +663,25 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 runtime.state[1, lesion_idx] = 0.0
 
         # --- nervous system -> body -------------------------------------
+        if t < args.seed_wave:
+            # Hand-over experiment: the scripted wave drives the body, and the
+            # nervous system watches. Its own output is discarded until t reaches
+            # --seed-wave, at which point the wave stops and the loop is on its own.
+            muscle_model.step(
+                sine_wave_drive(plan, t * 1000.0, frequency_hz=0.5, wavelength_fraction=0.65),
+                dt_ms=dt * 1000.0,
+            )
+            articulation.set_dof_efforts(
+                muscle_model.joint_torques().reshape(1, -1), dof_indices=dofs
+            )
+            _apply_drag(links, drag, dt, masses)
+            simulation_app.update()
+            t += dt
+            history.append(angles.copy())
+            if motor_idx.size:
+                motor_trace.append(runtime.state[1, motor_idx].copy())
+            continue
+
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
         command_history.append((t, _command_state(runtime)))
         if len(command_history) > 2400:  # ten seconds at 240 Hz
@@ -622,6 +701,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         simulation_app.update()
         t += dt
         history.append(angles.copy())
+        if motor_idx.size:
+            motor_trace.append(runtime.state[1, motor_idx].copy())
         # Keep the animal in frame; it travels several body lengths.
         if len(history) % 4 == 0:
             camera.follow(_centroid(links))
@@ -631,6 +712,23 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             _report(t, start, links, plan, angles, history)
 
     _report(args.seconds, start, links, plan, angles, history, final=True)
+    if motor_trace and args.dump_motor:
+        np.savez_compressed(
+            args.dump_motor,
+            activation=np.array(motor_trace),
+            angles=np.array(history),
+            cells=np.array([motor_cells[i] for i in order]),
+            sensed=proprio.sensed_segment[: len(motor_cells)][order],
+            dt_s=dt,
+        )
+        print(f"         motor trace written to {args.dump_motor}")
+    if motor_trace:
+        corr, shared = _motor_phase(motor_trace)
+        verdict = "  -- one signal, so no wave can travel" if shared > 0.75 else ""
+        print(
+            f"         B-type motor neurons: adjacent correlation {corr:+.2f}, "
+            f"{100 * shared:.0f}% of variance shared{verdict}"
+        )
 
 
 def _background_swing(
@@ -829,6 +927,49 @@ def _apply_drag(links: RigidPrim, drag: GroundDrag, dt_s: float, masses: np.ndar
     if not np.all(np.isfinite(forces)):
         raise FloatingPointError("body diverged")
     links.apply_forces(forces)
+
+
+def _motor_phase(trace: list[np.ndarray]) -> tuple[float, float]:
+    """Are the B-type motor neurons in phase with each other, or lagged?
+
+    Returns ``(mean adjacent correlation, fraction of variance they share)``.
+
+    This separates two very different reasons a body can oscillate without a wave
+    travelling along it. If the motor neurons are **synchronised** -- adjacent
+    correlation near 1 at zero lag -- the nervous system is telling every segment
+    to do the same thing at the same moment, and nothing downstream can turn that
+    into a travelling wave. If they are lagged and the body still does not
+    undulate, the phase is being lost between the neurons and the muscle.
+
+    Worth measuring because the anatomy makes synchrony plausible: AVB is
+    gap-junction coupled to every B-type neuron (total weight 156 in this dataset)
+    and the B cells are coupled to their neighbours (85), so they are wired to pull
+    each other into step.
+    """
+    if len(trace) < 200:
+        return 0.0, 0.0
+    recent = np.array(trace[-1200:])
+    fluct = recent - recent.mean(axis=0, keepdims=True)
+    alive = fluct.std(axis=0) > 1e-9
+    if int(alive.sum()) < 2:
+        return 0.0, 0.0
+    fluct = fluct[:, alive]
+
+    adjacent = [
+        float(np.corrcoef(fluct[:, i], fluct[:, i + 1])[0, 1]) for i in range(fluct.shape[1] - 1)
+    ]
+    # Shared variance, not cross-correlation lag.
+    #
+    # The first version of this returned the lag of peak correlation against the
+    # anterior-most cell, and reported a clean head-to-tail gradient in the dorsal
+    # neurons. That was an artefact: the signals are ~90% identical, so the peak
+    # sits wherever the small residual happens to align and wanders with noise.
+    # How much variance the population shares has no such precondition. See
+    # docs/model_assumptions.md 5O.
+    normalised = fluct / fluct.std(axis=0, keepdims=True)
+    singular = np.linalg.svd(normalised, compute_uv=False)
+    shared = float(singular[0] ** 2 / np.sum(singular**2))
+    return float(np.mean(adjacent)), shared
 
 
 def _wave_metrics(history: list[np.ndarray]) -> tuple[float, float]:

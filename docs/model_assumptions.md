@@ -1759,6 +1759,167 @@ Adding hysteresis to B-neurons on Boyle's authority would very likely produce a
 gait. It is not done here, because the rhythm would then be theirs rather than the
 connectome's, and saying so afterwards is much harder than not doing it.
 
+## 5N. Settling the offset, and why matching the measurement exactly is wrong
+
+§5L introduced `v_threshold_offset_mv` at 20 mV and left two things unfinished:
+the value had been picked rather than swept, and §5K had established that the
+*free* resting potential is the objective while the scan still used the clamped
+one. Both are now closed.
+
+### 5N.1 The sweep
+
+Free settle, nothing clamped, everything else at committed values:
+
+| offset | s at rest | free rest | resting spread | AVB→AVAL | body amp |
+|---|---|---|---|---|---|
+| 0 | 0.0909 | −31.3 mV | 17.9 mV | +7.8 mV | 0.00° |
+| 20 | 0.0149 | −49.4 mV | 8.3 mV | +18.2 mV | 0.70° |
+| **30** | **0.0046** | **−60.9 mV** | **3.5 mV** | **+18.5 mV** | **9.02°** |
+| 40 | 0.0013 | −66.9 mV | 1.2 mV | +17.1 mV | 0.00° |
+| 50 | 0.0004 | −69.1 mV | 0.3 mV | +16.0 mV | 0.17°, 22% joints pinned |
+
+The committed value is now **30 mV**.
+
+### 5N.2 Matching the measured resting potential exactly is the wrong target
+
+This is the useful finding. Fifty millivolts of offset brings the network to
+−69.1 mV, which is where both measured cells rest — and it is the worst setting in
+the table.
+
+**The resting spread collapses.** From 17.9 mV across the 397 cells to 0.3 mV: at
+that offset every cell rests at essentially the same potential. Synapses are 0.04%
+open, so almost nothing is coupling anything, and what remains is 397 cells sitting
+at the leak potential in parallel. The network reproduces one measured number by
+ceasing to be a network.
+
+**Behaviour is worst there too.** It jams, pinning 22% of joints against their
+60-degree limit and travelling 4 mm in ten seconds, and signal propagation is lower
+than at 30 mV.
+
+So "agree with the measurement" turns out to be satisfiable in a degenerate way,
+and §5G's original instinct — treat agreement with the measured cells as *the*
+objective — would have walked straight into it. A resting potential is one number;
+matching it says nothing about whether the thing matching it still functions. The
+same trap as §5K, in a different costume: a criterion that a bad answer can satisfy.
+
+Thirty is a compromise and is recorded as one. It reaches −60.9 mV, about 8 mV
+short of the measurement, and keeps a network that still has structure at rest and
+conducts signals better than any other setting tried.
+
+### 5N.3 The largest oscillation the model has produced
+
+At 30 mV the body shows `amp 9.02°` with bend cycling up to 33 degrees — against
+0.70° at the previous default, and against exactly 0.00 for the whole of §5C
+through §5K. The scripted wave, for comparison, runs at about 30 degrees of bend.
+
+Sustained over forty seconds it is irregular but never stops: amp 1.41, 3.21, 3.06,
+0.72, 8.43 at eight-second intervals. It is not a transient.
+
+**It still does not propagate.** `travel` stays within ±0.04 of zero throughout.
+The body oscillates in place rather than passing a wave from head to tail, so this
+is not locomotion, and the §5M conclusion is unchanged: the missing ingredient is
+most likely bistability in the B-class motor neurons, which is what VB6 would
+settle.
+
+What has changed is that the amplitude is now in the right range and the problem
+has narrowed from "nothing moves" to "the phase does not travel". Those are
+different problems, and the second is closer to a gait than the first.
+
+## 5O. Why the phase does not travel: the motor neurons act as one cell
+
+§5N narrowed the problem from "nothing moves" to "the phase does not travel". This
+section answers why, and corrects a reading of its own diagnostic along the way.
+
+### 5O.1 The answer
+
+The eighteen B-type motor neurons are, to a very good approximation, **a single
+signal**. Measured over the last twenty seconds of a thirty-second run, with the
+committed parameters:
+
+| | mean pairwise correlation | variance in first principal component |
+|---|---|---|
+| VB with VB (11 cells) | **+0.992** | **99.3%** |
+| DB with DB (7 cells) | +0.856 | 87.9% |
+| VB with DB | +0.752 | — |
+
+Eleven ventral B-type neurons spanning sensed segments 4 through 18 carry one
+waveform between them. A travelling wave requires neighbouring segments to be
+doing *different* things at the same moment; these are doing the same thing.
+
+That is sufficient on its own to explain `travel ≈ 0` while `amp` is large. The
+body oscillates because the shared signal oscillates, and it oscillates everywhere
+at once.
+
+### 5O.2 It is not the gap junctions
+
+The obvious suspect was electrical coupling. AVB is gap-junction coupled to every
+B-type neuron (total weight 156 in Cook 2019) and the B cells are coupled to their
+neighbours (85), which is exactly the wiring for pulling a population into step —
+and `g_gap` is one of the seven parameters still marked ASSUMED.
+
+Sweeping it says no:
+
+| `g_gap` | VB shared variance | DB shared |
+|---|---|---|
+| 100 pS (committed) | 98.9% | 86.7% |
+| 10 pS | 93.3% | 50.9% |
+| 1 pS | 74.7% | 89.7% |
+
+At 1 pS — a hundredth of the assumed value, which is effectively no electrical
+coupling at all — three quarters of the VB population is still one signal. The
+hypothesis is rejected. Whatever synchronises these cells survives removing the
+coupling that was supposed to be doing it.
+
+### 5O.3 A diagnostic that read the opposite of the truth
+
+The first version of this measurement reported the *lag* of peak cross-correlation
+between each neuron and the anterior-most one, and produced:
+
+    VB1..VB11   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    DB1..DB6    36, 100, 88, 203, 312, 313
+
+which reads as a clean story: the ventral side synchronised, the dorsal side
+carrying a travelling wave. It was reported as such. It is wrong.
+
+Peak cross-correlation lag is meaningless when the signals being compared are 88%
+identical: the peak then sits wherever the small residual happens to align, and
+moves around with noise. The correct measurement is how much variance the
+population *shares*, which says the dorsal cells are as much one signal as the
+ventral ones.
+
+This is the third instance of the same error in this document — the `travel`
+metric of §5C.4, the touch background of §5D.1b, and now this. The pattern is
+consistent enough to be worth stating as a rule: **a statistic computed from a
+signal is only meaningful if the signal has the structure the statistic assumes.**
+Cross-correlation lag assumes two distinguishable signals; the `travel` metric
+assumed a wave existed to have a direction; the touch readout assumed a response
+existed to have a magnitude. Each was applied to data that did not meet its
+precondition, and each returned a confident number.
+
+### 5O.4 Where that leaves it
+
+Not the gap junctions. The remaining candidates, in order of how easily they can
+be tested:
+
+1. **The input is already common.** All eighteen cells receive the same constant
+   AVB drive and proprioceptive current derived from the same body. If the body's
+   curvature is itself nearly uniform — `extent` is 0.88, meaning the animal is
+   almost straight — then every receptive field is reporting nearly the same
+   number, and the cells have nothing to differ about. This is circular in a way
+   the model may not escape: no wave in the body means no difference between
+   segments, which means no wave in the neurons.
+2. **The chemical synapses between them.** Around half the connections between
+   B-type cells carry no predicted sign and are excluded under `EXCLUDE` (§5E), so
+   whatever mutual inhibition the real circuit has is largely missing here.
+3. **Bistability**, per §5M. Boyle et al.'s binary B-neurons with hysteresis
+   cannot all sit in the same state unless driven there, because each latches
+   independently.
+
+Candidate 1 is the most uncomfortable, because it means the model needs a wave to
+make a wave, and something has to break that symmetry. In Boyle et al. the
+hysteresis does it. That remains the most likely missing ingredient, and VB6
+remains the datum that would say whether it is real.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

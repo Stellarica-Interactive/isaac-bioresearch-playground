@@ -57,7 +57,7 @@ check, not a measurement: no per-neuron leak conductance has been measured."""
 improvement = "Whole-cell patch clamp per neuron class; currently exists for very few."
 
 [parameters.v_threshold_offset_mv]
-value = 20.0
+value = 30.0
 unit = "mV"
 confidence = "constrained"
 source = "This project; see docs/model_assumptions.md 5L."
@@ -71,15 +71,21 @@ resting neuron does not tonically release transmitter at 9% of maximum, and the
 consequence was not small: the network sat 38 mV away from the two cells whose
 resting potential has actually been measured.
 
-At 20 mV the network rests at -49.4 mV, against -31.3 mV with no offset and the
--69 mV both measured cells sit at. So this closes rather more than half the gap,
-not all of it; about 40 mV would close it entirely and has not been tested for side
-effects.
+Swept against the free resting potential and against behaviour (5N). At 30 mV the
+network rests at -60.9 mV, against -31.3 mV with no offset and the -69 mV both
+measured cells sit at -- so this closes most of the gap, not all of it.
 
-It also changes behaviour rather than merely repositioning the model. Under a
-command drive alone -- no noise, no stimulus -- the body now shows sustained
-bending where every earlier run froze into one posture, though the bend still does
-not propagate head to tail. See 5L.3.
+Closing it entirely is possible and turns out to be a bad idea. Fifty millivolts
+reaches -69.1 mV, and the resting spread across all 397 cells collapses from
+17.9 mV to 0.3 mV: every cell ends up at the same potential and the network loses
+its resting structure. Behaviourally it is the worst setting tested, jamming 22% of
+joints against their limit.
+
+Thirty is the best measured compromise. It has the largest signal propagation
+(+18.5 mV of an AVB drive reaching AVAL), retains 3.5 mV of resting diversity, and
+produces by far the largest sustained bending this model has shown -- amp 9.02
+degrees against 0.70 at 20 mV, with bend cycling up to 33 degrees, comparable to
+the scripted wave. The bend still does not propagate head to tail. See 5L.3, 5N.
 
 Marked `constrained` rather than `assumed` because it is set by agreement with two
 measured resting potentials, not chosen. It is still a modelling device: nobody has
