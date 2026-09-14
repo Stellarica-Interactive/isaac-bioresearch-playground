@@ -1920,6 +1920,84 @@ make a wave, and something has to break that symmetry. In Boyle et al. the
 hysteresis does it. That remains the most likely missing ingredient, and VB6
 remains the datum that would say whether it is real.
 
+## 5P. The loop cannot sustain a wave it is handed
+
+§5O left the failure looking circular: the body bends in one mode, so every
+proprioceptor reports the same curvature, so every motor neuron does the same
+thing, so the body keeps bending in one mode. That framing suggests the problem is
+*starting* a wave — that the loop simply has no way to break its own symmetry, and
+would carry a wave perfectly well if one existed.
+
+`--seed-wave` tests that directly. The scripted travelling wave drives the body for
+the first N seconds while the nervous system watches; then the wave stops and the
+loop is on its own. It is the only way to ask whether the loop can sustain
+something it cannot create.
+
+### 5P.1 It cannot
+
+Ten seconds of scripted wave, then hand over, torque 3e-3:
+
+| | travel | amp | extent | distance |
+|---|---|---|---|---|
+| t = 10 s, end of the seeded wave | **+0.12** | 16.3° | 0.60 | 1.186 BL |
+| t = 15 s | **−0.00** | 4.2° | 0.93 | 1.083 BL |
+| t = 20 s | +0.00 | 1.4° | 0.79 | 1.174 BL |
+| t = 30 s | −0.00 | 2.8° | 0.30 | 1.060 BL |
+
+The seed is a genuine gait: `travel +0.12`, a body extent of 0.60 which is the
+crawling shape, no joints pinned, and 1.19 body lengths covered in ten seconds.
+
+Within five seconds of the hand-over the propagation is gone. Amplitude survives at
+a quarter of its seeded value and decays further; forward progress stops entirely,
+with cumulative distance flat from 1.186 BL onward. The B-type shared variance
+recovers only to 65% from the seeded differentiation before climbing back.
+
+So the loop does not merely fail to start a wave. **It actively destroys one.**
+
+That is a worse result than the framing of §5O implied, and more informative. A
+model that could carry a wave but not initiate one needs a symmetry-breaking
+mechanism — noise, a head oscillator, an asymmetric initial condition. A model that
+collapses an existing wave has something in it that is actively synchronising, and
+adding a starter would not help.
+
+### 5P.2 What that rules out
+
+* **Symmetry breaking alone is not the answer.** Anything that merely creates an
+  initial difference between segments -- noise (§5C.7), an asymmetric stimulus, a
+  perturbation -- will be flattened within a few seconds, exactly as the seeded
+  wave was.
+* **It is not the body.** The same body, same drag, same muscle model and same
+  torque scale carries the scripted wave at 1.19 BL per ten seconds. The mechanics
+  can sustain a wave; the neural loop cannot.
+* **It is not a gain problem.** The seeded wave produced 16.3 degrees of amplitude
+  and the loop reduced it, rather than failing to reach it.
+
+What remains is that the loop's feedback is *restoring toward uniformity*. Each
+neuron is driven by curvature and drives muscle that opposes that curvature, with
+no mechanism that would hold a phase difference between neighbours. Boyle et al.'s
+hysteresis is exactly such a mechanism: a latched neuron stays latched while its
+neighbour is in the other state, so a phase difference has somewhere to live.
+§5M's conclusion arrives here for the third time, from a third direction.
+
+### 5P.3 The experiment was wrong the first time
+
+Worth recording because the failure looked like a result.
+
+The first run drove the seed phase at the connectome's torque scale of 3e-3. The
+scripted drive spans 0 to 1 while the connectome's antagonist difference spans
+about 5e-3, so the same scale over-drives the scripted wave roughly sixtyfold.
+Measured: `bend 60.0`, `pinned 100%`, `extent 0.16` — the body coiled into a knot
+rather than undulating, and travelled 0.083 BL.
+
+Handing that over and observing that the loop did not sustain it would have been
+meaningless, because there was nothing worth sustaining. The seed is now scaled by
+`DEFAULT_PEAK_TORQUE_SCALE / torque_scale` so that it produces the torque the
+scripted runner actually uses, and the seeded phase reproduces the W2 gait.
+
+The general shape is familiar from §5D.4 and §5M: two systems tuned separately,
+composed without checking that the units of the interface still mean the same thing
+on both sides.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

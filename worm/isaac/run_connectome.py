@@ -284,6 +284,7 @@ from worm.body.chemotaxis import (  # noqa: E402
 from worm.body.drag import DragParameters, GroundDrag  # noqa: E402
 from worm.body.geometry import BodyPlan  # noqa: E402
 from worm.body.muscles import (  # noqa: E402
+    DEFAULT_PEAK_TORQUE_SCALE,
     MuscleModel,
     MuscleParameters,
     sine_wave_drive,
@@ -667,8 +668,19 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             # Hand-over experiment: the scripted wave drives the body, and the
             # nervous system watches. Its own output is discarded until t reaches
             # --seed-wave, at which point the wave stops and the loop is on its own.
+            # Scaled to the torque the scripted runner actually uses.
+            #
+            # The sine drive spans 0 to 1 while the connectome's antagonist
+            # difference spans about 5e-3, so the two need torque scales three
+            # orders of magnitude apart. Driving the scripted wave at the
+            # connectome's scale over-drives it sixtyfold: measured, it pinned
+            # 100% of joints against their limit and coiled the body to extent
+            # 0.16. That seeds a knot, not a wave, and the hand-over then measures
+            # nothing worth knowing.
+            seed_gain = DEFAULT_PEAK_TORQUE_SCALE / max(torque_scale, 1e-12)
             muscle_model.step(
-                sine_wave_drive(plan, t * 1000.0, frequency_hz=0.5, wavelength_fraction=0.65),
+                seed_gain
+                * sine_wave_drive(plan, t * 1000.0, frequency_hz=0.5, wavelength_fraction=0.65),
                 dt_ms=dt * 1000.0,
             )
             articulation.set_dof_efforts(
