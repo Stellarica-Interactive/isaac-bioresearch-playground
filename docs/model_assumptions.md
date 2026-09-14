@@ -1998,6 +1998,360 @@ The general shape is familiar from §5D.4 and §5M: two systems tuned separately
 composed without checking that the units of the interface still mean the same thing
 on both sides.
 
+## 5Q. Testing the bistability hypothesis, and two ways the test was invalid first
+
+§5M, §5O and §5P all end at the same place: the B-type motor neurons need to be
+able to hold a state, and Boyle, Berri & Cohen get undulation out of exactly that.
+`common/neural/hysteresis.py` imports the mechanism as a hypothesis test. It is
+off by default, it is not biology, and its docstring says so.
+
+Two attempts at the test measured nothing. Both failures are more instructive than
+the sweep they were meant to support, and both are the same mistake in different
+clothing: **an intervention that changes two things at once, reported as though it
+changed one.**
+
+### 5Q.1 First failure — the dead band was where the cells never go
+
+The band was centred on each cell's activation threshold. That is the obvious
+choice and it is wrong: since §5N the sigmoid midpoint sits `v_threshold_offset_mv`
+= 30 mV **above** resting potential, and the B-type cells operate far below it.
+Nothing crossed. The sweep reported:
+
+| dead band | distance | amp | travel | extent | latched high at the end |
+|---|---|---|---|---|---|
+| 2 mV | 0.026 BL | 7.75° | −0.05 | 0.16 | **0%** |
+| 4 mV | 0.349 BL | 1.82° | −0.00 | 0.95 | **0%** |
+| 8 mV | 0.349 BL | 1.82° | −0.00 | 0.95 | **0%** |
+| 16 mV | 0.349 BL | 1.82° | −0.00 | 0.95 | **0%** |
+
+Bands 4, 8 and 16 are byte-identical, which is the tell: three different parameter
+values cannot produce the same trajectory unless the parameter is doing nothing.
+Every cell stayed latched low for the whole run.
+
+How completely it did nothing only became clear later. The control run
+`--lesion DB,VB`, which **ablates** the B-type motor neurons outright, returns:
+
+    moved 34.93 mm (0.349 BL)  bend 1.4deg  amp 1.82deg  travel -0.00
+    extent 0.95  pinned 0%  head -178.8deg
+
+— digit for digit the bands 4, 8 and 16 rows above. The intervention was not a
+weak or partial bistability. It was an ablation, reproduced exactly. Reported as a
+null result it would have been a statement about where a band was centred, dressed
+up as a statement about bistability.
+
+The `fraction_on` readout that caught it exists only because the module's own
+docstring predicted this failure mode before the first run. That is the cheapest
+diagnostic in this document: one number, printed once, invalidating four runs.
+
+The band is now centred on each cell's **driven operating point** — measured by
+settling the network with the command drive applied, which is the state the cells
+are actually in during a run. Centring on the undriven rest would be a third
+version of the same error.
+
+### 5Q.2 What the B-type cells actually do, which nobody had measured
+
+Placing the band correctly required knowing where these cells sit. Over the last
+ten seconds of a baseline run (`--torque-scale 3e-3`, 18 B-type cells, second half
+of the trace only):
+
+| | value |
+|---|---|
+| operating points (mean V) | −45.4 to −38.7 mV — all 18 within **6.7 mV** of each other |
+| peak-to-peak swing | 44 mV (DB5) to 167 mV (VB5) |
+| most extreme cell | VB5, −140.1 to +27.0 mV |
+| synaptic activation `s` | never leaves **[0, 0.165]** |
+| voltage shared variance, PC1 | 95.9% |
+
+**The output variable uses a sixth of its range.** Because the sigmoid is centred
+30 mV above rest, activation stays in its bottom tail — `s ≤ 0.165` — even at
++27 mV. The muscles are driven by the near-linear foot of a saturating function.
+§5N fixed one problem (cells were never quiet at rest) and created this one, which
+is worth stating plainly because §5N is committed and reads as a clean win. It is
+also precisely what made §5Q.3 below a confound rather than a control.
+
+**The cells are one signal in voltage, not just in activation.** §5O measured 99.3%
+shared variance in VB *activation*; 95.9% of the *voltage* variance is shared too,
+and all eighteen operating points lie within 6.7 mV. The synchrony is upstream of
+the output nonlinearity, so nothing done to the output alone can break it. That is
+a genuine constraint on what the hypothesis in §5Q.4 could possibly achieve, and
+it was not known before this measurement.
+
+**A claim about physiological range, withdrawn before it was written down.** The
+swings above look alarming — a neuron at −140 mV is not something anyone records —
+and the first draft of this section asserted that the model "leaves the
+physiological range", with a range of −90…−10 mV. That range was **invented here**,
+not taken from any source, which is exactly the failure this document exists to
+prevent. Checking it against the only measured-cell models this project holds:
+
+| driven at | RMD (Nicoletti 2019) | AWC^on (Nicoletti 2019) |
+|---|---|---|
+| rest | −69.5 mV | −69.2 mV |
+| ±5 pA | −79.1 … −27.7 mV | −78.4 … −49.0 mV |
+| ±10 pA | −87.7 … −9.0 mV | −85.5 … −32.9 mV |
+| ±20 pA | −103.6 … +4.7 mV | −97.0 … −16.6 mV |
+
+A conductance-based model of a real, characterised cell reaches −104 mV at 20 pA.
+These models have no hard rectification in this range either; drive them at 200 pA
+and RMD reports −381 mV, which says the envelope is a property of the drive, not a
+bound the biophysics imposes. So the graded model's excursions are **large but not
+disqualifying**, roughly what a conductance model does at a 20 pA injection, and no
+conclusion about physiological plausibility can be drawn from them. The honest
+residue is narrower and still worth having: the proprioceptive gain was calibrated
+at 20 mV per radian (§5N) and the cells move four to eight times that, so the loop
+is amplifying its own input by a factor nobody chose.
+
+### 5Q.3 Second failure — binarising is also a sixfold gain increase
+
+Boyle's neurons emit 0 and 1. This model's emit at most 0.165. Substituting the
+former for the latter multiplies muscle drive by about six **at the same moment**
+as it adds memory, and afterwards no measurement can say which of the two produced
+whatever changed. The first corrected sweep did exactly this and returned
+1.136 BL of distance at `amp 0.00°` — movement with no undulation at all, which is
+a body shoved into a static bend and sliding, not a gait.
+
+The latch now emits, in each state, the graded activation the cell would settle at
+if held at the band edge it last crossed — `s = a_r φ(V) / (a_d + a_r φ(V))`, the
+same sigmoid and the same rate constants the runtime integrates. Bistability is
+then the only difference between the two conditions. `--hysteresis-binary` keeps
+Boyle's literal scale available, because the gain question is worth asking too; it
+just is not this question.
+
+This is the same failure as §5P.3 (a seeded wave driven at sixty times the torque
+it was tuned for) and §5D.4 (two systems composed without checking the interface
+units). Three instances now, all of the form: *the intervention and the control
+differ in more ways than the one being reported.*
+
+### 5Q.4 The result
+
+Measured at sixty seconds, past the transient of §5Q.2, with the §5R metrics.
+`fraction_on` lands between 61% and 72%, so the mechanism is switching — the
+precondition for the sweep to mean anything. Inter-joint phase is the quantity
+that separates crawling from flexing in place; the scripted wave is the positive
+control, a gait by construction.
+
+| | distance | amplitude | **phase** | period | latched high |
+|---|---|---|---|---|---|
+| scripted wave (control) | 7.216 BL | 20.99° | **+23.0°** | 2.0 s | — |
+| baseline, no hysteresis | 0.994 BL | 16.67° | **−0.8°** | 12.0 s | — |
+| dead band 1 mV | 0.533 BL | 3.08° | **+0.0°** | none | 72% |
+| dead band 2 mV | 1.104 BL | 3.28° | **+0.0°** | none | 61% |
+| dead band 4 mV | 0.752 BL | 3.63° | **+0.0°** | none | 61% |
+
+**No gait, at any band width.** Phase is zero to the resolution of the
+measurement, against +23.0° for a real wave measured the same way. Amplitude falls
+from 16.67° to about 3.2°, so hysteresis does not merely fail to organise the
+oscillation — it removes four fifths of it. And in all three conditions **no period
+resolves at all**: fewer than two cycles fit in sixty seconds, which means the
+latch has flattened the body's twelve-second oscillation into drift. The metric
+reports no phase there rather than a number, per §5R.4.
+
+The distance column is the trap this table is built to avoid. The 2 mV row covers
+1.104 body lengths, more than the baseline, and read alone that looks like a
+result. It is not locomotion: amplitude is a fifth of baseline, no period resolves,
+and the heading differs by 284° between the 1 mV and 2 mV rows. The body is held in
+a fixed bend and rotating against anisotropic drag — the failure `_report` prints a
+heading to catch. The scripted control settles the point by contrast: a real gait
+covers 7.216 BL, seven times the best of these, while actually undulating.
+
+Three controls make the rest readable:
+
+| control | distance | amplitude | phase |
+|---|---|---|---|
+| no muscle drive (`--torque-scale 0`) | **0.000 BL** | 0.00° | — |
+| B-type ablated (`--lesion DB,VB`) | 0.348 BL | 6.69° | −3.0° |
+| no proprioception (`--no-proprioception`) | 0.345 BL | — | — |
+
+The first rules out drift: with no muscle drive the body moves **exactly zero**, so
+every distance in this document is caused by the nervous system and not by PhysX
+coasting. That had never been checked.
+
+The second says the B-type cells do drive the movement — ablating them cuts
+amplitude from 16.67° to 6.69° and distance to a third. Neither is a travelling
+wave (−3.0° against −0.8°), so this is about how much the body moves, not how it
+is organised.
+
+That row was reported twice before it was right, and both errors are §5R's:
+
+* **At twenty seconds it pointed the other way.** Ablation appeared to *raise*
+  amplitude, 1.82° against the baseline's 0.96°, which would have meant the cells
+  supposed to drive locomotion were suppressing it and that §5O and §5P had spent
+  two sections asking why a wave fails to appear in a circuit that was not
+  producing the movement being measured. That was a transient, and it reverses.
+* **At sixty seconds the magnitude was still wrong.** On the one-second amplitude
+  window the same two runs read 9.20° and 1.57°, a nearly sixfold difference,
+  because that window catches a different sliver of a twelve-second oscillation in
+  each. Over whole cycles it is 2.5×.
+
+The direction was right on the second measurement and the magnitude only on the
+third. Both corrections come from the same cause — a timescale assumed rather than
+measured — which is why §5R exists.
+
+So three converging lines of evidence — §5M, §5O, §5P — are wrong together, which
+§5Q.1's preamble named as the more valuable outcome and is the reason the test was
+worth running. Bistability in the B-type motor neurons, on its own, is not the
+missing ingredient. It is actively harmful to what little movement there is.
+
+### 5Q.5 Why it fails, and what that leaves
+
+§5Q.2 already contains the reason, measured before the sweep ran. All eighteen
+B-type cells sit within 6.7 mV of each other and share 95.9% of their voltage
+variance. A Schmitt trigger is a function of a cell's own voltage; applied to
+eighteen cells carrying nearly the same voltage, it switches them at nearly the
+same instant. Bistability gives a population somewhere to *hold* a phase
+difference, but it cannot manufacture one, and there is none here to hold.
+
+That is consistent with Boyle et al. rather than a contradiction of them. In their
+model the B-class cells receive genuinely different inputs, because each reads a
+short, non-overlapping stretch of body and the body is already bending in a wave.
+Here the input is 97.1% shared (§5O) because the body bends in a single mode. The
+hysteresis was never the part doing the work; it was holding a difference that
+something else created.
+
+What this rules out, added to §5P.2:
+
+* **Bistability alone is not the answer**, and neither is symmetry-breaking alone
+  (§5P.2). The two obvious candidates are both gone.
+* **It is not the output nonlinearity.** The synchrony is present in voltage, 
+  upstream of the sigmoid, so replacing the sigmoid — with a latch or anything
+  else — cannot break it.
+
+What remains, in order of testability:
+
+1. **The proprioceptive receptive field.** §5O.4 candidate 1, never yet varied.
+   `DEFAULT_RECEPTIVE_FRACTION` is 1/24 — one segment — but the *sensed* curvature
+   is 97.1% shared regardless, which says the body, not the field, is the problem.
+   Boyle's cells read a stretch offset *behind* them; this model's read the segment
+   they drive. A delay line is a mechanism for creating phase difference rather
+   than holding it, and is untested here.
+2. **The missing inhibition.** Around half the B-to-B connections carry no
+   predicted sign and are excluded under `EXCLUDE` (§5E). Mutual inhibition between
+   neighbouring segments is the standard way a population desynchronises, and this
+   model does not have it.
+3. **The D-class reset.** Boyle's oscillator is not the B cells alone — it is B
+   latching against antagonistic D-class inhibition. Only half the circuit was
+   imported here, which in hindsight is the most likely reason this test failed
+   while theirs works.
+
+Item 3 is the uncomfortable one: §5M read Boyle's model as "binary B-class neurons
+with hysteresis" and this test implemented that phrase. Their oscillator needs the
+antagonist too, and importing half a mechanism and reporting that the mechanism
+does not work is not a fair test of it. §5Q.4's null result stands as stated —
+B-type bistability alone does nothing — but it is a narrower claim than the one
+§5M set up, and the fair version of the experiment has not been run yet.
+
+## 5R. The gait metrics were measuring their own constants
+
+§5C.4 fixed the `travel` metric once already: the first version correlated joint
+angles at a single lag, which reports a large number for a body flexing in place,
+and the fix was to subtract the reverse direction so that anything symmetric in
+time reads zero. That fix was correct and still stands.
+
+It left a second error underneath it, which survived §5C through §5Q and silently
+scaled every number those sections report.
+
+### 5R.1 Calibrating against a wave that is a gait by construction
+
+The scripted travelling wave is the only signal in this project whose answer is
+known in advance: it is a sine wave imposed on the joints, it covers 2.391 body
+lengths in twenty seconds, and it propagates head to tail because it was built to.
+Measuring it with the committed metric gives `travel +0.12` — which §5P read as
+"a genuine gait", on a scale whose documented top is +1.
+
+Sweeping the lag instead of fixing it at twelve samples:
+
+| lag (samples) | 12 | 32 | 64 | 96 | **128** | 192 |
+|---|---|---|---|---|---|---|
+| travel | +0.12 | +0.32 | +0.58 | +0.74 | **+0.78** | +0.46 |
+
+The same data, the same formula, reading from +0.12 to +0.78 depending on a
+constant nobody had examined.
+
+### 5R.2 Why, in closed form
+
+For two joints oscillating at period `T` with a phase difference `φ`, the
+difference-of-correlations formula evaluates exactly:
+
+    travel(lag) = cos(φ − ω·lag) − cos(φ + ω·lag) = 2 sin(φ) · sin(ω·lag)
+
+Checked against synthetic sinusoids with `φ` = 23° and `T` = 2 s, predicted against
+measured, to three decimals:
+
+| lag | 12 | 32 | 64 | 120 | 128 | 192 |
+|---|---|---|---|---|---|---|
+| measured | 0.121 | 0.313 | 0.579 | 0.782 | 0.776 | 0.464 |
+| `2 sin φ sin ω·lag` | 0.122 | 0.318 | 0.581 | 0.781 | 0.777 | 0.459 |
+
+So the reading is the real quantity multiplied by `sin(ω·lag)`. At the committed
+twelve samples and a two-second period that factor is **0.156**. The metric could
+not have reported above about +0.12 for a two-second gait however cleanly it
+propagated, and the docstring's "+1 is a clean head-to-tail wave" was unreachable
+by any body at that lag.
+
+Two consequences worth separating. The scale of every `travel` figure in §5C–§5Q is
+compressed roughly sixfold, so §5P's "+0.12" was not a weak wave but close to that
+metric's ceiling. And the sensitivity is correspondingly poor: a real but modest
+phase gradient would have read at the noise floor and been dismissed.
+
+### 5R.3 The amplitude window had the same shape of error
+
+`amp` was the standard deviation of joint angle over the last 240 samples — one
+second at 240 Hz. The connectome-driven body's dominant period is **twelve
+seconds**, measured over five cycles of a sixty-second run. A one-second window on
+a twelve-second oscillation catches a sliver of one excursion: the same twenty
+seconds reads `amp 0.96°` over the committed window and `14.75°` over whole
+cycles. Slow movement was being reported as no movement, which is precisely the
+observation that the worm "barely moves".
+
+The period was first measured as ten seconds from a twenty-second run. That is two
+cycles in the window — exactly the boundary of the guard in
+:data:`MIN_CYCLES_IN_WINDOW`, and not a number to rely on. Re-measuring at sixty
+seconds gives twelve seconds and agrees on everything that matters. Quoting the
+twenty-second figure would have been a smaller version of the same error this
+section is about.
+
+Both errors are one mistake: a timescale hard-coded as a constant when it is a
+property of the signal, and neither had a test that could fail, because every test
+compared the metric against another number produced by the same metric.
+
+### 5R.4 The replacement
+
+`common/body/gait.py` derives both timescales from the data. The dominant period
+comes from the spectrum of a mid-body joint — not a pooled average, since averaging
+joints that are out of phase cancels the signal being looked for. Amplitude is
+taken over whole cycles. Propagation is measured at `lag = T/4`, where
+`sin(ω·lag)` = 1, which both maximises sensitivity and makes the reading exactly
+`2 sin(φ)` — invertible into the inter-joint phase in degrees, which is what "the
+wave travels" means physically and is bounded in a way `travel` never was.
+
+When fewer than two cycles fit in the window the period is `nan` and no phase is
+reported. Returning a number there would describe the window length rather than
+the body, which is the §5O.3 error in a third costume.
+
+`common/tests/test_gait.py` builds waves with a chosen period and a chosen phase,
+so there is a right answer to miss — including one test that fails if a fixed
+one-second window is reintroduced, and one that asserts the sixfold compression
+directly.
+
+### 5R.5 What it changes, and what it does not
+
+Re-measured at the correct lag, over whole cycles:
+
+| | window | amplitude | period | inter-joint phase |
+|---|---|---|---|---|
+| scripted wave (a gait by construction) | 20 s | 20.93° | 2.00 s | **+23.0°** |
+| connectome baseline | 20 s | 14.75° | 10.00 s | **−0.5°** |
+| connectome baseline | 60 s | 16.67° | 12.00 s | **−0.8°** |
+
+**No conclusion in §5O, §5P or §5Q is overturned.** The connectome-driven body
+still shows no propagation — half a degree of phase between adjacent joints,
+against twenty-three for a real gait. The failure those sections describe is real
+and was not an artifact of the metric.
+
+What changes is that the magnitudes in them were on a compressed and partly
+arbitrary scale, and that the model's body oscillates far more than `amp` ever
+showed: 14.75° over its own period, not 0.96° over an arbitrary second. The body
+was moving the whole time. It simply was not moving as a wave.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

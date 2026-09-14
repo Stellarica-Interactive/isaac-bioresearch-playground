@@ -286,6 +286,7 @@ import omni.timeline  # noqa: E402
 from isaacsim.core.experimental.prims import Articulation, RigidPrim  # noqa: E402
 from isaacsim.core.simulation_manager import SimulationManager  # noqa: E402
 
+from common.body.gait import measure as measure_gait  # noqa: E402
 from common.data.schemas import CellCategory, Connectome, Sign  # noqa: E402
 from common.neural.hysteresis import Hysteresis  # noqa: E402
 from common.neural.runtime import NeuralRuntime  # noqa: E402
@@ -1043,44 +1044,6 @@ def _motor_phase(trace: list[np.ndarray]) -> tuple[float, float]:
     return float(np.mean(adjacent)), shared
 
 
-def _wave_metrics(history: list[np.ndarray]) -> tuple[float, float]:
-    """How much the body is bending, and whether the bend is *travelling*.
-
-    Amplitude is the temporal standard deviation of joint angle, so a body frozen
-    in a bent shape reads zero however bent it is.
-
-    Travel is the harder measurement and the one worth getting right. A posterior
-    joint doing what its anterior neighbour did a moment ago is a wave moving head
-    to tail. A body flexing in place does the same thing at positive and negative
-    lag, so correlating at one lag alone cannot tell the two apart -- and reports a
-    large number for a standing oscillation, which is exactly the mistake this
-    function made in its first version. The answer is the *difference* between the
-    two directions, which is zero for anything symmetric in time:
-
-        travel = corr(anterior(t), posterior(t+lag)) - corr(anterior(t), posterior(t-lag))
-
-    Each joint's own temporal mean is removed first, so a static bend contributes
-    nothing. +1 is a clean head-to-tail wave, -1 tail-to-head, 0 no propagation.
-    """
-    if len(history) < 120:
-        return 0.0, 0.0
-    recent = np.array(history[-240:])
-    fluct = recent - recent.mean(axis=0, keepdims=True)
-    amplitude = float(np.degrees(fluct.std()))
-
-    lag = min(12, len(fluct) // 4)
-    anterior = fluct[lag:-lag, :-1]
-
-    def corr(shift: int) -> float:
-        posterior = fluct[lag + shift : len(fluct) - lag + shift, 1:]
-        a, b = anterior.ravel(), posterior.ravel()
-        if a.std() < 1e-12 or b.std() < 1e-12:
-            return 0.0
-        return float(np.corrcoef(a, b)[0, 1])
-
-    return amplitude, corr(lag) - corr(-lag)
-
-
 def _report(  # noqa: PLR0913
     t: float,
     start: np.ndarray,
@@ -1096,7 +1059,7 @@ def _report(  # noqa: PLR0913
         return
     delta = np.asarray(links.get_world_poses()[0])[:, :2].mean(axis=0) - start
     extent = float(np.linalg.norm(xyz[-1] - xyz[0])) / plan.total_length_m
-    amplitude, travel = _wave_metrics(history)
+    gait = measure_gait(history)
     label = "FINAL" if final else f"t={t:5.1f}s"
     # Heading tells crawling apart from being stirred. A body held in a fixed bend
     # can still travel a long way by rotating against anisotropic drag, and the
@@ -1110,7 +1073,11 @@ def _report(  # noqa: PLR0913
         f"  {label}  moved {np.linalg.norm(delta) * 1e3:7.2f} mm "
         f"({np.linalg.norm(delta) / plan.total_length_m:5.3f} BL)  "
         f"bend {np.degrees(np.abs(angles).max()):5.1f}deg  "
-        f"amp {amplitude:5.2f}deg  travel {travel:+5.2f}  "
+        f"amp {gait.amplitude_deg:5.2f}deg  phase {gait.inter_joint_phase_deg:+5.1f}deg  "
+        # "--" rather than "nan": no period resolved is a refusal to answer, not a
+        # measurement, and phase is meaningless without one. See common/body/gait.py.
+        f"period {f'{gait.period_s:4.1f}s' if np.isfinite(gait.period_s) else '  -- '}  "
+        f"travel {gait.travel:+5.2f}  "
         f"extent {extent:4.2f}  pinned {saturated:4.0%}  head {heading:+7.1f}deg"
     )
     if final:
