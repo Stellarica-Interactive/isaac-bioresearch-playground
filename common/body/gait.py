@@ -47,6 +47,18 @@ import numpy as np
 #: degenerate case.
 MIN_CYCLES_IN_WINDOW = 2.0
 
+#: Amplitude below which no phase is reported, in degrees. A body frozen in a
+#: bend still jitters by a fraction of a float, and correlating that jitter
+#: returns a confident, structured, meaningless number: ablating VD froze the body
+#: at ``bend 51.1 deg, extent 0.24, amp 0.00 deg`` and the phase came back
+#: **+34.8 deg**, larger than the scripted wave's genuine +23.0 deg. The guard in
+#: :func:`travel_at` did not catch it because PhysX jitter is far above 1e-12.
+#:
+#: ASSUMED. A tenth of a degree is well under any real undulation here -- the
+#: scripted wave is 21 deg and even the quietest connectome run is 3 deg -- and
+#: well above numerical noise, but nothing measures it.
+MIN_AMPLITUDE_DEG = 0.1
+
 
 @dataclass(frozen=True)
 class Gait:
@@ -81,6 +93,10 @@ class Gait:
         A body must both oscillate appreciably and carry a real phase gradient.
         The threshold is ASSUMED -- there is no measurement behind 5 degrees -- so
         this is a convenience for reading a table, never evidence on its own.
+
+        This was the only thing standing between a frozen, coiled body and a
+        reported phase of +34.8 degrees; :data:`MIN_AMPLITUDE_DEG` now stops the
+        number being produced at all, which is the right place for the guard.
         """
         return bool(
             np.isfinite(self.period_s)
@@ -156,6 +172,13 @@ def measure(history: list[np.ndarray] | np.ndarray, *, hz: float = 240.0) -> Gai
     whole = fluct[-int(cycles * period) :]
     whole = whole - whole.mean(axis=0, keepdims=True)
 
+    amplitude = float(np.degrees(whole.std()))
+    if amplitude < MIN_AMPLITUDE_DEG:
+        # A phase needs an oscillation to be the phase *of*. Below this the
+        # correlation is computed on jitter and returns whatever the jitter
+        # happens to align to -- see MIN_AMPLITUDE_DEG.
+        return Gait(amplitude, float(period / hz), 0.0, 0.0)
+
     lag = max(int(round(period / 4)), 1)
     travel = travel_at(whole, lag)
     # travel = 2 sin(phase) at the quarter-period lag, so phase inverts directly.
@@ -163,7 +186,7 @@ def measure(history: list[np.ndarray] | np.ndarray, *, hz: float = 240.0) -> Gai
     # undefined -- that is a saturated reading, not a phase above 90 degrees.
     phase = float(np.degrees(np.arcsin(np.clip(travel / 2.0, -1.0, 1.0))))
     return Gait(
-        amplitude_deg=float(np.degrees(whole.std())),
+        amplitude_deg=amplitude,
         period_s=float(period / hz),
         inter_joint_phase_deg=phase,
         travel=float(travel),

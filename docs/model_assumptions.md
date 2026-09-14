@@ -2228,16 +2228,54 @@ What remains, in order of testability:
    neighbouring segments is the standard way a population desynchronises, and this
    model does not have it.
 3. **The D-class reset.** Boyle's oscillator is not the B cells alone — it is B
-   latching against antagonistic D-class inhibition. Only half the circuit was
-   imported here, which in hindsight is the most likely reason this test failed
-   while theirs works.
+   latching against antagonistic D-class inhibition, and only the B half was made
+   bistable here. The antagonist itself is present and correctly signed; what was
+   never tried is latching the two against each other.
 
-Item 3 is the uncomfortable one: §5M read Boyle's model as "binary B-class neurons
-with hysteresis" and this test implemented that phrase. Their oscillator needs the
-antagonist too, and importing half a mechanism and reporting that the mechanism
-does not work is not a fair test of it. §5Q.4's null result stands as stated —
-B-type bistability alone does nothing — but it is a narrower claim than the one
-§5M set up, and the fair version of the experiment has not been run yet.
+### 5Q.6 Correction: the D-class inhibition is not missing
+
+The paragraph above originally read that "only half the circuit was imported here,
+which in hindsight is the most likely reason this test failed while theirs works",
+and called that the most promising direction left. It was committed in that form.
+It is wrong, and the way it went wrong is worth keeping.
+
+The claim came from querying the connectome with
+`annotations=("sim", "nt", "polarity")` and finding every D-class output edge
+unsigned — therefore dropped under `EXCLUDE` (§5E), therefore no inhibition. What
+that query actually omitted is a fifth overlay. The runtime loads
+`RUNTIME_OVERLAYS = ("classes", "sim", "nt", "polarity", "nmj")`, and `nmj` is the
+neuromuscular one, deliberately kept separate from `polarity` because the two rest
+on different kinds of evidence: `polarity` is predicted from receptor expression
+(Fenyves 2020), `nmj` is measured physiology. Loaded as the runtime loads it:
+
+| | edges | weight | sign |
+|---|---|---|---|
+| B-type → muscle | 132 | 508 | **excitatory**, all of them |
+| D-class → muscle | 121 | 609 | **inhibitory**, all of them |
+| B-type → D-class | 70 | 770 | excitatory (67), unknown (3) |
+
+`DD1 → MDL06`, for instance, carries `sign=inhibitory`,
+`confidence=published_annotation`, `source=mcintire_1993_gaba_inhibitory`. The
+antagonist is fully wired, from measured physiology, and has been all along. The
+D-class cells are also in the runtime — all nineteen of them.
+
+Two lessons, the second more useful than the first. The obvious one is that a
+diagnostic query has to load what the thing being diagnosed loads, and an overlay
+set retyped by hand rather than imported is a place for them to diverge silently.
+The subtler one is that the separation of `polarity` from `nmj` — which exists for
+good reasons, so that no result can quietly lean on predicted signs while claiming
+measured ones — is exactly what made the mistake possible. A design that keeps two
+kinds of evidence apart makes it easy to consult one and believe you consulted
+both.
+
+So §5Q.4's null result is not narrower than it appeared. The test ran against a
+model that already contains the antagonist, and B-type bistability still produced
+nothing. What remains untried is narrower and more specific than "import the other
+half": making the D-class bistable *too*, so the two classes latch against each
+other, which is the actual structure of Boyle's oscillator. Whether that is worth
+doing is a separate question — §5Q.5's own argument applies to it, since D-class
+cells driven by the same near-uniform signal have as little to differ about as the
+B-type cells do.
 
 ## 5R. The gait metrics were measuring their own constants
 
@@ -2351,6 +2389,79 @@ What changes is that the magnitudes in them were on a compressed and partly
 arbitrary scale, and that the model's body oscillates far more than `amp` ever
 showed: 14.75° over its own period, not 0.96° over an arbitrary second. The body
 was moving the whole time. It simply was not moving as a wave.
+
+## 5S. What the D-class inhibition is actually doing
+
+§5Q.6 established that the antagonist is wired and correctly signed. That is not
+the same as it doing anything, so this asks directly, by ablating it. Sixty
+seconds, `--torque-scale 3e-3`, measured with the §5R metrics.
+
+| | distance | bend | amplitude | phase | extent |
+|---|---|---|---|---|---|
+| scripted wave (control) | 7.216 BL | 30.5° | 20.99° | **+23.0°** | 0.60 |
+| baseline | 0.994 BL | 25.9° | 16.67° | −0.8° | 0.26 |
+| D-class ablated (`DD,VD`) | 0.228 BL | 5.6° | 14.21° | −4.1° | 0.88 |
+| DD ablated | 0.095 BL | 12.4° | 22.12° | −0.3° | 0.40 |
+| VD ablated | 0.043 BL | 51.1° | **0.00°** | — | 0.24 |
+| B-type and D-class ablated | 0.757 BL | 28.8° | 7.96° | −2.7° | 0.35 |
+
+### 5S.1 The inhibition carries translation, not amplitude
+
+Removing both D-class types costs **four fifths of the distance** — 0.994 BL to
+0.228 BL — while amplitude barely moves, 16.67° to 14.21°. The body still swings
+about as far; it stops getting anywhere. Ablating either class alone costs more
+still, an order of magnitude of distance in each case.
+
+This is the first result in this document where an inhibitory population turns out
+to matter for translation specifically, and it is consistent with what the
+inhibition is for: dorsoventral antagonism is what converts a swing into a push
+against anisotropic drag. Without it both sides contract together and the body
+flexes without purchase.
+
+It is not, however, a wave. Every phase in the table is within a few degrees of
+zero against the scripted control's +23.0°. The D-class is contributing to how
+effectively the body moves, not to whether the phase travels, and §5Q.4's null
+result is untouched by it.
+
+### 5S.2 The two classes are not interchangeable, and VD is load-bearing
+
+Ablating VD alone freezes the animal: `bend 51.1°`, `extent 0.24`, and amplitude
+of **zero**. Nothing is oscillating at all; the body is locked in a coil and stays
+there for the full sixty seconds.
+
+That is the anatomically expected result, which is worth stating because so little
+else in this document has been. VD inhibits ventral muscle — 74 of its 75
+body-wall targets are ventral (§5Q.6). Remove it and ventral contraction is
+unopposed, so the body curls ventrally and holds. DD ablation, whose targets are
+45/46 dorsal, does something quite different: amplitude *rises* to 22.12°, the
+largest in the table, with the body half-extended at 0.40.
+
+The asymmetry between the two is real and is not something this model was built to
+produce. It falls out of measured innervation (Cook 2019) and measured transmitter
+physiology (McIntire 1993) with nothing added.
+
+### 5S.3 A phase of +34.8 degrees from a body that was not moving
+
+The VD row first read `phase +34.8°, travel +1.14` — a cleaner travelling wave
+than the scripted control, from the frozen body described above.
+
+`travel` is `2 sin(φ)`, so +1.14 is a self-consistent φ of 34.8°; the arithmetic
+was fine. The signal was not. With amplitude at zero the correlation was running
+on PhysX jitter, and jitter correlates to whatever it happens to align with. The
+guard in `travel_at` missed it because it only rejects a standard deviation below
+1e-12, and float noise in a physics engine is many orders above that.
+
+`is_travelling_wave` returned False, because it requires amplitude above 1°. That
+is the right answer reached by the wrong route: the number was still computed,
+still printed, and would have been quoted from the table by anyone reading it.
+`MIN_AMPLITUDE_DEG` now refuses to produce a phase below a tenth of a degree, the
+same way §5R.4 refuses to produce one when no period resolves.
+
+This is the fifth instance of the pattern named in §5O.3, and the first committed
+by the module written to prevent it. Writing the guard into `is_travelling_wave`
+rather than into `measure` put it one level too far out — the consumer, not the
+producer. A statistic that should not exist must not be returned, not merely
+flagged.
 
 ## 6. Decisions taken, and what remains open
 

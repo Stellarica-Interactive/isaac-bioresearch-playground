@@ -124,3 +124,32 @@ def test_too_short_a_recording_is_refused() -> None:
         assert g.inter_joint_phase_deg == 0.0
         assert g.travel == 0.0
         assert not g.is_travelling_wave
+
+
+def test_a_frozen_body_is_not_given_a_phase() -> None:
+    """The failure that prompted MIN_AMPLITUDE_DEG.
+
+    Ablating VD froze the body at ``bend 51.1 deg, extent 0.24, amp 0.00 deg`` and
+    the metric reported a phase of **+34.8 deg** -- larger than the scripted
+    wave's genuine +23.0 deg, from a body that was not moving. The correlation was
+    running on PhysX jitter, which is far above the 1e-12 floor in `travel_at`.
+    """
+    rng = np.random.default_rng(1)
+    # A static coil, plus jitter with a genuine phase gradient, so the test fails
+    # if the guard is removed rather than merely passing for lack of structure.
+    t = np.arange(4800)[:, None]
+    j = np.arange(24)[None, :]
+    coil = np.deg2rad(np.linspace(0.0, 51.0, 24))[None, :]
+    jitter = 1e-7 * np.sin(2 * np.pi * t / 480.0 - np.deg2rad(30.0) * j)
+    frozen = coil + jitter + rng.standard_normal((4800, 24)) * 1e-9
+
+    g = measure(frozen)
+    assert g.amplitude_deg < 0.1
+    assert g.inter_joint_phase_deg == 0.0, "no oscillation, so no phase to report"
+    assert g.travel == 0.0
+    assert not g.is_travelling_wave
+
+    # The same shape at a real amplitude still reads its phase, so the guard is a
+    # floor on noise and not a blanket refusal.
+    real = coil + np.deg2rad(10.0) * np.sin(2 * np.pi * t / 480.0 - np.deg2rad(30.0) * j)
+    assert measure(real).inter_joint_phase_deg == pytest.approx(30.0, abs=2.0)
