@@ -109,13 +109,19 @@ from worm.isaac.stage import add_camera, add_ground_grid, build_scene, dof_order
 
 def main() -> int:
     plan = BodyPlan(n_segments=args.segments)
-    overrides: dict[str, float] = {}
-    if args.torque_scale:
-        overrides["peak_torque_scale"] = args.torque_scale
-    if args.stiffness:
-        overrides["joint_stiffness"] = args.stiffness
-    if args.damping:
-        overrides["joint_damping"] = args.damping
+    # `is not None`, not truthiness: all three default to None, and zero is a
+    # meaningful setting for each. --torque-scale 0 is the null control that shows
+    # the body does not drift, and it was silently running the default instead.
+    # Same bug as the three flags in run_connectome.py.
+    overrides: dict[str, float] = {
+        key: value
+        for key, value in (
+            ("peak_torque_scale", args.torque_scale),
+            ("joint_stiffness", args.stiffness),
+            ("joint_damping", args.damping),
+        )
+        if value is not None
+    }
     muscle_params = MuscleParameters(**overrides)
     drag_params = DragParameters(
         **({"ratio": args.drag_ratio} if args.drag_ratio is not None else {})

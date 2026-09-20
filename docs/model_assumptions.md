@@ -1911,6 +1911,8 @@ be tested:
 2. **The chemical synapses between them.** Around half the connections between
    B-type cells carry no predicted sign and are excluded under `EXCLUDE` (§5E), so
    whatever mutual inhibition the real circuit has is largely missing here.
+   **Corrected in §5V: there are three such connections in the whole animal, of
+   one synapse each. "Around half" is two of three.**
 3. **Bistability**, per §5M. Boyle et al.'s binary B-neurons with hysteresis
    cannot all sit in the same state unless driven there, because each latches
    independently.
@@ -2226,7 +2228,8 @@ What remains, in order of testability:
 2. **The missing inhibition.** Around half the B-to-B connections carry no
    predicted sign and are excluded under `EXCLUDE` (§5E). Mutual inhibition between
    neighbouring segments is the standard way a population desynchronises, and this
-   model does not have it.
+   model does not have it. **Withdrawn in §5V: the animal does not have it
+   either.**
 3. **The D-class reset.** Boyle's oscillator is not the B cells alone — it is B
    latching against antagonistic D-class inhibition, and only the B half was made
    bistable here. The antagonist itself is present and correctly signed; what was
@@ -2571,6 +2574,57 @@ missing ingredient is not in the body, and no amount of tuning the medium will
 substitute for it. §5P reached this conclusion from the other direction — the same
 body carries a scripted wave it cannot sustain from the loop — and this is the
 quantitative form of it.
+
+## 5V. There is no wiring between the B-type cells to be missing
+
+§5O.4 and §5Q.5 both list the same candidate: around half the chemical connections
+between B-type motor neurons carry no predicted sign, are dropped under `EXCLUDE`
+(§5E), and so whatever mutual inhibition the real circuit uses to desynchronise
+neighbouring segments is absent here. It was the last "something was dropped"
+explanation still standing for the synchrony of §5O.
+
+### 5V.1 Three synapses
+
+Counted in Cook 2019, loaded as the runtime loads it, every chemical connection
+whose source and target are both B-type motor neurons:
+
+| | | |
+|---|---|---|
+| `VB1 → VB2` | weight 1 | unsigned |
+| `VB4 → VB5` | weight 1 | excitatory |
+| `VB6 → VB7` | weight 1 | unsigned |
+
+That is the complete list. Three connections, one synapse each, among eighteen
+cells. "Around half carry no predicted sign" is true — two of three — and was
+written without looking at the denominator.
+
+**The eighteen B-type motor neurons are essentially not chemically connected to
+each other.** Not in this model, and not in the animal: nothing has been dropped,
+because there is nothing there. Restoring all three at full weight could not
+desynchronise anything, and no sign policy applied to two edges of weight 1 will
+change a result.
+
+This closes the candidate, and it closes the whole class it belonged to. The
+synchrony measured in §5O — 99.3% shared variance in activation, 95.9% in voltage
+— cannot be an artifact of missing connections between these cells. Gap junctions
+were already ruled out (§5O.2: 74.7% shared at a hundredth of the assumed
+conductance). What remains is what §5O.4 listed first and this document has
+circled ever since: **the input is common.** All eighteen receive the same constant
+AVB drive and a proprioceptive signal that is 97.1% one signal because the body
+bends in one mode. There is no longer an alternative account.
+
+### 5V.2 The denominator was the whole point
+
+The error is worth naming because it is not the usual one in this document. The
+claim was not computed from a signal lacking the structure the statistic assumed
+(§5O.3) — it was a *fraction quoted without its base*. Two of three presented as
+"around half", carrying the implication of a substantial population, when the
+population is three synapses.
+
+It survived two sections because a proportion reads like a measurement. The guard
+is the same one §5O.3 arrived at from the other direction: a number is only
+meaningful with the thing it is a number *of*, and a percentage that never shows
+its denominator has hidden exactly that.
 
 ## 6. Decisions taken, and what remains open
 

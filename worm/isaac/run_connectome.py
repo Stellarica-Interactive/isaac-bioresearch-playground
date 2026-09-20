@@ -42,6 +42,11 @@ import argparse
 import sys
 from dataclasses import replace
 
+# Imported here rather than with the rest, because --unknown-sign offers this
+# enum's members as choices and the parser is built before Isaac starts. Safe to
+# hoist: common.neural.synapses touches nothing from the simulator.
+from common.neural.synapses import UnknownSignPolicy
+
 # --- 1. Argument parsing and app launch, before any Isaac import --------------
 
 parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -71,6 +76,16 @@ parser.add_argument(
 )
 parser.add_argument("--sensing-offset", type=float, default=None)
 parser.add_argument(
+    "--unknown-sign",
+    choices=[p.value for p in UnknownSignPolicy],
+    default=UnknownSignPolicy.EXCLUDE.value,
+    help="What to do with the chemical synapses nobody has predicted a sign for. "
+    "This is 1846 of 4879 connections and 8239 of 28113 synaptic weight -- 29 per "
+    "cent of the animal -- dropped from every result so far under the default. "
+    "There is no right answer, which is why it is a flag and why the choice is "
+    "printed with the result. See common/neural/synapses.UnknownSignPolicy.",
+)
+parser.add_argument(
     "--hysteresis-mv",
     type=float,
     default=0.0,
@@ -96,7 +111,7 @@ parser.add_argument(
     help="Drive the body with the scripted travelling wave for this many seconds, "
     "then hand over to the connectome. The question it answers is whether the loop "
     "can SUSTAIN a wave it did not create, which is different from whether it can "
-    "start one. The proprioceptive input is 97% one signal when the body bends in a "
+    "start one. The proprioceptive input is 97%% one signal when the body bends in a "
     "single mode (5O), so starting it in a wave is the only way to ask.",
 )
 parser.add_argument(
@@ -295,7 +310,6 @@ from common.neural.stimulus import (  # noqa: E402
     solve_for_depolarisation,
     total_conductance,
 )
-from common.neural.synapses import UnknownSignPolicy  # noqa: E402
 from worm.body.chemotaxis import (  # noqa: E402
     CHEMOSENSORS,
     DEFAULT_DECAY_BODY_LENGTHS,
@@ -356,7 +370,7 @@ def main() -> int:
     )
     runtime, report = build_runtime(
         "cook_2019_herm",
-        unknown_sign=UnknownSignPolicy.EXCLUDE,
+        unknown_sign=UnknownSignPolicy(args.unknown_sign),
         cells=cells,
         connectome=connectome,
         dt_ms=args.neural_dt_ms,
