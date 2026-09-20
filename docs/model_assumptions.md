@@ -2463,6 +2463,115 @@ rather than into `measure` put it one level too far out — the consumer, not th
 producer. A statistic that should not exist must not be returned, not merely
 flagged.
 
+## 5T. The receptive field delay is not the missing ingredient either
+
+§5Q.5 left three candidates. §5Q.4 closed bistability and §5S closed the D-class
+antagonist — present all along, and carrying translation rather than phase. This
+closes the third.
+
+The argument for it was the best of the three. Boyle et al.'s stretch receptors
+read a stretch of body *behind* where the neuron acts, and a delay line is a
+mechanism that **creates** a phase difference rather than merely holding one —
+which is exactly what §5P showed this model cannot do. `DEFAULT_SENSING_OFFSET` is
+2.0 joints, marked ASSUMED, and had never been varied: §5M swept the receptive
+field *width* and found Boyle's half-body span measurably worse, but the offset
+itself was untouched.
+
+Sixty seconds each, against the scripted control's `phase +23.0°`:
+
+| offset (joints anterior) | amplitude | **phase** | period | distance |
+|---|---|---|---|---|
+| 0 | 3.21° | +0.0° | none | 0.542 BL |
+| 1 | 15.35° | −0.1° | 15.0 s | 1.480 BL |
+| 2 (default) | 16.67° | −0.8° | 12.0 s | 0.994 BL |
+| 4 | 16.64° | −0.8° | 12.0 s | 0.354 BL |
+| 6 | 4.12° | +0.0° | none | 0.375 BL |
+| 9 | 3.38° | +0.0° | none | 0.689 BL |
+| 12 | 3.23° | +0.0° | none | 0.796 BL |
+
+**No offset produces a travelling wave.** Phase never leaves ±0.8° of zero across
+the whole range, while the control reads +23.0°.
+
+There is structure worth noting even so. Oscillation exists only in a narrow band,
+offsets 1 to 4: outside it amplitude collapses to 3-4° and no period resolves at
+all. So the delay length does control whether the loop oscillates — it simply has
+no setting at which the oscillation propagates. A delay line in a population whose
+input is already 97% shared (§5O) delays a signal every cell is receiving alike,
+and a common signal delayed is still a common signal.
+
+That closes all three candidates from §5Q.5. What remains untried is listed in
+§5Q.6: making the D-class bistable so the two classes latch against each other,
+which is the actual structure of Boyle's oscillator rather than the half of it
+§5M named. The same objection applies to it in advance, and should be stated
+before rather than after: D-class cells driven by the same near-uniform signal
+have as little to differ about as the B-type cells did.
+
+## 5U. Drag anisotropy, and the limit of what the body can rescue
+
+The isotropic control had never been run, because `--drag-ratio 0` was silently
+ignored: the flag defaults to `None` and was tested for truthiness, so an explicit
+zero fell through to the default. Ratio 1 makes perpendicular and tangential drag equal; `DEFAULT_DRAG_RATIO` is 20,
+inside the published range that `worm/body/drag.py` already flags as uncertain —
+about 10 from Rabets et al. 2014's direct measurement, nearer 40 in the Niebur and
+Erdös 1991 lineage. Sixty seconds each.
+
+| ratio | connectome: distance | amplitude | phase | scripted wave: distance |
+|---|---|---|---|---|
+| 1 (isotropic) | 0.129 BL | 17.22° | −0.1° | **1.187 BL** |
+| 2 | 0.111 BL | 17.25° | −0.0° | |
+| 5 | 0.163 BL | 17.01° | −0.8° | |
+| 10 | 0.702 BL | 16.73° | −0.7° | |
+| 20 (default) | 0.994 BL | 16.67° | −0.8° | **7.216 BL** |
+| 40 | 0.485 BL | 16.64° | −0.8° | |
+
+### 5U.1 The nervous system does not notice the ground
+
+Amplitude is flat across a fortyfold change in drag: 16.64° to 17.25°, a spread of
+under 4%. Phase is flat too, −0.8° to −0.0°. The neural output is essentially
+independent of what the body is pushing against, while the distance covered varies
+about ninefold.
+
+That is worth stating because it is a negative result about the closed loop. The
+loop is closed through *curvature*, not through force, so drag changes where the
+body ends up without changing what the neurons do about it. A real animal's
+proprioceptors are loaded by the medium; ours are not. Nothing in this model is
+wrong given its own assumptions — but "closed sensorimotor loop" means something
+narrower here than the phrase suggests, and this is the measurement that shows it.
+
+### 5U.2 The clean measurement is the scripted arm, not the connectome arm
+
+The connectome rows are confounded and should not be read quantitatively. The
+trajectories differ wildly between them — `extent` runs from 0.19 to 0.95, so at
+one ratio the animal is coiled and at another nearly straight — and distance in a
+body that is flexing without propagating depends heavily on which configuration it
+happens to fall into. The non-monotonic dip at ratio 40 (0.485 BL, below ratio 20's
+0.994) is most likely that, not a real optimum, and a single deterministic run
+cannot distinguish them.
+
+The scripted arm has no such problem: the gait is identical by construction at both
+ratios, `phase +23.1°` against `+23.0°` and amplitude within one degree, so drag is
+the only thing that differs. **It gives 1.187 BL isotropic against 7.216 BL at the
+default — a factor of 6.1.**
+
+That is the honest version of "anisotropy is load-bearing", and it confirms
+resistive force theory is doing real work in this model rather than being decorative.
+
+### 5U.3 A better gait beats better ground
+
+The comparison that puts the locomotion problem in proportion:
+
+| | phase | distance |
+|---|---|---|
+| scripted wave, **isotropic** drag | +23.1° | **1.187 BL** |
+| connectome, **default** drag | −0.8° | 0.994 BL |
+
+A real travelling wave with the drag anisotropy removed still outruns the
+connectome-driven body with every mechanical advantage the model offers. The
+missing ingredient is not in the body, and no amount of tuning the medium will
+substitute for it. §5P reached this conclusion from the other direction — the same
+body carries a scripted wave it cannot sustain from the loop — and this is the
+quantitative form of it.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
