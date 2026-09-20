@@ -252,7 +252,13 @@ kind = "neuron_model"
 url = "https://github.com/martinanicoletti92/CelegansInterMotorNeuronsModels"
 filename = ""
 sha256 = ""
-license = "Paper is CC-BY 4.0 (PLOS ONE). Code repository licence not yet verified -- CHECK BEFORE USE."
+license = "NO LICENCE. Verified 2026-09-20 via the GitHub API: license is null, so the code is all-rights-reserved by default. We redistribute none of it. Sources are fetched to build/ (gitignored), parsed, and the numeric constants re-derived into our own implementation with the paper cited. The paper itself is CC-BY 4.0 (PLOS ONE). Same treatment as the 2019 XPPAUT source."
 citation = "Nicoletti M, Chiodo L, Loppini A, Liu Q, Folli V, Ruocco G, Filippi S. Biophysical modeling of the whole-cell dynamics of C. elegans motor and interneurons families. PLoS ONE 19(3):e0298105 (2024)."
 doi = "10.1371/journal.pone.0298105"
-mirror_note = """Conductance-based models of AVA, AIY, RIM and the motor neurons VA5, VB6, VD5. NEURON .mod channel kinetics plus per-cell Python drivers; 24 .mod files, 22 .py. NOT IMPORTED, and only partly importable. Each cell's conductances live in a bare vector g0 whose entries are identified only by a comment, and for four of seven cells that comment does not match the vector: VB6 lists 13 names against 16 values with 10 conductance names for 13 conductances, VD5 lists 13 names against 11 values, AVAL has no comment, and RIM's file carries the comment but not the vector. VA5, AIY and AVAR are self-consistent and could be imported. Unluckily the two cells most wanted for locomotion, VB6 and VD5, are among the ambiguous ones. Separately, the repository's own g_to_nS.py helper appends outside its loop and returns a one-element array; the g_to_Scm2.py actually used is correct. See docs/model_assumptions.md 5I."""
+mirror_note = """Conductance-based models of AVAL, AVAR, AIY, RIM and the motor neurons VA5, VB6, VD5. NEURON .mod channel kinetics plus per-cell Python drivers.
+
+IMPORTED -- all seven cells -- by tools/assess_nicoletti2024.py, tools/import_mod_channel.py and tools/import_nicoletti2024_cells.py.
+
+An earlier assessment (docs/model_assumptions.md 5I) concluded four of seven cells were unimportable, because each cell's conductances live in a bare vector named only by a comment, and those comments are wrong for VB6, VD5 and AIY. That assessment was mistaken; see 5W. The comment is not the mapping. Each cell's *_simulation_vclamp.py assigns the same vector into named NEURON mechanisms by index, which is unambiguous and is what the published simulations ran. The importers read that, and use the comments only to report disagreement.
+
+Three cautions carried forward. (1) AIY's comment has the right COUNT and the wrong CONTENT -- it names irk where the code assigns shl1 -- so a count check passes while the model is wrong; comment_agrees is therefore recorded per cell. (2) SHK-1 and SHL-1 were refitted for 2024 and differ from our 2019 values (vashak 20.4 -> 2.0), so 2024 cells must not inherit 2019 constants. (3) The repository's own g_to_nS.py appends outside its loop and returns a one-element array; the g_to_Scm2.py actually used by the drivers is correct."""

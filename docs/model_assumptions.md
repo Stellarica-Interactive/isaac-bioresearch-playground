@@ -2626,6 +2626,254 @@ is the same one §5O.3 arrived at from the other direction: a number is only
 meaningful with the thing it is a number *of*, and a percentage that never shows
 its denominator has hidden exactly that.
 
+## 5W. Correction to 5I: every cell is recoverable, and the comment was never the source
+
+§5I assessed Nicoletti et al. 2024 and concluded that four of seven cells could
+not be imported, because each cell's maximal conductances live in a bare vector
+whose entries are named only by a comment, and for those four the comment does not
+match the vector. Its words were:
+
+> The vectors are all there. What is missing is which channel each number belongs
+> to, and that cannot be recovered from the repository.
+
+That is wrong. **All seven cells are recoverable, including VB6 and VD5** — the two
+named there as "the two cells most wanted". An email was sent to the authors asking
+for information the repository already contained.
+
+### 5W.1 The mapping is in the code, not the comment
+
+Every cell has a voltage-clamp driver that takes the same vector and assigns it
+into named NEURON mechanisms, one index at a time:
+
+```python
+seg.slo1egl19.gbar = gVB6_scaled[0]
+seg.slo2egl19.gbar = gVB6_scaled[1]
+seg.slo1unc2.gbar  = gVB6_scaled[2]
+seg.slo2unc2.gbar  = gVB6_scaled[3]
+...
+seg.leak.gbar      = gVB6_scaled[12]
+soma.cm            = gVB6_scaled[15]
+```
+
+Thirteen conductances at indices 0 to 12, which is exactly what
+`gScm2(g0, surf, 12)` declares, and the tail of the vector checks out
+independently: `g0[13] = -52` is the leak reversal, `g0[15] = 1.5` the
+capacitance. There is no ambiguity anywhere in it.
+
+VB6's comment omits `slo1unc2` and `slo2unc2`, which is why it reads as ten names
+for thirteen values. VD5's comment is stale copy-paste from VB6, naming channels
+its own clamp driver never inserts. Neither cell was ever missing information.
+
+Recovered, by `tools/assess_nicoletti2024.py`, reading the drivers:
+
+| cell | conductances | mapping |
+|---|---|---|
+| AVAL | 4 | egl19, leak, irk, nca |
+| AVAR | 5 | egl19, leak, irk, nca, unc103 |
+| VA5 | 7 | slo2egl19, slo2iso, egl19, irk, shk1, nca, leak |
+| AIY | 7 | leak, slo1iso, kqt1, egl19, slo1egl19, nca, **shl1** |
+| RIM | 7 | shl1, egl2, irk, cca1, unc2, egl19, leak |
+| VD5 | 8 | slo2egl19, slo2iso, egl19, cca1, irk, shk1, nca, leak |
+| VB6 | 13 | slo1egl19, slo2egl19, slo1unc2, slo2unc2, slo1iso, slo2iso, egl19, unc2, cca1, irk, shk1, nca, leak |
+
+### 5W.2 The cell §5I called safe was the dangerous one
+
+AIY was one of the three §5I declared importable, on the grounds that its comment
+has nine names against nine values. The count is right. The **content** is not: the
+comment's seventh conductance is `irk`, and the clamp driver assigns `shl1`.
+
+Importing AIY from its comment would have put an inward-rectifier potassium
+channel where a Shal-type one belongs, at the correct density, in a model that
+starts, settles and produces a plausible resting potential. That is verbatim the
+failure §5I exists to prevent:
+
+> Guessing it would produce a cell carrying the right channels at the wrong
+> densities: a model that runs, looks plausible, and is not the published one.
+
+The section identified the hazard exactly and then walked into it, because a
+matching count reads as verification. Three of seven comments disagree with their
+code — AIY, VB6, VD5 — and only two of those three announce themselves by
+miscounting.
+
+### 5W.3 What the mistake actually was
+
+Not a failure to find an obscure file. The clamp drivers are named
+`VB6_simulation_vclamp.py`, sit beside the driver that was read, and are imported
+by it at the top:
+
+```python
+from VB6_simulation_vclamp import VB6_simulation_vc
+```
+
+§5I compared a comment against a vector, found they disagreed, and concluded the
+information was absent — without asking where else in the repository it might be.
+The check that would have caught it is the one this document keeps arriving at
+from other directions: **a comment is a claim about code; the code is the fact.**
+§5I.3 even says so, about this very repository — "in this field the published code
+is the better source than the published paper" — and then treated a comment inside
+that code as though it were the code.
+
+`tools/assess_nicoletti2024.py` now parses the `gbar` assignments and uses the
+comments only as a cross-check, reporting which cells disagree rather than
+trusting either. The assessment is rerunnable against upstream instead of resting
+on one reading of it.
+
+### 5W.4 The cost estimate was also wrong
+
+§5I.2 put the cost at "EXP-2, KQT-1, UNC-103 and the `iso` variants of SLO-1/SLO-2,
+none of which we have, plus a `.mod` parser ... Larger than AWC, which shared
+nineteen channels and needed three new ones."
+
+Measured against the channels the seven cells actually use, with `irk` confirmed
+identical to our `kir` parameter by parameter — same formula
+`1/(1+exp((v-va_kir+30)/ka_kir))`, same eight constants — and EGL-19's `shift = 10`
+confirmed equal to our `stm19`/`sth19`:
+
+| | |
+|---|---|
+| gating **formulas** already implemented | **13 of 15** |
+| genuinely new formulas | **2**: KQT-1 and UNC-103 |
+| EXP-2 | not used by any of the seven cells |
+
+Smaller than AWC, not larger, and it yields seven cells rather than two. The
+estimate that deferred this work for weeks was wrong in the direction that
+mattered, in both of its terms.
+
+### 5W.5 Shared formulas are not shared values
+
+The first version of the table above said "channels already implemented", which
+conflates two things, and the distinction is the whole difficulty of this import.
+
+Compared parameter by parameter against our 2019 sets — the check §5W.2 says a
+count cannot substitute for:
+
+| channel | identical | **different** | new |
+|---|---|---|---|
+| `slo2iso` | 10 | 0 | 2 |
+| `slo2egl19` | 45 | 0 | 4 |
+| `slo1egl19` | 44 | 1 | 4 |
+| `slo1unc2` | 33 | 1 | 8 |
+| **`shk1`** | 9 | **2** | 1 |
+| **`shl1`** | 11 | **8** | 2 |
+
+SHK-1 and SHL-1 were **refitted for the 2024 paper**. `vashak` moves from 20.4 mV
+to 2.0, `kashak` from 7.7 to 10.0; SHL-1 changes eight of its twenty-one, including
+`vishal` from −33.1 to −40.0. These are different channels wearing the same name,
+and a 2024 cell built on our 2019 values would be a model that runs, looks
+plausible and is not the published one — §5W.2 for the third time in one section.
+
+This does not block the import. It is what the existing design already assumes:
+`common/neural/conductance.py` holds the *formulas*, and each model carries its own
+values in `worm/neural/models/<id>.toml`. The 2024 cells need their own parameter
+files, derived from the 2024 `.mod` sources, and must not inherit ours. What
+transfers is thirteen gating formulas; what does not transfer is their constants.
+
+One oddity recorded rather than resolved: `kxy` reads 55.726816 in our 2019 import
+and 55.726186 in three 2024 `.mod` files. The digits are transposed. One of the two
+artefacts has a typo, it is numerically irrelevant at this magnitude, and we do not
+know which is which.
+
+**Still outstanding before an import is honest:** KQT-1 and UNC-103 need writing. A
+`.mod` parser and the `gScm2` surface-area conversion are real work. And every
+channel a 2024 cell uses needs its constants taken from the 2024 source, not
+assumed from ours.
+
+### 5W.6 The email
+
+Sent to L. Chiodo and A. Loppini asking for the channel mapping of VB6, VD5, AVAL
+and RIM. Unanswered after three weeks, which prompted the fallback plan of
+importing only the three "safe" cells — one of which, AIY, would have been
+imported wrong.
+
+The request was unnecessary in full. Four of the four cells it asked about are
+recoverable from the published code, and were the whole time. Nothing about the
+authors' silence was the obstacle.
+
+## 5X. Importing Nicoletti 2024: what is in, and where it stops
+
+§5W established that all seven cells are recoverable. This is the import.
+
+### 5X.1 What was brought in
+
+Three tools, each committed, each rerunnable against the upstream repository:
+
+| tool | what it does |
+|---|---|
+| `tools/assess_nicoletti2024.py` | recovers the channel-to-index mapping from each cell's clamp driver, and reports where the source comment disagrees |
+| `tools/import_mod_channel.py` | parses NEURON `.mod` kinetics into TOML, every constant tagged with its source line |
+| `tools/import_nicoletti2024_cells.py` | per-cell maximal conductances, read from the driver rather than the comment |
+
+Result: **17 channels** in `worm/neural/models/channels2024/` — 374 constants and 97
+expressions, each carrying the `.mod` file and line it came from — and **7 cells**
+in `worm/neural/models/cells2024/`, each recording its membrane area, whether the
+published vector is area-scaled, and whether its own comment agrees with its code.
+
+VB6 imports with all thirteen conductances. It was the cell §5I called
+unrecoverable and the reason an email was sent.
+
+### 5X.2 Four parser bugs, all of the same shape
+
+Each produced a file that looked correct and was missing its content. They are
+recorded because the pattern is the one this document keeps meeting, and because
+each is now a test in `worm/tests/test_import_mod_channel.py`.
+
+1. **Nested parentheses in a signature.** `FUNCTION minf(v (mV))` — matching the
+   argument list up to the first `)` lands inside `(mV)`, so the pattern never
+   reached the brace and found *no functions at all*. Every channel imported with
+   a complete `PARAMETER` block and an empty `[formulas]` section.
+2. **A guard that refused the honest cases.** Rejecting any channel without
+   formulas threw away `leak` and `nca`, which have no gating because they are
+   ohmic. The guard now asks whether a channel has *states* but no kinetics,
+   which is the condition that is always a bug.
+3. **Kinetics in the wrong block.** The SLO `iso` variants compute gating in a
+   `PROCEDURE`, not one `FUNCTION` per quantity. Their order is load-bearing —
+   `v0` uses `s0`, `minf` uses both — so they are stored in source order, not
+   sorted with the rest.
+4. **A check and a writer that disagreed.** After (3), `slo1iso` passed the guard
+   because its `PROCEDURE` had been parsed, and was then written *without* it: the
+   validation and the serialisation consulted different things. The file on disk
+   had states, constants, and no equations.
+
+A fifth, found by a test rather than by inspection: `_block` required a newline
+before the closing brace, so single-line blocks never matched — and `leak.mod` and
+`nca.mod` are entirely `BREAKPOINT { i = gbar*(v - e) }`. Both passive channels
+imported with their constants and without the one equation that is their content.
+
+Every one of these yields a well-formed TOML with an authoritative-looking
+provenance header. None would have been caught by reading the output.
+
+### 5X.3 Where it stops
+
+**The data is imported. The models are not yet runnable.**
+
+`common/neural/conductance.py` keeps gating maths as hand-written Python in
+`_gates()`, with the TOML formulas held as strings for provenance. That is a
+deliberate choice recorded in `tools/import_neuron_model.py`: a parser that also
+generated the mathematics would be the one place an error could enter without
+anyone reading it. Making the 2024 cells executable therefore means writing
+`_gates` entries for their channel set, by hand, per channel.
+
+That is real work and it is the step where a mistake would be least visible:
+
+* Four SLO variants whose kinetics come from `PROCEDURE` bodies with
+  order-dependent intermediate terms.
+* KQT-1 and UNC-103, new formulas with no counterpart in our 2019 import.
+* SHL-1 and SHK-1, which share our 2019 *formulas* and must take the 2024
+  *constants* (§5W.5) — the one place where "we already have this channel" is
+  true and wrong at the same time.
+
+Doing it quickly is the failure this section is about. It is the next piece of
+work, not part of this one.
+
+### 5X.4 The licence
+
+The repository carries **no licence**, verified on 2026-09-20 through the GitHub
+API (`license: null`), which makes it all-rights-reserved by default. Nothing from
+it is redistributed. Sources are fetched to `build/`, which is gitignored; the
+committed artefacts are our own TOMLs holding numeric constants with citations,
+which is the treatment already applied to the 2019 XPPAUT source. The paper itself
+is CC-BY 4.0.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
