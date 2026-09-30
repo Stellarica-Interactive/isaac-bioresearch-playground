@@ -41,6 +41,7 @@ from typing import ClassVar
 import numpy as np
 
 from common.data.schemas import Connectome
+from common.neural.delay import ConductionDelay
 from common.neural.neuron_models import (
     GradedLeakyIntegrator,
     GradedLeakyIntegratorParameters,
@@ -162,6 +163,14 @@ class NeuralRuntime:
     step_count: int = field(default=0, init=False)
     recorder: ActivityRecorder | None = field(default=None, init=False)
 
+    s_pre: ConductionDelay | None = field(default=None, init=False)
+    """Optional conduction delay on chemical transmission.
+
+    ``None`` -- the default -- means synapses transmit instantaneously, which is
+    what every result in docs/model_assumptions.md before §5Z was measured with.
+    Attach one only for the delay experiment; see common/neural/delay.py for why
+    it delays chemical transmission and not gap junctions."""
+
     def __post_init__(self) -> None:
         self.state = self.model.initial_state(self.network)
         self.i_ext_pa = np.zeros(self.network.n, dtype=np.float64)
@@ -244,7 +253,12 @@ class NeuralRuntime:
     # -- integration -------------------------------------------------------
 
     def _derivs(self, state: np.ndarray) -> np.ndarray:
-        return self.model.derivatives(state, self.i_ext_pa, self.network)
+        # `s_pre` carries presynaptic activation when a conduction delay is
+        # attached (common/neural/delay.py); None otherwise, which is the
+        # default. Read from the delay rather than advanced here, because the
+        # buffer moves once per step and not once per Runge-Kutta stage.
+        s_pre = None if self.s_pre is None else self.s_pre.delayed
+        return self.model.derivatives(state, self.i_ext_pa, self.network, s_pre)
 
     def _step_euler(self, dt: float) -> np.ndarray:
         return self.state + dt * self._derivs(self.state)
@@ -266,8 +280,13 @@ class NeuralRuntime:
         """
         model = self.model
         v, s = self.state[0], self.state[1]
-        g_total = model.total_conductance(s, self.network)  # type: ignore[attr-defined]
-        terms = model.currents(v, s, self.i_ext_pa, self.network)  # type: ignore[attr-defined]
+        # This integrator is the committed default (worm/neural/parameters.toml),
+        # so a delay that reached only _derivs would reach nothing that runs. It
+        # did: four delays from 0 to 50 ms produced byte-identical trajectories
+        # until s_pre was threaded here as well.
+        s_pre = None if self.s_pre is None else self.s_pre.delayed
+        g_total = model.total_conductance(s, self.network, s_pre)  # type: ignore[attr-defined]
+        terms = model.currents(v, s, self.i_ext_pa, self.network, s_pre)  # type: ignore[attr-defined]
         # Total current with the V-dependence of this cell's own terms removed.
         i_drive = (
             terms["leak"] + terms["gap"] + terms["chemical"] + terms["external"]
@@ -299,6 +318,10 @@ class NeuralRuntime:
                 f"constant is {self.fastest_time_constant_ms():.4f} ms. Reduce dt, or use "
                 f"Integrator.EXPONENTIAL."
             )
+        if self.s_pre is not None:
+            # After the state update, so the buffer holds activation as it was at
+            # the end of each completed step.
+            self.s_pre.advance(nxt[1])
         self.state = nxt
         self.t_ms += dt
         self.step_count += 1

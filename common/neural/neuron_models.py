@@ -56,9 +56,18 @@ class NeuronModel(Protocol):
         ...
 
     def derivatives(
-        self, state: np.ndarray, i_ext: np.ndarray, network: NetworkMatrices
+        self,
+        state: np.ndarray,
+        i_ext: np.ndarray,
+        network: NetworkMatrices,
+        s_pre: np.ndarray | None = None,
     ) -> np.ndarray:
-        """Time derivative of ``state``, same shape. Units per millisecond."""
+        """Time derivative of ``state``, same shape. Units per millisecond.
+
+        ``s_pre`` is presynaptic activation where it differs from the model's own
+        -- that is, when a conduction delay is in use. ``None`` means no delay,
+        which is the default and the only case with any measurement behind it.
+        """
         ...
 
 
@@ -258,7 +267,12 @@ class GradedLeakyIntegrator:
     # -- dynamics ----------------------------------------------------------
 
     def currents(
-        self, v: np.ndarray, s: np.ndarray, i_ext: np.ndarray, network: NetworkMatrices
+        self,
+        v: np.ndarray,
+        s: np.ndarray,
+        i_ext: np.ndarray,
+        network: NetworkMatrices,
+        s_pre: np.ndarray | None = None,
     ) -> dict[str, np.ndarray]:
         """The four current terms separately, in pA. Useful for inspection and teaching.
 
@@ -273,15 +287,24 @@ class GradedLeakyIntegrator:
         p = self.params
         i_leak = -p.g_leak_ns * (v - p.e_leak_mv)
         i_gap = network.g_gap @ v - v * network.gap_row_sum
-        i_syn = network.g_syn_e_rev @ s - v * (network.g_syn @ s)
+        # `s_pre` is presynaptic activation, which differs from `s` only when a
+        # conduction delay is in use (common/neural/delay.py). The gap-junction
+        # term above deliberately still sees the present voltage: an electrical
+        # synapse is a resistive pore and has no transmission delay.
+        pre = s if s_pre is None else s_pre
+        i_syn = network.g_syn_e_rev @ pre - v * (network.g_syn @ pre)
         return {"leak": i_leak, "gap": i_gap, "chemical": i_syn, "external": i_ext}
 
     def derivatives(
-        self, state: np.ndarray, i_ext: np.ndarray, network: NetworkMatrices
+        self,
+        state: np.ndarray,
+        i_ext: np.ndarray,
+        network: NetworkMatrices,
+        s_pre: np.ndarray | None = None,
     ) -> np.ndarray:
         p = self.params
         v, s = state[0], state[1]
-        terms = self.currents(v, s, i_ext, network)
+        terms = self.currents(v, s, i_ext, network, s_pre)
         dv = (terms["leak"] + terms["gap"] + terms["chemical"] + terms["external"]) / p.c_m_pf
         phi = sigmoid(v, self._thresholds(network), p.beta_per_mv)
         ds = p.a_r_per_ms * phi * (1.0 - s) - p.a_d_per_ms * s
@@ -289,9 +312,22 @@ class GradedLeakyIntegrator:
 
     # -- stability ---------------------------------------------------------
 
-    def total_conductance(self, s: np.ndarray, network: NetworkMatrices) -> np.ndarray:
-        """Instantaneous total membrane conductance per cell, nS."""
-        return self.params.g_leak_ns + network.gap_row_sum + network.g_syn @ s
+    def total_conductance(
+        self,
+        s: np.ndarray,
+        network: NetworkMatrices,
+        s_pre: np.ndarray | None = None,
+    ) -> np.ndarray:
+        """Instantaneous total membrane conductance per cell, nS.
+
+        The synaptic term is conductance *opened by presynaptic* release, so it
+        takes ``s_pre`` when a conduction delay is in use. Leaving it on the
+        undelayed activation would delay the driving current while leaving the
+        conductance it flows through undelayed -- internally inconsistent, and
+        invisible in the output.
+        """
+        pre = s if s_pre is None else s_pre
+        return self.params.g_leak_ns + network.gap_row_sum + network.g_syn @ pre
 
     def fastest_time_constant_ms(self, network: NetworkMatrices) -> float:
         """Shortest membrane time constant in the network, at rest.

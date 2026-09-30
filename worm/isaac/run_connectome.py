@@ -92,6 +92,18 @@ parser.add_argument(
 )
 parser.add_argument("--sensing-offset", type=float, default=None)
 parser.add_argument(
+    "--conduction-delay-ms",
+    type=float,
+    default=0.0,
+    help="Delay chemical transmission by this many ms, uniformly across every "
+    "connection. c302 produces its travelling wave with a per-connection delay "
+    "ladder rising to 1500 ms (see model_assumptions 5Z), which is a phase "
+    "gradient written into a parameter file rather than computed by a circuit. "
+    "This is ONE number instead of eighteen, so a result is about the mechanism. "
+    "Gap junctions stay instantaneous -- an electrical synapse is a resistive "
+    "pore. ASSUMED and off by default.",
+)
+parser.add_argument(
     "--unknown-sign",
     choices=[p.value for p in UnknownSignPolicy],
     default=UnknownSignPolicy.EXCLUDE.value,
@@ -319,6 +331,7 @@ from isaacsim.core.simulation_manager import SimulationManager  # noqa: E402
 
 from common.body.gait import measure as measure_gait  # noqa: E402
 from common.data.schemas import CellCategory, Connectome, Sign  # noqa: E402
+from common.neural.delay import ConductionDelay  # noqa: E402
 from common.neural.hysteresis import Hysteresis  # noqa: E402
 from common.neural.runtime import NeuralRuntime  # noqa: E402
 from common.neural.stimulus import (  # noqa: E402
@@ -392,6 +405,13 @@ def main() -> int:
         dt_ms=args.neural_dt_ms,
         parameter_overrides=_parameter_overrides(),
     )
+    if args.conduction_delay_ms:
+        runtime.s_pre = ConductionDelay.build(runtime, delay_ms=args.conduction_delay_ms)
+        print(
+            f"  conduction delay: {runtime.s_pre.quantised_delay_ms:g} ms on "
+            f"chemical transmission ({runtime.s_pre.steps} steps), gap junctions "
+            f"instantaneous. ASSUMED -- see model_assumptions 5Z."
+        )
     print(report.summary())
 
     lesioned = _resolve_lesion(connectome, args.lesion)

@@ -18,21 +18,47 @@ This is applied as an explicit force per segment rather than left to contact
 friction, because PhysX material friction is isotropic and cannot express the
 distinction. It is also the approach the standard neuromechanical models take.
 
-The ratio is genuinely uncertain
---------------------------------
+The ratio is genuinely uncertain, and ours is above measurement
+--------------------------------------------------------------
 
-Published estimates for crawling on agar disagree by roughly a factor of four,
-which is worth knowing before treating any locomotion result as quantitative:
-
-* Rabets et al. 2014 measure the normal and tangential coefficients directly and
-  report about 220 and 22, a ratio near **10**.
+* **Rabets et al. 2014** dragged real worms across agar with a microcantilever and
+  measured the anisotropy at **3 to 10**.
 * The values commonly used in neuromechanical models, following Niebur and Erdös
   1991, give a ratio nearer **40**.
 * For swimming in water the ratio is only about 1.4 to 2, which is why worms swim
   with a different gait than they crawl.
 
-So :data:`DEFAULT_DRAG_RATIO` is an ASSUMED parameter sitting inside a published
-range, and it belongs in any sweep of a locomotion result.
+:data:`DEFAULT_DRAG_RATIO` is **20**, which is twice the top of the directly
+measured range. It sits inside the span of values *used* by models, not inside the
+span of values *measured*. Swept in §5U: at a ratio of 10 -- inside the measured
+range -- the model covers 0.702 BL against 0.994 BL at 20, so the measured value
+makes this model worse, which is a fact about the model rather than about agar.
+
+An earlier version of this docstring attributed absolute coefficients of "about
+220 and 22" to Rabets et al. Those numbers could not be re-verified against any
+accessible source, and are not repeated here. The anisotropy range above is
+confirmed; the absolute coefficients need checking against the paper before being
+quoted again.
+
+What this model leaves out, which is the reason the body slides
+--------------------------------------------------------------
+
+Linear resistive force theory is the standard choice and what Boyle et al. and
+c302 also use, but Rabets et al. found it is not what agar does. Substrate
+viscoelasticity introduces **nonlinearities in the force-velocity relationship**,
+giving **nonconstant** drag coefficients, and the major contributing factor is the
+formation of a **shallow groove** in the surface.
+
+A real worm crawls in a groove it has made. That groove is geometric confinement:
+it blocks lateral slip in a way no velocity-proportional coefficient reproduces.
+This model has a flat plane, a force linear in velocity, and **no static friction
+at all**, so nothing holds the body in place when it is not actively pushing.
+Sliding is the visible consequence, and it is a property of the model rather than
+a bug in it.
+
+:data:`DEFAULT_TANGENTIAL_DRAG` compounds this: only the *ratio* is constrained by
+anything published, while the magnitude was chosen alongside the torque scale to
+give a plausible speed. Two free parameters, one constraint between them.
 """
 
 from __future__ import annotations
@@ -49,6 +75,9 @@ DEFAULT_DRAG_RATIO = 20.0
 
 #: Tangential drag coefficient, N s / m per unit segment length, before scaling.
 #: ASSUMED: chosen with the torque scale so the body moves at a plausible speed.
+#: Only the ratio to :data:`DEFAULT_DRAG_RATIO` is constrained by published work;
+#: this magnitude and the torque scale are a pair of free parameters with one
+#: constraint between them. See the module docstring.
 DEFAULT_TANGENTIAL_DRAG = 2.0e-3
 
 
