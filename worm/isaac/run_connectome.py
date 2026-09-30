@@ -52,7 +52,23 @@ from common.neural.synapses import UnknownSignPolicy
 parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
 parser.add_argument("--headless", action="store_true")
 parser.add_argument("--seconds", type=float, default=20.0)
-parser.add_argument("--physics-hz", type=float, default=240.0)
+#: Physics rate. Defaults to 60 Hz with a window open and 240 Hz headless,
+#: because the two modes are asking different questions -- see WATCH_HZ.
+WATCH_HZ, MEASURE_HZ = 60.0, 240.0
+parser.add_argument(
+    "--physics-hz",
+    type=float,
+    default=None,
+    help=f"Physics steps per simulated second. Defaults to {WATCH_HZ:g} with a "
+    f"window open and {MEASURE_HZ:g} headless. Omniverse ticks its whole app once "
+    "per physics step and that is 99 per cent of the wall clock, so the rate sets "
+    "how long you wait: at 240 Hz ten simulated seconds cost about 150 s, at 60 Hz "
+    "about 37 s. The catch is that this simulation is NOT converged with respect "
+    "to timestep -- identical settings give bend 56.4/12.0/22.9 deg at "
+    "240/120/60 Hz -- so a trajectory from one rate is not comparable with "
+    "another. The locomotion result survives it (phase +0.0/+0.0/+1.8 deg against "
+    "a scripted +23.0), but never quote a number from a 60 Hz run.",
+)
 parser.add_argument("--neural-dt-ms", type=float, default=1.0)
 parser.add_argument(
     "--torque-scale",
@@ -464,6 +480,16 @@ def main() -> int:
         )
     )
 
+    # Resolved here rather than in the parser, because it depends on --headless.
+    # Watching and measuring want different things: a window open means somebody
+    # is looking, and waiting three minutes for one 12 s cycle is not looking.
+    if args.physics_hz is None:
+        args.physics_hz = MEASURE_HZ if args.headless else WATCH_HZ
+        if not args.headless:
+            print(
+                f"  physics {args.physics_hz:g} Hz (viewing default). Pass "
+                f"--physics-hz {MEASURE_HZ:g} for a number you intend to quote."
+            )
     dt = 1.0 / args.physics_hz
     neural_substeps = max(1, int(round(dt * 1000.0 / args.neural_dt_ms)))
     print(f"  {neural_substeps} neural steps per physics step")
