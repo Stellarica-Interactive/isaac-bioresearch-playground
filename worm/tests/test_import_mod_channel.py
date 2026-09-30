@@ -147,3 +147,29 @@ def test_rendered_toml_is_parseable(source: str) -> None:
     import tomllib
 
     tomllib.loads(to_toml(parse("x", source)))
+
+
+RANGED_STATE = """
+NEURON { SUFFIX ranged }
+PARAMETER { gbar = 0.11 (S/cm2) }
+STATE {
+      m   FROM 0 TO 1
+}
+BREAKPOINT {
+    SOLVE states METHOD cnexp
+    ik = gbar * m * (v - ek)
+}
+FUNCTION minf(v (mV)) { minf=1/(1+exp(-v/10))
+}
+"""
+
+
+def test_a_state_range_declaration_is_not_three_states() -> None:
+    """``STATE { m FROM 0 TO 1 }`` declares one state with bounds.
+
+    Taking every identifier in the block gave slo1iso and slo2iso the states
+    ('m', 'FROM', 'TO'). Two phantom state variables per cell would have been
+    allocated and integrated as though they were gating -- silently, since
+    nothing downstream checks a state name against the kinetics that drive it.
+    """
+    assert parse("ranged", RANGED_STATE).states == ("m",)

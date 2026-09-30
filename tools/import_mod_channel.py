@@ -66,6 +66,10 @@ FUNCTION = re.compile(r"FUNCTION\s+(\w+)\s*\([^{]*\{(.*?)\n\s*\}", re.S)
 # than in one FUNCTION per quantity, so every assignment in the body is a formula.
 PROCEDURE = re.compile(r"PROCEDURE\s+\w+\s*\([^{]*\{(.*?)\n\s*\}", re.S)
 ASSIGNMENT = re.compile(r"^\s*([A-Za-z_]\w*)\s*=\s*(.+?)\s*$", re.M)
+#: Words that appear inside a STATE block without naming a state. NMODL
+#: allows ``m FROM 0 TO 1``, and the unit annotation ``ca (mM)`` puts the
+#: unit in parentheses, which the identifier pattern also picks up.
+NMODL_STATE_KEYWORDS = frozenset({"FROM", "TO", "START", "mM", "uM", "mV", "ms"})
 SUFFIX = re.compile(r"SUFFIX\s+(\w+)")
 USEION = re.compile(r"USEION\s+(\w+)")
 
@@ -141,7 +145,15 @@ def parse(name: str, text: str) -> Channel:
         line = next((i + 1 for i, original in enumerate(lines) if original == raw), 0)
         channel.parameters[key] = (float(value), unit, line)
 
-    channel.states = tuple(re.findall(r"[A-Za-z_]\w*", _block(text, "STATE")))
+    # ``STATE { m FROM 0 TO 1 }`` declares one state with a range, not three.
+    # Taking every identifier in the block gave slo1iso and slo2iso the states
+    # ('m', 'FROM', 'TO'), which would have allocated two phantom state variables
+    # per cell and integrated them as if they were gating.
+    channel.states = tuple(
+        name
+        for name in re.findall(r"[A-Za-z_]\w*", _block(text, "STATE"))
+        if name not in NMODL_STATE_KEYWORDS
+    )
 
     current = re.search(r"^\s*i\w*\s*=\s*(.+)$", _block(text, "BREAKPOINT"), re.M)
     channel.current = current.group(1).strip() if current else None

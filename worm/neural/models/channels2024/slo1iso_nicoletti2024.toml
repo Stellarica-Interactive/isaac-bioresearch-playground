@@ -10,7 +10,7 @@
 name = "slo1iso"
 source = "slo1iso.mod"
 ion = "k"
-states = ["m", "FROM", "TO"]
+states = ["m"]
 current = "gbar * m * (v - ek)"
 
 [parameters]

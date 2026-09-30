@@ -2865,6 +2865,44 @@ That is real work and it is the step where a mistake would be least visible:
 Doing it quickly is the failure this section is about. It is the next piece of
 work, not part of this one.
 
+### 5X.5 The specific obstacle, which is not the new channels
+
+AVAL looked like a free win: four channels — EGL-19, IRK, NCA, leak — every one
+already implemented for RMD, and EGL-19 and IRK verified identical to our 2019
+constants parameter by parameter (§5W.4). Nothing new to write.
+
+It does not load, for a structural reason worth recording because it decides how
+the remaining work should be done. `ConductanceModel._gates` is a single function
+computing all twelve RMD channels unconditionally, and it is coupled to the model's
+state vector in two directions:
+
+* it reads `p["vashal"]`, `p["kashak"]` and so on directly, so a parameter file
+  holding only AVAL's channels raises `KeyError` on a channel AVAL does not have;
+* it builds `s = {name: state[i] for i, name in enumerate(self.state_names)}`, and
+  `state_names_for` derives those names from `MODEL_CHANNELS`. Declaring AVAL's
+  four channels therefore produces a state vector without `m_shal`, while `_gates`
+  still tries to compute gates that index it.
+
+So a subset model fails on both missing parameters and missing state names, and
+the fix is to make each channel's gating independently evaluable rather than to
+add the two new formulas. The sections themselves are cleanly separable — each
+writes only into `inf[...]` and `tau[...]` for its own gates — with two real
+dependencies to preserve: the calcium nanodomains are computed from EGL-19 and
+UNC-2 gating, and BK/SLO read those nanodomains rather than bulk calcium.
+
+Recorded rather than attempted, because the tempting shortcut is to give AVAL the
+whole RMD parameter set with the unwanted conductances set to zero. That runs
+immediately, and it puts `gshal` in a file describing a cell that has no SHL-1 —
+a model that starts, settles, looks plausible, and misdescribes its own
+composition to anyone who reads it. Same failure as §5W.2, chosen deliberately
+instead of by accident, which would be worse.
+
+`worm/tests/test_nicoletti2024_import.py` guards the imported data in the
+meantime: seven cells present, every channel a cell names actually imported, no
+gated channel without kinetics, no NMODL keyword mistaken for a state,
+conductances inside the 0-20 nS range our 2019 import occupies, and the three
+cells whose comments contradict their code recorded as such.
+
 ### 5X.4 The licence
 
 The repository carries **no licence**, verified on 2026-09-20 through the GitHub
@@ -2873,6 +2911,155 @@ it is redistributed. Sources are fetched to `build/`, which is gitignored; the
 committed artefacts are our own TOMLs holding numeric constants with citations,
 which is the treatment already applied to the 2019 XPPAUT source. The paper itself
 is CC-BY 4.0.
+
+## 5Y. The simulation is not converged with respect to timestep
+
+Found while looking for a way to make the model watchable rather than by asking
+the question directly, which is the wrong order and is why it went unnoticed for
+this long.
+
+`--physics-hz` sets the physics rate. Identical configuration, identical seed,
+ten simulated seconds:
+
+| rate | bend | amplitude | extent | **inter-joint phase** | wall clock |
+|---|---|---|---|---|---|
+| 240 Hz (committed default) | 56.4° | 16.86° | 0.14 | **+0.0°** | 151 s |
+| 120 Hz | 12.0° | 7.32° | 0.74 | **+0.0°** | 69 s |
+| 60 Hz | 22.9° | 6.87° | 0.39 | **+1.8°** | 37 s |
+| 30 Hz | 42.2° | 9.03° | 0.48 | **+0.0°** | 33 s |
+
+A fourfold spread in bend and a fivefold spread in extent between 240 Hz and
+120 Hz. **No trajectory in this document is reproducible at another timestep.**
+
+### 5Y.1 What it does and does not invalidate
+
+The locomotion conclusion survives. Inter-joint phase reads within 2° of zero at
+every rate, against the scripted control's +23.0°, so "no travelling wave" is
+robust to the integration. What is not robust is any single trajectory: `bend`,
+`extent`, `head` and distance are all properties of one path through a system that
+evidently amplifies small differences, and quoting them across rates is
+meaningless.
+
+That distinction matters for how the rest of this document should be read. The
+*comparative* results — ablation against intact, one gain against another, a
+policy against the default — were all taken at 240 Hz and remain internally
+comparable. The *absolute* numbers are not a prediction of anything.
+
+### 5Y.2 Why it is probably chaos rather than a bug
+
+Not established, and worth saying so. Two observations point that way. The body
+spends most of its time coiled (`extent` 0.14 to 0.48 here), so segments are
+close to each other and to their joint limits, which is where a physics engine's
+contact handling contributes most. And the divergence is not monotonic in the
+rate — 30 Hz sits between 240 and 120 on bend — which is the signature of
+sensitive dependence rather than of an integrator converging.
+
+If it is chaos, no timestep is "correct" and the fix is statistical: report
+distributions over seeds rather than single trajectories. If it is stiffness in
+the joint drive or the drag application, there is a right answer and 240 Hz may
+not be it. Distinguishing them is a matter of running the same seed at several
+rates over a long window and asking whether the *statistics* converge even though
+the paths do not.
+
+**Caveat on the table above:** these are ten-second runs, and §5Q.2 established
+that the first twenty seconds are transient. A transient-dominated window
+exaggerates path divergence. The finding — that trajectories differ materially —
+does not depend on the window, but the magnitudes in that table should not be
+quoted either. A sixty-second convergence study at each rate is the honest
+version and has not been run.
+
+### 5Y.3 What changed as a result
+
+`--physics-hz` now defaults to 60 Hz with a window open and 240 Hz headless, on
+the reasoning that the two modes ask different questions: watching wants the
+wall clock, measuring wants comparability with what is committed. A windowed run
+prints the rate it used and says to pass 240 explicitly for a number worth
+quoting.
+
+Rejected on the way: stepping physics directly with
+`SimulationManager.step()` instead of ticking the Omniverse app. It is 1.8× faster
+and produces a different trajectory (bend 56.4° to 16.4°, extent 0.14 to 0.63),
+because the app tick is what flushes the queued forces. It is also headless-only
+by construction — the app tick *is* the render — so it could never have helped the
+viewport it was built for.
+
+For the record of where the time actually goes: a ten-second run costs 151 s, of
+which the 302-cell nervous system is **1.16 s**. Ninety-nine per cent is Omniverse
+ticking its whole application 2400 times.
+
+## 5Z. What OpenWorm does instead, and why we cannot take it
+
+Asked whether OpenWorm has the result this project is missing. It does not, and
+what it has instead is worth recording precisely, because it settles how the
+negative result of `docs/negative_result.md` should be framed.
+
+### 5Z.1 c302 prescribes the phase gradient
+
+c302 does produce head-to-tail travelling waves in muscle. It does so with a
+hand-selected 39-neuron forward-locomotion network rather than the whole
+connectome, and the wave travels because the delays are set to make it travel.
+From `c302/parameters_C2.py`:
+
+| parameter | value |
+|---|---|
+| `AVBR_to_DB1_elec_syn_delay` | 0 ms |
+| `AVBL_to_DB2_elec_syn_delay` | 250 ms |
+| `AVBL_to_DB3_elec_syn_delay` | 500 ms |
+| `AVBL_to_DB4_elec_syn_delay` | 750 ms |
+| `AVBL_to_DB5_elec_syn_delay` | 1000 ms |
+| `AVBL_to_DB6_elec_syn_delay` | 1250 ms |
+| `AVBL_to_DB7_elec_syn_delay` | 1500 ms |
+
+The ventral side has the same structure in `mu`: 50, 55, 60, 65, 70, 75, 80, 85,
+90, 95, 100 ms for VB1 through VB11. The AVB-to-DB conductances carry a matching
+hand-built ramp, 0.01252 nS at DB1 falling to 0.000002 nS at DB7.
+
+A 250 ms per segment delay ladder from the command interneuron **is** a travelling
+wave. The circuit is not computing the phase gradient; the parameter file contains
+it. Every one of the 238 bioparameters in that file is tagged `certainty 0.1`,
+which is c302's own lowest confidence marker — the authors are not claiming these
+are measurements, and this document should not either.
+
+### 5Z.2 Nobody gets locomotion from measured parameters
+
+Putting the three published models that locomote side by side:
+
+| model | how the rhythm arises |
+|---|---|
+| Boyle, Berri & Cohen 2012 | fitted components — binary neurons with hysteresis, a half-body receptive field, a dorsoventral gain asymmetry (§5M, §5Q) |
+| c302 (OpenWorm) | a prescribed per-segment delay ladder and conductance ramp, on a 39-neuron subset |
+| MetaWorm / BAAIWorm 2024 | connection weights and synaptic delays "optimized... by iteratively adjusting model parameters" |
+
+None obtains undulation from measured connectivity with measured parameters. The
+OpenWorm consortium's own review is direct about the state of it: *"the level of
+detail that we have incorporated to date is inadequate for biological research"*,
+and a key remaining component is *"to complete the curation and parameter
+extraction of Hodgkin-Huxley models for ion channels to produce realistic
+dynamics"* — which is precisely the work of §5X.
+
+So the negative result is not idiosyncratic to this implementation. It is the
+field's position, stated from the other direction: locomotion in a *C. elegans*
+model is currently something you put in, not something you get out.
+
+### 5Z.3 What can honestly be taken
+
+Not the ladder. Importing eighteen hand-set delays would produce a gait belonging
+to those delays, and reporting it as the connectome's would be the failure §5Q.4
+exists to name.
+
+What c302 does identify is a mechanism this model lacks and which none of the
+seven hypotheses of `negative_result.md` covers: **a temporal delay in coupling**.
+Our gap junctions are instantaneous and ohmic; our chemical synapses have
+activation kinetics but no transmission delay. §5T swept the proprioceptive
+*spatial* offset and found no propagation at any distance, but a spatial offset in
+what a neuron senses is not the same thing as a lag in when its neighbour hears
+about it.
+
+The honest version of the experiment is one number, not eighteen: a single uniform
+conduction delay applied to all coupling, declared `ASSUMED`, and swept. If a
+uniform delay produces propagation, that is a statement about the mechanism rather
+than about a fitted gradient. If it does not, then c302's wave depends on the
+gradient being graded — which would be a sharper result than anything in §5T.
 
 ## 6. Decisions taken, and what remains open
 

@@ -94,6 +94,15 @@ class Gait:
         The threshold is ASSUMED -- there is no measurement behind 5 degrees -- so
         this is a convenience for reading a table, never evidence on its own.
 
+        **It does not mean the animal is locomoting, and the amplitude floor of
+        1 degree is far too permissive to suggest otherwise.** That floor exists
+        to exclude numerical noise, not to certify a gait: the scripted control
+        undulates at 21 degrees. A run reading ``True`` here at 3 degrees is a
+        small ripple travelling along a body held in a static bend -- visibly, to
+        anyone watching, a worm frozen in a J that slides. Phase says whether
+        something propagates; only amplitude says whether it is worth anything.
+        Quote the two together or neither.
+
         This was the only thing standing between a frozen, coiled body and a
         reported phase of +34.8 degrees; :data:`MIN_AMPLITUDE_DEG` now stops the
         number being produced at all, which is the right place for the guard.

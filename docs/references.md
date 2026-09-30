@@ -336,6 +336,40 @@ A phenomenological model whose state variable is calcium-imaging brightness
 rather than voltage, with weights fitted to imaging data — discussed as option B
 in [model_assumptions.md](model_assumptions.md) §6.2.
 
+**Gleeson P, Lung D, Grosu R, Hasani R, Larson SD. c302: a multiscale framework
+for modelling the nervous system of *Caenorhabditis elegans*.** *Philosophical
+Transactions of the Royal Society B* 373:20170379 (2018).
+doi:[10.1098/rstb.2017.0379](https://doi.org/10.1098/rstb.2017.0379)
+OpenWorm's neural model generator. Its forward-locomotion network is a
+hand-selected 39-neuron subset, and its travelling wave is **prescribed rather
+than emergent**: `c302/parameters_C2.py` sets an explicit per-segment delay ladder
+from AVB to the B-type motor neurons (0, 250, 500, 750, 1000, 1250, 1500 ms for
+DB1–DB7) together with a monotonically declining conductance ramp. All 238
+bioparameters in that file carry the authors' own `certainty 0.1`. Recorded in
+§5Z of [model_assumptions.md](model_assumptions.md) as the reason this project
+cannot borrow the result — and as the source of the one mechanism it names that we
+have not tested, a temporal delay in coupling.
+
+**Sarma GP, Lee CW, Portegys T, et al. OpenWorm: overview and recent advances in
+integrative biological simulation of *Caenorhabditis elegans*.** *Philosophical
+Transactions of the Royal Society B* 373:20170382 (2018).
+doi:[10.1098/rstb.2017.0382](https://doi.org/10.1098/rstb.2017.0382)
+The consortium's own assessment, quoted in §5Z: "the level of detail that we have
+incorporated to date is inadequate for biological research", with the completion
+of Hodgkin–Huxley channel parameter extraction named as a key remaining component
+— which is the work of §5X.
+
+**Zhao M, Wang Z, Liu Y, et al. An integrative data-driven model simulating
+*C. elegans* brain, body and environment interactions (MetaWorm / BAAIWorm).**
+*Nature Computational Science* 4:978–990 (2024).
+doi:[10.1038/s43588-024-00738-w](https://doi.org/10.1038/s43588-024-00738-w),
+[code](https://github.com/Jessie940611/BAAIWorm)
+Multicompartment morphology, a closed brain–body–environment loop, and
+reproduction of zigzag chemotaxis toward food. Its parameters, including
+connection weights and synaptic delays, are optimised iteratively to match
+electrophysiology. Cited in §5Z as the third of three published models that
+locomote, none of which does so from measured parameters alone.
+
 ---
 
 ## Tools and resources
