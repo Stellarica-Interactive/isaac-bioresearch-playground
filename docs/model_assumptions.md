@@ -3352,6 +3352,90 @@ to oscillate with. A single non-relaxing element in a network of relaxing ones
 does not change that, and the measurement above is what it looks like when it does
 not.
 
+## 5AD. Validated against the published figures: three of four, and one that fails
+
+§5AB.6 recorded that the seven imported cells had never been checked against the
+paper — only that they settle to equilibria, which shows consistent assembly and
+not agreement. The paper is CC-BY and open access, so the check was available all
+along.
+
+### 5AD.1 The comparison
+
+Resting potentials given in Nicoletti et al. 2024 as model outputs, against ours:
+
+| cell | published | ours | difference |
+|---|---|---|---|
+| **VB6** | −53.19 mV | **−53.41 mV** | **−0.22 mV** |
+| VA5 | −75.20 mV | −75.73 mV | −0.53 mV |
+| VD5 | −44.61 mV | −45.97 mV | −1.36 mV |
+| **AVAL** | −25.40 mV | **−39.37 mV** | **−13.97 mV** |
+
+The paper gives no explicit resting potential for AVAR, AIY or RIM, so three of
+the seven cannot be checked this way. For AVAR it notes a *"discrepancy between
+current-clamp recordings and voltage-clamp recordings"* in the experimental data
+itself.
+
+### 5AD.2 What the three agreements establish
+
+**VB6 reproduces to 0.22 mV.** That is the cell §5G.4 named as the most wanted
+datum and §5I declared unrecoverable: thirteen channels, 323 parameters, all six
+SLO variants, a calcium pool borrowed from a Purkinje cell, and a chain of name
+normalisations — SLO-2's vestigial `1` suffixes, `bkg` against `fondo`, `c1`
+against `c2`, `shift` standing in for four of our names, `pi = 3.14` rather than
+π, FARADAY from NMODL's unit system, and two scale factors written as bare
+literals inside formulas.
+
+Any one of those going wrong would move the resting potential by more than half a
+millivolt. Three cells landing inside 1.4 mV is therefore evidence about the
+*import*, not only about the models: the channel-to-index mapping recovered from
+the clamp drivers in §5W is correct, and the constants are the published ones.
+
+It also retires a doubt §5AB.6 raised explicitly. Settling to equilibrium was
+described there as showing consistent assembly but not reproduction of the paper.
+For VA5, VB6 and VD5 it now shows both.
+
+### 5AD.3 AVAL does not reproduce, and it is the simplest of the seven
+
+Off by 14 mV, which is far outside anything attributable to a settling criterion
+or a timestep. It is also the least likely cell to carry a mapping error: four
+channels — EGL-19, leak, IRK, NCA — with NCA at zero conductance, a comment that
+*agrees* with its clamp driver, and every constant shared with cells that do
+reproduce.
+
+What is known:
+
+* Our AVAL settles at −39.37 mV, which is essentially its own leak reversal of
+  −39 mV. The leak dominates, as it should with these densities.
+* Reaching −25.4 mV requires about **+1.7 pA** of standing inward current.
+* Its driver's `IClamp` has `delay = 1023 ms`, and the drivers measure resting
+  potential over t = 50–60 ms, so no stimulus is active when the value is taken.
+  A holding current is not the explanation.
+
+What is not known is why. Candidates, none tested:
+
+1. The paper's −25.4 mV may come from a different parameter set than the one in
+   `AVAL_simulations.py` — the repository contains several per cell.
+2. NCA at zero may be an artefact of the committed vector rather than the figure's
+   configuration; NCA is a sodium leak with a +30 mV reversal, and a small
+   conductance there is exactly the ~1.7 pA of inward current required.
+3. Our EGL-19 or IRK density for this cell may be misread, though the same
+   constants reproduce three other cells.
+
+Candidate 2 is the one worth testing first, and is recorded here rather than
+acted on: setting a conductance to make a number match is fitting, and the point
+of this import is that nothing is fitted.
+
+### 5AD.4 What the check does not cover
+
+Resting potential is one scalar. Agreeing on it does not establish that the
+*dynamics* match — a cell could rest correctly and respond wrongly to current, and
+the published current-voltage curves have not been compared. The drivers compute
+them (`VB6_simulated_IV_SS_LEAK.txt` and similar), so the comparison is available
+and is the obvious next validation.
+
+Nor does it bear on §5AC: VB6 resting where the paper says it rests does not make
+it oscillate, and it does not.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

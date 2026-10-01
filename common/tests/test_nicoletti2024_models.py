@@ -143,3 +143,48 @@ def test_the_2019_models_are_unaffected() -> None:
     assert float(ConductanceModel.load("awc_nicoletti2019").resting_state()[0][0]) == (
         pytest.approx(-69.18, abs=0.01)
     )
+
+
+#: Resting potentials given as model outputs in Nicoletti et al. 2024
+#: (PLOS ONE 19(3):e0298105, CC-BY). The paper states no value for AVAR, AIY or
+#: RIM, so three of the seven cannot be checked this way -- and for AVAR it notes
+#: a discrepancy between current-clamp and voltage-clamp in the experimental data
+#: itself.
+PUBLISHED_RESTING_MV: dict[str, float] = {
+    "va5": -75.20,
+    "vb6": -53.19,
+    "vd5": -44.61,
+    "aval": -25.40,
+}
+
+
+@pytest.mark.parametrize("cell", ("va5", "vb6", "vd5"))
+def test_resting_potential_matches_the_paper(cell: str) -> None:
+    """The check that makes this an import rather than a plausible imitation.
+
+    Any one of the name normalisations going wrong -- SLO-2's vestigial ``1``
+    suffixes, ``bkg`` against ``fondo``, ``shift`` standing in for four of our
+    names, ``pi = 3.14`` rather than the real constant, the scale factors written
+    as bare literals inside formulas -- would move these by more than the
+    tolerance. VB6 in particular carries all six SLO variants and 323 parameters.
+
+    2 mV, because the paper quotes two decimals and the drivers read their value
+    at t = 50-60 ms while ours is the asymptote. AVAL is excluded; see
+    :func:`test_aval_does_not_match_the_paper`.
+    """
+    observed = float(_model(cell).resting_state()[0][0])
+    assert observed == pytest.approx(PUBLISHED_RESTING_MV[cell], abs=2.0)
+
+
+@pytest.mark.xfail(
+    reason="AVAL rests at -39.4 mV against the paper's -25.4, a 14 mV gap with no "
+    "diagnosis. It is the simplest of the seven -- four channels, NCA at zero, a "
+    "comment that agrees with its driver -- and shares every constant with cells "
+    "that do reproduce. Reaching -25.4 needs about +1.7 pA of standing inward "
+    "current and its IClamp fires at 1023 ms, long after the measurement window. "
+    "Recorded as a known failure rather than fitted away: see 5AD.3.",
+    strict=True,
+)
+def test_aval_does_not_match_the_paper() -> None:
+    observed = float(_model("aval").resting_state()[0][0])
+    assert observed == pytest.approx(PUBLISHED_RESTING_MV["aval"], abs=2.0)
