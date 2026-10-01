@@ -3252,6 +3252,106 @@ neuron inside the proprioceptive loop, and that is the experiment §5C.9 has bee
 waiting for — whether a cell with real intrinsic dynamics oscillates where a
 graded relaxation system cannot.
 
+## 5AC. A conductance-based VB6 in the network does not oscillate either
+
+§5AB made the seven Nicoletti 2024 cells runnable. This puts VB6 — a B-type motor
+neuron with measured channel densities — into the live 302-cell network and asks
+the question §5C.9 raised: the graded leaky integrator has no limit cycle
+anywhere, so does a cell with real intrinsic conductances have one?
+
+It does not.
+
+### 5AC.1 The result
+
+VB6 promoted, no external drive, measured in 5-second blocks:
+
+| window | mean V | swing |
+|---|---|---|
+| 0–5 s | −48.66 mV | 22.145 mV |
+| 5–10 s | −34.58 mV | 0.573 mV |
+| 10–15 s | −34.53 mV | **0.000 mV** |
+| … | −34.53 mV | 0.000 mV |
+| 55–60 s | −34.53 mV | **0.000 mV** |
+
+A twenty-two millivolt transient lasting about ten seconds, then a fixed point at
+−34.53 mV held to three decimals for the remaining fifty. The same is true of the
+cell in isolation: `resting_state` settles with its currents summing to zero.
+
+So **§5C.9 stands, and stands more strongly.** It previously said the graded model
+is a relaxation system with no limit cycle under any drive. It can now say the
+same of the connectome carrying a measured conductance-based motor neuron: still
+a relaxation system, with a longer transient.
+
+### 5AC.2 How this was nearly reported as the opposite
+
+Measured first with a 2-second settle and a 3-second window, against the graded
+model as a control:
+
+| drive | graded swing (late) | VB6 2024 swing (late) |
+|---|---|---|
+| 0 pA | 0.000 mV | **4.627 mV** |
+| 2 pA | 2.687 mV | 1.764 mV |
+| 5 pA | 0.529 mV | 0.087 mV |
+
+The zero-drive row reads as unambiguous: the graded cell is *identically* static
+to three decimals while the conductance cell sustains a 4.6 mV swing. It was
+written up as "a sustained oscillation the graded model cannot produce at any
+drive", with the explicit argument that **no window-length objection could turn
+0.000 into 4.627**.
+
+That argument was wrong, and wrong in an instructive way. Both numbers are
+correct. The graded cell settles immediately and the conductance cell takes ten
+seconds, so *any* window inside those ten seconds shows a large difference that
+vanishes outside them. The control was the right control; the window was shorter
+than the phenomenon.
+
+This is the fifth instance in one working session of a number quoted from a window
+shorter than the transient — after the first hysteresis sweep, the `inhibitory`
+near-miss, the gain-30 phase, and the delay sweep's 75% shared variance. It is
+also the one where the mistake was made *while stating that this class of mistake
+had been ruled out*, which is worth recording as its own lesson: a control
+establishes what a difference is attributable **to**, not that the difference
+persists.
+
+The rule that keeps being relearned, now in its general form: **measure the
+settling time before choosing a window.** Not after, and not by eye.
+
+### 5AC.3 What is nonetheless true
+
+Promotion is not a no-op, and three things did change:
+
+* **The transient is 20× longer.** The graded VB6 settles immediately at zero
+  drive; the conductance VB6 takes about ten seconds. A cell with voltage-gated
+  conductances has dynamics the graded model does not, even though they do not
+  close into a cycle.
+* **The resting potential moves 27 mV.** Graded VB6 rests at −61.15 mV embedded,
+  the conductance model at −34.53 mV. Which is closer to the real cell is unknown
+  — neither has been checked against the published figure (§5AB.6).
+* **Depolarisation suppresses the transient.** At 5 pA and above the swing is
+  gone within the first second, which is the opposite of the graded loop's
+  behaviour, where drive is what produces movement at all.
+
+### 5AC.4 What this does not test
+
+VB6 alone, in a network with no body. The proprioceptive loop is absent, and §5Q.2
+measured that all eighteen B-type cells receive 97.1% the same input — so one
+oscillating cell among seventeen followers may be averaged away regardless. The
+experiment that matters is the whole B-type population promoted inside the closed
+sensorimotor loop, which needs:
+
+* the remaining B-type cells, which Nicoletti 2024 does not provide — VB6 is the
+  only B-type cell published, so promoting the class would mean applying one
+  cell's fitted densities to seventeen others, which is the §5W.2 failure by
+  choice rather than by accident;
+* `HybridRuntime` to carry more than one model at a time, since it currently
+  holds exactly one.
+
+Neither is a reason to expect a different answer. §5C.9's argument was never about
+one cell's dynamics: it was that a system whose every element relaxes has nothing
+to oscillate with. A single non-relaxing element in a network of relaxing ones
+does not change that, and the measurement above is what it looks like when it does
+not.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
