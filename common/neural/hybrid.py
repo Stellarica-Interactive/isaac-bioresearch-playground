@@ -89,7 +89,38 @@ from common.neural.runtime import NeuralRuntime
 #: run intrinsically; see the module docstring on why the list is not longer.
 INTRINSIC_MODELS: dict[str, tuple[str, ...]] = {
     "rmd_nicoletti2019": ("RMDDL", "RMDDR", "RMDVL", "RMDVR", "RMDL", "RMDR"),
+    # Nicoletti 2024 fits each cell individually -- VB6's conductances are VB6's,
+    # not a B-type template -- so these are one model per cell rather than one
+    # model shared by a class, as the six RMD cells share theirs.
+    #
+    # The left/right pair is deliberate for AVA: the published models are AVAL
+    # and AVAR separately, and they differ (AVAL has no UNC-103, AVAR does), so
+    # they are not interchangeable.
+    "aval_nicoletti2024": ("AVAL",),
+    "avar_nicoletti2024": ("AVAR",),
+    "aiy_nicoletti2024": ("AIYL", "AIYR"),
+    "rim_nicoletti2024": ("RIML", "RIMR"),
+    "va5_nicoletti2024": ("VA5",),
+    "vd5_nicoletti2024": ("VD5",),
+    # The one the locomotion question has been waiting for: a B-type motor neuron
+    # inside the proprioceptive loop, with intrinsic dynamics rather than the
+    # graded relaxation of 5C.9. See docs/model_assumptions.md 5AB.
+    "vb6_nicoletti2024": ("VB6",),
 }
+
+#: Cells whose published model is for one named neuron, so promoting it to the
+#: whole class would be inventing the others. AIY and RIM are fitted as a single
+#: cell each and applied to both members of the pair, which is the authors' own
+#: scope; everything else here is one cell.
+SINGLE_CELL_MODELS = frozenset(
+    {
+        "aval_nicoletti2024",
+        "avar_nicoletti2024",
+        "va5_nicoletti2024",
+        "vd5_nicoletti2024",
+        "vb6_nicoletti2024",
+    }
+)
 
 
 @dataclass
