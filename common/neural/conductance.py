@@ -140,6 +140,18 @@ CHANNEL_GATES: dict[str, tuple[str, ...]] = {
     "kvs1": ("m_kvs1", "h_kvs1"),
     "kqt3": ("mf_kqt3", "ms_kqt3", "w_kqt3", "s_kqt3"),
     "kir": ("m_kir",),
+    # Nicoletti 2024 splits SLO-1 and SLO-2 by which calcium channel feeds them:
+    # a nanodomain at EGL-19's or UNC-2's mouth, or bulk cytosolic calcium for
+    # the "iso" (isolated) forms. Each is a separate channel with its own rate
+    # constants, and VB6 carries all six at once.
+    "slo1egl19": ("m_slo1egl19",),
+    "slo2egl19": ("m_slo2egl19",),
+    "slo1unc2": ("m_slo1unc2",),
+    "slo2unc2": ("m_slo2unc2",),
+    "slo1iso": ("m_slo1iso",),
+    "slo2iso": ("m_slo2iso",),
+    "unc103": ("m_unc103", "h_unc103"),
+    "kqt1": ("m_kqt1", "s_kqt1"),
     "unc2": ("m_unc2", "h_unc2"),
     "egl19": ("m_egl19", "hs_egl19"),
     "cca1": ("m_cca1", "h_cca1"),
@@ -156,6 +168,32 @@ CHANNEL_GATES: dict[str, tuple[str, ...]] = {
 #: Channels carrying calcium into the cell, so their current feeds the
 #: intracellular calcium pool. Summed over whichever of them a model declares.
 _CALCIUM_CHANNELS: tuple[str, ...] = ("unc2", "egl19", "cca1")
+
+#: Faraday's constant as NMODL supplies it, in coulombs per mole. The 2024 SLO
+#: sources write ``FARADAY = (faraday)``, a reference to NMODL's unit system
+#: rather than a value in the file, so it cannot be parsed out of them.
+#:
+#: Our 2019 import carries ``F = 96485`` from the XPPAUT source. The two differ
+#: by 3 parts per million, recorded rather than reconciled: each model uses the
+#: constant its own source specifies.
+NMODL_FARADAY = 96485.309
+
+#: Starting intracellular calcium for the 2024 pool, in mM. From cadiff.mod's
+#: `INITIAL { ca = .0001 }`, which is also the floor its update clamps to --
+#: 100 nM, as its own comment says.
+CADIFF_INITIAL_CA_MM = 1e-4
+
+#: The 2024 SLO variants fed by a nanodomain, and which calcium channel's
+#: gating supplies the carrier and the alpha/beta rates for each.
+SLO_NANODOMAIN_2024: dict[str, str] = {
+    "slo1egl19": "egl19",
+    "slo2egl19": "egl19",
+    "slo1unc2": "unc2",
+    "slo2unc2": "unc2",
+}
+
+#: The 2024 SLO variants fed by bulk cytosolic calcium instead of a nanodomain.
+SLO_ISOLATED_2024: tuple[str, ...] = ("slo1iso", "slo2iso")
 
 #: Channels gated by the calcium nanodomain rather than by voltage or bulk
 #: calcium. See ConductanceModel._reads_nanodomain.
@@ -328,7 +366,12 @@ class ConductanceModel:
         """
         state = np.zeros((self.n_state, n_cells), dtype=np.float64)
         state[0] = self.p["eleak"]
-        if self._reads_bulk_calcium:
+        if self._uses_2024_calcium_pool:
+            # cadiff.mod: `INITIAL { ca = .0001 }`, which is also the floor its
+            # update clamps to. The 2019 pool starts at its own `backgr2`
+            # instead, and a model uses one pool or the other.
+            state[self.index("ca_intra1")] = CADIFF_INITIAL_CA_MM
+        elif self._reads_bulk_calcium:
             state[self.index("ca_intra1")] = self.p["backgr2"]
         inf, _ = self._gates(state)
         for i, name in enumerate(self.state_names):
@@ -384,6 +427,14 @@ class ConductanceModel:
                 * (v - ek)
             ),
             "kir": lambda: p["gkir"] * s["m_kir"] * (v - ek),
+            "unc103": lambda: p["gunc103"] * s["m_unc103"] * s["h_unc103"] * (v - ek),
+            "slo1egl19": lambda: p["gslo1egl19"] * s["m_slo1egl19"] * (v - ek),
+            "slo2egl19": lambda: p["gslo2egl19"] * s["m_slo2egl19"] * (v - ek),
+            "slo1unc2": lambda: p["gslo1unc2"] * s["m_slo1unc2"] * (v - ek),
+            "slo2unc2": lambda: p["gslo2unc2"] * s["m_slo2unc2"] * (v - ek),
+            "slo1iso": lambda: p["gslo1iso"] * s["m_slo1iso"] * (v - ek),
+            "slo2iso": lambda: p["gslo2iso"] * s["m_slo2iso"] * (v - ek),
+            "kqt1": lambda: p["gkqt1"] * s["m_kqt1"] * s["s_kqt1"] * (v - ek),
             "unc2": lambda: p["gunc2"] * s["m_unc2"] * s["h_unc2"] * (v - eca),
             "egl19": lambda: p["gegl19"] * s["m_egl19"] * s["hs_egl19"] * (v - eca),
             "cca1": lambda: p["gcca1"] * s["m_cca1"] ** 2 * s["h_cca1"] * (v - eca),
@@ -406,7 +457,18 @@ class ConductanceModel:
         have no KCNL and no calcium-pool parameters, and integrating a quantity
         nothing reads would require inventing them.
         """
-        return "sk" in self.channels
+        return "sk" in self.channels or any(name in self.channels for name in SLO_ISOLATED_2024)
+
+    @property
+    def _uses_2024_calcium_pool(self) -> bool:
+        """Whether this model carries the 2024 calcium pool rather than the 2019 one.
+
+        The two are different formulations -- 2019 accumulates on influx with a
+        first-order return to a background concentration, 2024 integrates a
+        diffusion equation with a hard 100 nM floor -- so a model uses one or the
+        other, never a blend. Decided by which parameter set it was built with.
+        """
+        return "F_cadiff" in self.p
 
     @property
     def _reads_nanodomain(self) -> bool:
@@ -666,6 +728,127 @@ class ConductanceModel:
             inf["mslo1"], tau["mslo1"] = bk(s["m_egl19"], alpha1, beta1, kcm_a, kom_a, kop_a)
             inf["mslo2"], tau["mslo2"] = bk(s["m_unc2"], alpha, beta, kcm_b, kom_b, kop_b)
 
+        # --- SLO-1/SLO-2, Nicoletti 2024 ----------------------------------
+        # Same algebra as the 2019 BK channels -- a four-state scheme reduced to
+        # one effective gate -- but with each variant naming its own rate
+        # constants, because a cell may carry several at once. Transcribed from
+        # slo1egl19.mod's PROCEDURE:
+        #
+        #   alpha1 = actegl19(v)/tactegl19(v)
+        #   beta1  = 1/tactegl19(v) - alpha1
+        #   mminf  = (carrier*kop*(alpha1+beta1+kcm))/((kop+kom)*(kcm+alpha1)+beta1*kcm)
+        #   tslo1  = (alpha1+beta1+kcm)/((kop+kom)*(kcm+alpha1)+beta1*kcm)
+        #
+        # `kcm` uses the background concentration rather than the nanodomain one,
+        # which is what distinguishes the closed-state rate from the open one.
+        #
+        # `pi` is read from the parameter table rather than from numpy: these
+        # files declare `pi=3.14`, and that is the value the published results
+        # were computed with. Substituting the real constant would be a 0.05%
+        # correction to somebody else's model.
+        for variant, carrier in SLO_NANODOMAIN_2024.items():
+            if variant not in self.channels:
+                continue
+            gate = f"m_{carrier}"
+            alpha_v = inf[gate] / tau[gate]
+            beta_v = 1.0 / tau[gate] - alpha_v
+            nano = (
+                np.abs(p[f"gsc_{variant}"] * (v - p["eca"]) * 1e-3)
+                / (8.0 * p[f"pi_{variant}"] * p[f"r_{variant}"] * p[f"d_{variant}"] * NMODL_FARADAY)
+                * np.exp(
+                    -p[f"r_{variant}"]
+                    / np.sqrt(p[f"d_{variant}"] / (p[f"kb_{variant}"] * p[f"b_{variant}"]))
+                )
+            ) * 1e6 * 1e-3 + p[f"fondo_{variant}"]
+            kcm = (
+                p[f"wom_{variant}"]
+                * np.exp(-p[f"wyx_{variant}"] * v)
+                / (1.0 + (p[f"fondo_{variant}"] / p[f"kyx_{variant}"]) ** p[f"nyx_{variant}"])
+            )
+            kom = (
+                p[f"wom_{variant}"]
+                * np.exp(-p[f"wyx_{variant}"] * v)
+                / (1.0 + (nano / p[f"kyx_{variant}"]) ** p[f"nyx_{variant}"])
+            )
+            kop = (
+                p[f"wop_{variant}"]
+                * np.exp(-p[f"wxy_{variant}"] * v)
+                / (1.0 + (p[f"kxy_{variant}"] / nano) ** p[f"nxy_{variant}"])
+            )
+            denom = (kop + kom) * (kcm + alpha_v) + beta_v * kcm
+            numer = alpha_v + beta_v + kcm
+            inf[f"m_{variant}"] = s[gate] * kop * numer / denom
+            tau[f"m_{variant}"] = numer / denom
+
+        # --- SLO-1/SLO-2 isolated forms, Nicoletti 2024 -------------------
+        # Gated by bulk cytosolic calcium rather than a nanodomain, so these are
+        # the variants that require the 2024 calcium pool. From slo1iso.mod:
+        #
+        #   s0   = 1/(wyx-wxy)
+        #   v0   = s0*(log(wom/wop)+log(1+pow(kxy/(ca*1e3),nxy))
+        #              -log(1+pow((ca*1e3)/kyx,nyx)))
+        #   minf = 1/(1+exp(-(v-v0)/s0))
+        #   mtau = ((exp(wxy*v)/wop)*(1+pow(kxy/(ca*1e3),nxy))*minf)*c1
+        #
+        # `ca*1e3` converts the pool's mM into the uM the rate constants expect.
+        for variant in SLO_ISOLATED_2024:
+            if variant not in self.channels:
+                continue
+            ca_um = np.maximum(state[self.index("ca_intra1")], 1e-9) * 1e3
+            s0 = 1.0 / (p[f"wyx_{variant}"] - p[f"wxy_{variant}"])
+            v0 = s0 * (
+                np.log(p[f"wom_{variant}"] / p[f"wop_{variant}"])
+                + np.log(1.0 + (p[f"kxy_{variant}"] / ca_um) ** p[f"nxy_{variant}"])
+                - np.log(1.0 + (ca_um / p[f"kyx_{variant}"]) ** p[f"nyx_{variant}"])
+            )
+            minf = _boltzmann(v, v0, s0)
+            inf[f"m_{variant}"] = minf
+            tau[f"m_{variant}"] = (
+                np.exp(p[f"wxy_{variant}"] * v)
+                / p[f"wop_{variant}"]
+                * (1.0 + (p[f"kxy_{variant}"] / ca_um) ** p[f"nxy_{variant}"])
+                * minf
+            ) * p[f"c_{variant}"]
+
+        # --- UNC-103 (ERG-family K), Nicoletti 2024 ------------------------
+        # Both time constants are a product of two mirrored sigmoids, which peaks
+        # at the half-activation voltage and falls away on either side. Written as
+        # in unc103.mod:
+        #   mtau = ((tm1/(1+exp((v-tm2)/tm3)))+tm4)*((tm1/(1+exp(-(v-tm2)/tm3)))+tm4)
+        if "unc103" in self.channels:
+            inf["m_unc103"] = _boltzmann(v, p["va_unc103"], p["ka_unc103"])
+            tau["m_unc103"] = (
+                p["tm1_unc103"] / (1.0 + np.exp((v - p["tm2_unc103"]) / p["tm3_unc103"]))
+                + p["tm4_unc103"]
+            ) * (
+                p["tm1_unc103"] / (1.0 + np.exp(-(v - p["tm2_unc103"]) / p["tm3_unc103"]))
+                + p["tm4_unc103"]
+            )
+            inf["h_unc103"] = 1.0 / (1.0 + np.exp((v - p["vi_unc103"]) / p["ki_unc103"]))
+            tau["h_unc103"] = (
+                p["th1_unc103"] / (1.0 + np.exp((v - p["th2_unc103"]) / p["th3_unc103"]))
+                + p["th4_unc103"]
+            ) * (
+                p["th1_unc103"] / (1.0 + np.exp(-(v - p["th2_unc103"]) / p["th3_unc103"]))
+                + p["th4_unc103"]
+            )
+
+        # --- KQT-1 (KCNQ), Nicoletti 2024 ---------------------------------
+        # A second, slow gate `s` whose steady state is the sum of two sigmoids,
+        # and whose time constant is Lorentzian in voltage rather than sigmoidal:
+        #   stau = (p1tskqt1+(p2tskqt1/(1+((v-p3tskqt1)/p4tskqt1)^2)))
+        if "kqt1" in self.channels:
+            inf["m_kqt1"] = _boltzmann(v, p["va_kqt1"], p["ka_kqt1"])
+            tau["m_kqt1"] = (
+                p["p2tmkqt1"] / (1.0 + np.exp((p["p3tmkqt1"] - v) / p["p4tmkqt1"])) + p["p1tmkqt1"]
+            )
+            inf["s_kqt1"] = p["s1_kqt1"] / (1.0 + np.exp((v - p["s2_kqt1"]) / p["s3_kqt1"])) + p[
+                "s4_kqt1"
+            ] / (1.0 + np.exp((v - p["s5_kqt1"]) / p["s6_kqt1"]))
+            tau["s_kqt1"] = p["p1tskqt1"] + p["p2tskqt1"] / (
+                1.0 + ((v - p["p3tskqt1"]) / p["p4tskqt1"]) ** 2
+            )
+
         # --- KCNL (SK), gated by bulk calcium ------------------------------
         if "sk" in self.channels:
             ca = state[self.index("ca_intra1")]
@@ -711,17 +894,37 @@ class ConductanceModel:
             constants[k] = tau[name]
         nxt[rows] = target + (state[rows] - target) * np.exp(-dt_ms / constants)
 
-        if self._reads_bulk_calcium:
+        # Calcium carried in by whichever calcium channels this model declares.
+        # `currents` is keyed by self.channels, so naming all three
+        # unconditionally raised KeyError for any model carrying a subset -- AVAL
+        # has EGL-19 and neither UNC-2 nor CCA-1. See model_assumptions 5X.5.
+        # Computed before the branch because both calcium pools consume it.
+        i_ca = sum(
+            (currents[name] for name in _CALCIUM_CHANNELS if name in currents),
+            start=np.zeros_like(state[0]),
+        )
+
+        if self._uses_2024_calcium_pool:
+            # Nicoletti 2024's pool, from cadiff.mod, reproduced as written:
+            #
+            #   ca = ca + 10000*dt*((-1/(2*F)*ica/depth) - 0.0001*beta*ca)
+            #   if (ca < 1e-4) { ca = 1e-4 }      : minimum 100 nM
+            #
+            # `ica` is a current density in mA/cm^2 while ours are currents in pA,
+            # hence the surface area: 1 pA over `surface_cm2` is 1e-9 mA/cm^2.
+            #
+            # Provenance worth knowing: cadiff.mod is adapted from a Purkinje cell
+            # model (ModelDB 48332, 2002), not measured in C. elegans. See
+            # docs/model_assumptions.md.
+            ica = i_ca * 1e-9 / p["surface_cm2"]
+            ca = state[self.index("ca_intra1")]
+            grown = ca + 10000.0 * dt_ms * (
+                -ica / (2.0 * p["F_cadiff"] * p["depth_cadiff"]) - 1e-4 * p["beta_cadiff"] * ca
+            )
+            nxt[self.index("ca_intra1")] = np.maximum(grown, 1e-4)
+        elif self._reads_bulk_calcium:
             # Intracellular calcium: influx from the three calcium currents, with a
             # first-order return to background. The source only accumulates on influx.
-            # Only the calcium channels this model actually has. `currents` is keyed
-            # by self.channels, so naming all three unconditionally raised KeyError
-            # for any model carrying a subset -- AVAL has EGL-19 and neither UNC-2
-            # nor CCA-1. See docs/model_assumptions.md 5X.5.
-            i_ca = sum(
-                (currents[name] for name in _CALCIUM_CHANNELS if name in currents),
-                start=np.zeros_like(state[0]),
-            )
             alpha_ca = 1.0 / (2.0 * p["vol"] * p["fd"])
             backgr2 = p["backgr2"]
             ca = state[self.index("ca_intra1")]

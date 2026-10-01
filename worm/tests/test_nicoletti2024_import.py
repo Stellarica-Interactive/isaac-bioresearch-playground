@@ -72,6 +72,12 @@ def test_a_gated_channel_has_kinetics(channel: str) -> None:
     data = _channels()[channel]
     kinetics = dict(data.get("formulas", {}))
     kinetics.update(data.get("procedure", {}).get("expressions", {}))
+    # A calcium pool keeps its update in BREAKPOINT, including a conditional
+    # that cannot be expressed as a named formula, so it is recorded verbatim
+    # and implemented by hand. Counting it here keeps the check meaningful
+    # without pretending the text has been parsed into expressions.
+    if data.get("breakpoint", {}).get("source"):
+        kinetics["breakpoint"] = data["breakpoint"]["source"]
     if channel in PASSIVE:
         assert not data["channel"]["states"]
         assert data["channel"]["current"], "a passive channel is still a current"
@@ -96,6 +102,23 @@ def test_state_names_are_not_nmodl_keywords(channel: str) -> None:
 def test_every_constant_is_finite(channel: str) -> None:
     for key, value in _channels()[channel]["parameters"].items():
         assert math.isfinite(value), f"{channel}.{key} is not finite"
+
+
+def test_the_calcium_pool_update_is_captured_whole() -> None:
+    """``cadiff.mod`` integrates calcium in BREAKPOINT behind a conditional.
+
+    Read up to the first closing brace, the body truncated mid-conditional and
+    lost both the 100 nM floor and the ``cai = ca`` that publishes the result --
+    text that looked complete and was not. The block is brace-matched now.
+    """
+    channels = _channels()
+    if "cadiff" not in channels:
+        pytest.skip("cadiff not imported")
+    source = channels["cadiff"]["breakpoint"]["source"]
+    assert "ca = ca + (10000) * dt" in source, "the integration step"
+    assert "if ( ca < 1e-4 )" in source, "the floor"
+    assert "cai = ca" in source, "the line that publishes the result"
+    assert source.count("{") == source.count("}"), "braces must balance"
 
 
 def test_procedure_order_covers_its_expressions() -> None:

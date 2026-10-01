@@ -3117,6 +3117,141 @@ The crashes were the windowed Isaac session, not the physics. Diagnosing a
 numerical failure from a crash in a rendering loop was a guess presented as a
 mechanism.
 
+## 5AB. All seven 2024 cells run, including VB6
+
+§5W established that every cell was recoverable and §5X imported the data. This
+makes them executable. Seven conductance-based models, assembled by tool from
+the published channel kinetics and per-cell conductances:
+
+| cell | channels | resting potential | currents at rest |
+|---|---|---|---|
+| AVAL | 4 | −39.37 mV | +0.00000 pA |
+| AVAR | 5 | −24.58 mV | +0.00051 pA |
+| RIM | 7 | −45.37 mV | −0.00147 pA |
+| VA5 | 7 | −75.73 mV | +0.00000 pA |
+| VD5 | 8 | −45.97 mV | −0.00000 pA |
+| AIY | 7 | −54.02 mV | −0.00001 pA |
+| **VB6** | **13** | **−53.41 mV** | **+0.00000 pA** |
+
+The 2019 models are unchanged: RMD −69.49 mV, AWC −69.18 mV, which is the
+regression test for three rounds of refactoring.
+
+**VB6 is the one that mattered.** §5G.4 named it the single most wanted datum in
+this project — a B-type motor neuron inside the proprioceptive loop — §5I
+concluded its channel mapping could not be recovered, and the email that went
+unanswered for three weeks was sent to ask for it. Thirteen channels, 323
+parameters, assembled from a repository that had it all along.
+
+### 5AB.1 What had to change, and why none of it was foreseeable from reading
+
+`_gates` computed all twelve channels unconditionally. Four sections were already
+guarded — exactly the channels where RMD and AWC differ — and the other eight had
+never needed it because both 2019 models share them. Guarding those was the
+expected work. The rest was not:
+
+* **`i_ca` named all three calcium channels.** `currents` is keyed by the model's
+  own channel list, so a cell with EGL-19 and neither UNC-2 nor CCA-1 raised
+  `KeyError`. Now summed over whichever are present.
+* **Bulk calcium was integrated for nobody.** Only KCNL reads it, and both 2019
+  models carry KCNL, so the pool had always been computed and its parameters had
+  always existed. A cell without KCNL would have needed them invented.
+* **There was no `[initial]` section.** The 2019 XPPAUT sources list initial
+  values; the NMODL sources instead carry `INITIAL { m = minf(v) }`, so the
+  initial condition *is* the steady state at the starting voltage. Reproducing
+  that convention rather than choosing values.
+* **`p.get(key, p["cshal"])` evaluates its default eagerly**, so a fallback
+  written that way still demands the key it is replacing. This was latent in
+  committed code: the `cashal` line had the same bug and had never been
+  exercised, because both 2019 models happen to carry `cshal`.
+
+### 5AB.2 SHL-1 was not already implemented
+
+§5W.4 counted thirteen of fifteen gating formulas as already present. SHL-1 was
+one of the thirteen, and it was wrong:
+
+| | activation | fast inactivation | slow inactivation |
+|---|---|---|---|
+| 2019 | `× cashal` | `× cshal` | `× cshal` |
+| 2024 | `/ 2` | `/ 3` | — |
+
+Different per gate, and different in form. Our implementation applied a single
+constant to both inactivation gates, which cannot express that cell's SHL-1 at
+any parameter value. Fixed by allowing one scalar per gate, defaulting to the
+shared `cshal` so the 2019 models stay bit-identical.
+
+Worth stating because "we already have this channel" was true of the name and
+false of the equation, which is §5W.2's failure arriving from a third direction.
+
+### 5AB.3 Three constants that no parser could have found
+
+* **`FARADAY`** is declared as `FARADAY = (faraday)` — a reference to NMODL's
+  unit system, not a value in the file. Our 2019 import carries `F = 96485` from
+  its own source. The two differ by 3 parts per million; each model uses the
+  constant its own source specifies rather than reconciling them.
+* **`pi = 3.14`**, declared explicitly in the SLO files. The implementation had
+  used `np.pi`. It now reads the parameter, because 3.14 is what the published
+  results were computed with and substituting the true value would be a 0.05%
+  correction to somebody else's model.
+* **Faraday's constant in `cadiff.mod` sits in a `CONSTANT` block**, not
+  `PARAMETER`, and the importer read only the latter — so the one number setting
+  the scale of the entire calcium update was silently absent.
+
+### 5AB.4 The same quantity under different names
+
+The six SLO variants spell identical roles inconsistently:
+
+| variant | rate constants | background | tau multiplier |
+|---|---|---|---|
+| slo1egl19 | `wom wop wxy wyx kxy kyx nxy nyx` | `fondo` | — |
+| slo2egl19 | the same with a `1` suffix | `bkg` | — |
+| slo1unc2 | unsuffixed | `bkg` | — |
+| slo2unc2 | `1`-suffixed | `fondo` | — |
+| slo1iso | unsuffixed | `fondo` | `c1` |
+| slo2iso | `1`-suffixed | — | `c2` |
+
+The `1` suffix is vestigial: it distinguished SLO-2's constants inside the 2019
+single parameter table, and each 2024 file is self-contained. The background
+concentration is the same quantity under two spellings. Normalised to one name
+per role at import, then namespaced per variant — which is mandatory, because VB6
+carries all six and they would otherwise collapse onto one another.
+
+### 5AB.5 The calcium diffusion is borrowed from a Purkinje cell
+
+`cadiff.mod`, which every `iso` SLO variant depends on, carries this header:
+
+    : Ca diffusion in a Purkinje cell
+    : Created 8/15/02 - nwg
+    : https://senselab.med.yale.edu/ModelDB/ShowModel?model=48332
+
+It is adapted from a 2002 cerebellar model, not measured in *C. elegans*. Its
+`depth = 0.1 um` and `beta = 1 /ms` are that model's values. Four of the seven
+cells here — VA5, VD5, AIY and VB6 — therefore hold a calcium pool whose dynamics
+come from a different animal and a different cell type.
+
+This does not make them unusable; it is the authors' own modelling choice and is
+cited as such. But "conductance-based model of a *C. elegans* motor neuron"
+overstates what the calcium handling rests on, and anything resting on
+intracellular calcium concentration in these cells should say so.
+
+### 5AB.6 What is still not done
+
+**These have not been validated against the published resting potentials.** Every
+cell settles to a genuine equilibrium — currents summing to zero to five decimals,
+which nothing in the code enforces — and responds monotonically to injected
+current. That is evidence the kinetics and conductances were assembled
+consistently. It is not evidence they reproduce the paper.
+
+The drivers measure resting potential over t = 50–60 ms with the stimulus
+starting at 1023 ms, so the quantity is comparable; ours settles for 3000 ms and
+is the asymptotic value. Obtaining the authors' numbers means reading their
+figures, which is the one step where their own code cannot be the source.
+
+Also untouched: none of these cells is wired into the network yet. `HybridRuntime`
+promotes RMD; promoting VB6 is what would put a conductance-based B-type motor
+neuron inside the proprioceptive loop, and that is the experiment §5C.9 has been
+waiting for — whether a cell with real intrinsic dynamics oscillates where a
+graded relaxation system cannot.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

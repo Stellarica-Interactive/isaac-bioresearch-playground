@@ -24,7 +24,7 @@ of the 2024 file makes that impossible rather than merely unlikely.
 What is extracted and what is not
 ---------------------------------
 
-Extracted: the ``PARAMETER`` block's named constants, the ``STATE`` variables, the
+Extracted: the ``PARAMETER`` and ``CONSTANT`` blocks' named values, the ``STATE`` variables, the
 ``BREAKPOINT`` current expression, and each ``FUNCTION``'s returned expression,
 verbatim as text.
 
@@ -70,6 +70,9 @@ ASSIGNMENT = re.compile(r"^\s*([A-Za-z_]\w*)\s*=\s*(.+?)\s*$", re.M)
 #: allows ``m FROM 0 TO 1``, and the unit annotation ``ca (mM)`` puts the
 #: unit in parentheses, which the identifier pattern also picks up.
 NMODL_STATE_KEYWORDS = frozenset({"FROM", "TO", "START", "mM", "uM", "mV", "ms"})
+#: A state update written straight into BREAKPOINT, which is how a calcium
+#: pool is distinguished from a channel: it assigns to a name using dt.
+DT_UPDATE = re.compile(r"^\s*\w+\s*=.*\bdt\b", re.MULTILINE)
 SUFFIX = re.compile(r"SUFFIX\s+(\w+)")
 USEION = re.compile(r"USEION\s+(\w+)")
 
@@ -86,6 +89,15 @@ class Channel:
     states: tuple[str, ...] = ()
     current: str | None = None
     formulas: dict[str, str] = field(default_factory=dict)
+    breakpoint_source: str = ""
+    """The verbatim BREAKPOINT body, for files whose state update lives there.
+
+    ``cadiff.mod`` integrates calcium inside BREAKPOINT and clamps it with
+    ``if (ca < 1e-4) { ca = 1e-4 }``. Reducing that to a list of assignments
+    would drop the floor, so it is kept as text and implemented by hand -- the
+    same division as everywhere else here: the parser records, a person writes
+    the mathematics.
+    """
     procedure: list[tuple[str, str]] = field(default_factory=list)
     """Assignments from a ``PROCEDURE`` body, **in source order**.
 
@@ -111,20 +123,42 @@ class Channel:
         tool checked only for absent formulas, which refused ``leak`` and ``nca``
         for being passive and accepted nothing in their place.
         """
-        return bool(self.states) and not (self.formulas or self.procedure)
+        return bool(self.states) and not (self.formulas or self.procedure or self.breakpoint_source)
 
 
 def _block(text: str, name: str) -> str:
     """The body of a top-level NMODL block, or an empty string.
 
-    Blocks may be written on one line. ``leak.mod`` and ``nca.mod`` are entirely
-    ``BREAKPOINT { i = gbar*(v - e) }``, and an earlier pattern that required a
-    newline before the closing brace silently returned nothing for them -- so the
-    two passive channels imported with their constants and without the single
-    equation that is their whole content.
+    Brace-matched rather than read up to the first ``}``. ``cadiff.mod``'s
+    BREAKPOINT contains a nested conditional::
+
+        ca = ca + (10000) * dt * (...)
+        if ( ca < 1e-4 ) {: minimum 100 nM Ca
+           ca = 1e-4
+        }
+        cai = ca
+
+    and stopping at the first closing brace truncated the body mid-conditional,
+    dropping the floor and the assignment that publishes the result. The captured
+    text looked plausible and was missing its ending.
+
+    Blocks may also be written on one line -- ``leak.mod`` and ``nca.mod`` are
+    entirely ``BREAKPOINT { i = gbar*(v - e) }`` -- so no newline is required
+    anywhere.
     """
-    match = re.search(rf"(?:^|\n)\s*{name}\s*\{{(.*?)\}}", text, re.S)
-    return match.group(1) if match else ""
+    opening = re.search(rf"(?:^|\n)\s*{name}\s*\{{", text)
+    if opening is None:
+        return ""
+    depth, start = 1, opening.end()
+    for i in range(start, len(text)):
+        if text[i] == "{":
+            depth += 1
+        elif text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i]
+    # Unbalanced braces are a malformed source, not something to paper over.
+    raise ValueError(f"{name} block is not closed")
 
 
 def parse(name: str, text: str) -> Channel:
@@ -137,7 +171,11 @@ def parse(name: str, text: str) -> Channel:
     ion = USEION.search(text)
     channel.ion = ion.group(1) if ion else None
 
-    for raw in _block(text, "PARAMETER").splitlines():
+    # CONSTANT as well as PARAMETER: cadiff.mod puts Faraday's constant in a
+    # CONSTANT block, and reading only PARAMETER left out the one number that
+    # sets the scale of the whole calcium update.
+    declared = _block(text, "PARAMETER") + chr(10) + _block(text, "CONSTANT")
+    for raw in declared.splitlines():
         found = ASSIGN.match(raw)
         if not found:
             continue
@@ -155,8 +193,13 @@ def parse(name: str, text: str) -> Channel:
         if name not in NMODL_STATE_KEYWORDS
     )
 
-    current = re.search(r"^\s*i\w*\s*=\s*(.+)$", _block(text, "BREAKPOINT"), re.M)
+    breakpoint_body = _block(text, "BREAKPOINT")
+    current = re.search(r"^\s*i\w*\s*=\s*(.+)$", breakpoint_body, re.M)
     channel.current = current.group(1).strip() if current else None
+    # Kept only when the state update is in here rather than in a FUNCTION or
+    # PROCEDURE, which is what distinguishes a calcium pool from a channel.
+    if DT_UPDATE.search(breakpoint_body):
+        channel.breakpoint_source = breakpoint_body.strip(chr(10))
 
     for function, body in FUNCTION.findall(text):
         expression = re.search(rf"^\s*{function}\s*=\s*(.+)$", body, re.M)
@@ -203,6 +246,17 @@ def to_toml(channel: Channel) -> str:
     for key, (value, unit, line) in sorted(channel.parameters.items()):
         note = f"  # line {line}" + (f", {unit}" if unit else "")
         out.append(f"{key} = {_number(value)}{note}")
+    if channel.breakpoint_source:
+        out += [
+            "",
+            "# The state update is written inside BREAKPOINT, including a",
+            "# conditional our expression format cannot carry. Recorded verbatim",
+            "# and implemented by hand -- see common/neural/conductance.py.",
+            "[breakpoint]",
+            'source = """',
+            channel.breakpoint_source,
+            '"""',
+        ]
     out += ["", "[formulas]"]
     for key, expression in sorted(channel.formulas.items()):
         out.append(f'{key} = "{expression}"')

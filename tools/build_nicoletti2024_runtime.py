@@ -49,6 +49,14 @@ DRIVERS = Path("build") / "nicoletti2024"
 MECHANISM_TO_CHANNEL = {
     "egl19": "egl19",
     "irk": "kir",
+    "unc103": "unc103",
+    "kqt1": "kqt1",
+    "slo1egl19": "slo1egl19",
+    "slo2egl19": "slo2egl19",
+    "slo1unc2": "slo1unc2",
+    "slo2unc2": "slo2unc2",
+    "slo1iso": "slo1iso",
+    "slo2iso": "slo2iso",
     "nca": "nca",
     "leak": "leak",
     "cca1": "cca1",
@@ -77,7 +85,70 @@ ALIASES: dict[str, dict[str, tuple[str, ...]]] = {
     # drivers do not override, so the .mod default of +30 mV stands. Our
     # implementation calls it ``ena``.
     "nca": {"e": ("ena",)},
+    # The SLO variants spell the same roles differently -- see the table in
+    # scratch notes and model_assumptions 5X. SLO-2 files carry a vestigial "1"
+    # suffix on every rate constant, the background concentration is "fondo" in
+    # three files and "bkg" in two, and the tau multiplier is "c1" or "c2".
+    # Normalised to one spelling per role, then namespaced per variant.
+    "slo1unc2": {"bkg": ("fondo",)},
+    "slo1iso": {"c1": ("c",)},
+    "slo2egl19": {
+        "wom1": ("wom",),
+        "wop1": ("wop",),
+        "wxy1": ("wxy",),
+        "wyx1": ("wyx",),
+        "kxy1": ("kxy",),
+        "kyx1": ("kyx",),
+        "nxy1": ("nxy",),
+        "nyx1": ("nyx",),
+        "bkg": ("fondo",),
+    },
+    "slo2unc2": {
+        "wom1": ("wom",),
+        "wop1": ("wop",),
+        "wxy1": ("wxy",),
+        "wyx1": ("wyx",),
+        "kxy1": ("kxy",),
+        "kyx1": ("kyx",),
+        "nxy1": ("nxy",),
+        "nyx1": ("nyx",),
+    },
+    "slo2iso": {
+        "wom1": ("wom",),
+        "wop1": ("wop",),
+        "wxy1": ("wxy",),
+        "wyx1": ("wyx",),
+        "kxy1": ("kxy",),
+        "kyx1": ("kyx",),
+        "nxy1": ("nxy",),
+        "nyx1": ("nyx",),
+        "c2": ("c",),
+    },
 }
+
+#: Mechanisms whose parameters are generically named -- ``va``, ``ka``, ``th1``
+#: -- and so must be suffixed to stay distinct in a model's single flat table.
+#: UNC-103 and KQT-1 both declare ``va`` and ``ka``; without this, whichever is
+#: read first silently wins for both. Names that already end in the mechanism
+#: are left alone, so KQT-1's ``p1tmkqt1`` does not become ``p1tmkqt1_kqt1``.
+NAMESPACE = frozenset(
+    {"unc103", "kqt1"}
+    | {
+        "slo1egl19",
+        "slo2egl19",
+        "slo1unc2",
+        "slo2unc2",
+        "slo1iso",
+        "slo2iso",
+    }
+)
+
+
+def _namespaced(mechanism: str, key: str) -> str:
+    if mechanism not in NAMESPACE or key.endswith(mechanism):
+        return key
+    return f"{key}_{mechanism}"
+
 
 #: Parameters that are per-mechanism and must never become global. Both
 #: ``leak.mod`` and ``nca.mod`` name their reversal potential ``e``, so a shared
@@ -121,6 +192,14 @@ NEUTRAL_OMISSIONS: dict[str, dict[str, float]] = {
 CONDUCTANCE_KEY = {
     "egl19": "gegl19",
     "kir": "gkir",
+    "unc103": "gunc103",
+    "kqt1": "gkqt1",
+    "slo1egl19": "gslo1egl19",
+    "slo2egl19": "gslo2egl19",
+    "slo1unc2": "gslo1unc2",
+    "slo2unc2": "gslo2unc2",
+    "slo1iso": "gslo1iso",
+    "slo2iso": "gslo2iso",
     "nca": "gnca",
     "leak": "gleak",
     "cca1": "gcca1",
@@ -200,7 +279,7 @@ def build(cell: str) -> tuple[dict[str, float], tuple[str, ...], list[str]]:
                     continue
                 names = (key,)
             for name in names:
-                parameters.setdefault(name, float(number))
+                parameters.setdefault(_namespaced(mechanism, name), float(number))
 
     # Ion reversal potentials, from the cell's own driver rather than assumed.
     for name, value in _reversals(cell).items():
@@ -209,6 +288,22 @@ def build(cell: str) -> tuple[dict[str, float], tuple[str, ...], list[str]]:
     # Leak reversal, then specific capacitance. The source does not name them, so
     # position is all there is -- which is why the importer records the tail
     # verbatim instead of guessing labels for it.
+    # The calcium pool is not in any cell's conductance vector, but the iso SLO
+    # variants read it, so its constants come in whenever one is present. Also
+    # the surface area, which converts our currents in pA into the current
+    # density in mA/cm^2 that cadiff's equation expects.
+    if any(name in conductances for name in ("slo1iso", "slo2iso")):
+        pool = MODELS / "channels2024" / "cadiff_nicoletti2024.toml"
+        if not pool.exists():
+            unsupported.append(
+                "slo*iso needs the cadiff calcium pool, which has not been "
+                "imported -- run tools/import_mod_channel.py cadiff"
+            )
+        else:
+            for key, number in _load(pool)["parameters"].items():
+                parameters.setdefault(f"{key}_cadiff", float(number))
+            parameters["surface_cm2"] = surface
+
     parameters["eleak"] = float(tail[0])
     # `c`, not `c_m`: that is the name our implementation integrates with.
     parameters["c"] = float(tail[-1]) * surface * 1e6
