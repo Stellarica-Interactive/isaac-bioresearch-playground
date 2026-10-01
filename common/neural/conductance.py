@@ -153,11 +153,47 @@ CHANNEL_GATES: dict[str, tuple[str, ...]] = {
 }
 
 
+#: Channels carrying calcium into the cell, so their current feeds the
+#: intracellular calcium pool. Summed over whichever of them a model declares.
+_CALCIUM_CHANNELS: tuple[str, ...] = ("unc2", "egl19", "cca1")
+
+#: Channels gated by the calcium nanodomain rather than by voltage or bulk
+#: calcium. See ConductanceModel._reads_nanodomain.
+_NANODOMAIN_READERS = frozenset({"bk", "bk2", "slo1", "slo2"})
+
+
+def channels_for(model_id: str) -> tuple[str, ...]:
+    """Which channels a model carries.
+
+    Declared in :data:`MODEL_CHANNELS` for the hand-written 2019 models, and in
+    the generated file's own ``[source].channels`` for the 2024 cells -- so a
+    generated model describes its own composition rather than needing an entry
+    added here by hand, which is a step that can be forgotten.
+    """
+    if model_id in MODEL_CHANNELS:
+        return MODEL_CHANNELS[model_id]
+    try:
+        declared = model_provenance(model_id).get("channels")
+    except FileNotFoundError:
+        # An unknown id must still say what is wrong with it. Letting the
+        # provenance read surface its own FileNotFoundError replaced a message
+        # about channel sets with one about a path.
+        declared = None
+    if not declared:
+        raise KeyError(
+            f"no channel set declared for {model_id!r}: it is not in MODEL_CHANNELS "
+            "and its "
+            "TOML declares no [source].channels. Guessing a cell's channel "
+            "complement is exactly what this module must not do."
+        )
+    return tuple(str(c) for c in declared)
+
+
 def state_names_for(model_id: str) -> tuple[str, ...]:
     """Voltage first -- so ``state[0]`` is membrane potential for every model,
     matching the graded runtime -- then each channel's gates, then calcium."""
     names = ["v"]
-    for channel in MODEL_CHANNELS[model_id]:
+    for channel in channels_for(model_id):
         names.extend(CHANNEL_GATES[channel])
     names.append("ca_intra1")
     return tuple(names)
@@ -228,18 +264,12 @@ class ConductanceModel:
 
     @classmethod
     def load(cls, model_id: str = "rmd_nicoletti2019") -> ConductanceModel:
-        if model_id not in MODEL_CHANNELS:
-            raise KeyError(
-                f"no channel set declared for {model_id!r}. Add it to MODEL_CHANNELS "
-                "after checking which currents the published source actually sums "
-                "into I_tot -- guessing a cell's channel complement is exactly what "
-                "this module must not do."
-            )
+        channels = channels_for(model_id)
         return cls(
             model_id=model_id,
             p=load_parameters(model_id),
             state_names=state_names_for(model_id),
-            channels=MODEL_CHANNELS[model_id],
+            channels=channels,
         )
 
     @property
@@ -273,10 +303,37 @@ class ConductanceModel:
         :meth:`settle` finds.
         """
         text = (files(MODELS_PACKAGE) / f"{self.model_id}.toml").read_text(encoding="utf-8")
-        initial = tomllib.loads(text)["initial"]
+        initial = tomllib.loads(text).get("initial")
+        if initial is None:
+            return self._nmodl_initial_state(n_cells)
         state = np.zeros((self.n_state, n_cells), dtype=np.float64)
         for i, name in enumerate(self.state_names):
             state[i] = float(initial.get(name, 0.0))
+        return state
+
+    def _nmodl_initial_state(self, n_cells: int) -> np.ndarray:
+        """Every gate at its steady state for the leak reversal potential.
+
+        The 2019 XPPAUT sources list explicit initial values and those are used
+        verbatim. The 2024 NMODL sources do not: each ``.mod`` file instead
+        carries ``INITIAL { m = minf(v) }``, so the initial condition *is* the
+        steady state at whatever voltage the cell starts from. Reproducing that
+        convention rather than inventing initial values.
+
+        The starting voltage is the leak reversal, which is the one voltage every
+        cell's own file supplies. It only has to lie in the basin of the resting
+        state -- :meth:`settle` finds the rest -- and a cell whose answer depended
+        on it would be bistable, which is a thing to discover rather than to hide
+        behind a different guess.
+        """
+        state = np.zeros((self.n_state, n_cells), dtype=np.float64)
+        state[0] = self.p["eleak"]
+        if self._reads_bulk_calcium:
+            state[self.index("ca_intra1")] = self.p["backgr2"]
+        inf, _ = self._gates(state)
+        for i, name in enumerate(self.state_names):
+            if name in inf:
+                state[i] = inf[name]
         return state
 
     def settle(self, state: np.ndarray, *, duration_ms: float = 2000.0) -> np.ndarray:
@@ -340,6 +397,28 @@ class ConductanceModel:
         }
         return {name: formula[name]() for name in self.channels}
 
+    @property
+    def _reads_bulk_calcium(self) -> bool:
+        """Whether anything in this model reads the intracellular calcium pool.
+
+        Only KCNL does. RMD and AWC both carry it, so the pool was integrated
+        unconditionally and its parameters were always present. The 2024 cells
+        have no KCNL and no calcium-pool parameters, and integrating a quantity
+        nothing reads would require inventing them.
+        """
+        return "sk" in self.channels
+
+    @property
+    def _reads_nanodomain(self) -> bool:
+        """Whether any channel in this model is gated by the calcium nanodomain.
+
+        The nanodomain block reads EGL-19 and UNC-2 gating, which is consistent:
+        a calcium-gated channel needs a calcium channel to gate it. Computing it
+        for a model with none -- AVAL, say -- would index state names that
+        `state_names_for` never allocated.
+        """
+        return any(c in self.channels for c in _NANODOMAIN_READERS)
+
     def _gates(
         self, state: np.ndarray
     ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray | float]]:
@@ -354,38 +433,52 @@ class ConductanceModel:
         tau: dict[str, np.ndarray | float] = {}
 
         # --- SHL-1 (Kv4) --------------------------------------------------
-        inf["m_shal"] = _boltzmann(v, p["vashal"] - p["shalsfhit"], p["kashal"])
-        tau["m_shal"] = (
-            p["ptmshal1"]
-            / (
-                np.exp(-(v - p["ptmshal2"]) / p["ptmshal3"])
-                + np.exp((v - p["ptmshal4"]) / p["ptmshal5"])
-            )
-            + p["ptmshal6"]
-        ) * p.get("cashal", p["cshal"])  # RMD names this cashal, AWC cshal
-        h_shal = 1.0 / (1.0 + np.exp((v - p["vishal"] + p["shalsfhit"]) / p["kishal"]))
-        inf["hf_shal"] = h_shal
-        inf["hs_shal"] = h_shal
-        tau["hf_shal"] = (
-            p["pthfshal1"] / (1.0 + np.exp((v - p["pthfshal2"]) / p["pthfshal3"])) + p["pthfshal4"]
-        ) * p["cshal"]
-        tau["hs_shal"] = (
-            p["pthsshal1"] / (1.0 + np.exp((v - p["pthsshal2"]) / p["pthsshal3"])) + p["pthsshal4"]
-        ) * p["cshal"]
+        if "shal" in self.channels:
+            inf["m_shal"] = _boltzmann(v, p["vashal"] - p["shalsfhit"], p["kashal"])
+            tau["m_shal"] = (
+                p["ptmshal1"]
+                / (
+                    np.exp(-(v - p["ptmshal2"]) / p["ptmshal3"])
+                    + np.exp((v - p["ptmshal4"]) / p["ptmshal5"])
+                )
+                + p["ptmshal6"]
+            ) * (p["cashal"] if "cashal" in p else p["cshal"])
+            h_shal = 1.0 / (1.0 + np.exp((v - p["vishal"] + p["shalsfhit"]) / p["kishal"]))
+            inf["hf_shal"] = h_shal
+            inf["hs_shal"] = h_shal
+            # One scalar per gate, falling back to the shared `cshal` the 2019
+            # sources use for both. Written as a conditional rather than
+            # `p.get(key, p["cshal"])`, because that evaluates its default
+            # eagerly and so still requires the very key it is replacing -- which
+            # is why RIM reported a missing `cshal` it does not have.
+            #
+            # Nicoletti 2024 scales them differently -- `htauf` divided by 3,
+            # `htaus` not at all, `mtau` by 2 -- so one constant cannot express
+            # that cell's SHL-1. The fallback keeps RMD and AWC bit-identical.
+            # See docs/model_assumptions.md 5X.
+            tau["hf_shal"] = (
+                p["pthfshal1"] / (1.0 + np.exp((v - p["pthfshal2"]) / p["pthfshal3"]))
+                + p["pthfshal4"]
+            ) * (p["cthfshal"] if "cthfshal" in p else p["cshal"])
+            tau["hs_shal"] = (
+                p["pthsshal1"] / (1.0 + np.exp((v - p["pthsshal2"]) / p["pthsshal3"]))
+                + p["pthsshal4"]
+            ) * (p["cthsshal"] if "cthsshal" in p else p["cshal"])
 
         # --- SHK-1 (Kv1) --------------------------------------------------
-        shift = p["shiftV05"]
-        inf["m_shak"] = _boltzmann(v, p["vashak"] - shift, p["kashak"])
-        tau["m_shak"] = (
-            p["ptmshak1"]
-            / (
-                np.exp(-(v - (p["ptmshak2"] + shift)) / p["ptmshak4"])
-                + np.exp((v - (p["ptmshak2"] + shift)) / p["ptmshak3"])
+        if "shak" in self.channels:
+            shift = p["shiftV05"]
+            inf["m_shak"] = _boltzmann(v, p["vashak"] - shift, p["kashak"])
+            tau["m_shak"] = (
+                p["ptmshak1"]
+                / (
+                    np.exp(-(v - (p["ptmshak2"] + shift)) / p["ptmshak4"])
+                    + np.exp((v - (p["ptmshak2"] + shift)) / p["ptmshak3"])
+                )
+                + p["ptmshak5"]
             )
-            + p["ptmshak5"]
-        )
-        inf["h_shak"] = 1.0 / (1.0 + np.exp((v - p["vishak"] + shift) / p["kishak"]))
-        tau["h_shak"] = p["pthshak"]
+            inf["h_shak"] = 1.0 / (1.0 + np.exp((v - p["vishak"] + shift) / p["kishak"]))
+            tau["h_shak"] = p["pthshak"]
 
         # --- EGL-36 (Kv3), three kinetic components sharing one activation --
         if "egl36" in self.channels:
@@ -438,136 +531,146 @@ class ConductanceModel:
             tau["s_kqt3"] = p["tsq1"] * p["ckqt3"]
 
         # --- IRK (inward rectifier) ---------------------------------------
-        # The source writes `(v - va_kir + 30)`, an inactivation-style Boltzmann
-        # with a hard-coded +30 mV shift; reproduced as written.
-        inf["m_kir"] = 1.0 / (1.0 + np.exp((v - p["va_kir"] + 30.0) / p["ka_kir"]))
-        tau["m_kir"] = (
-            p["p1tmkir"]
-            / (
-                np.exp(-(v - p["p2tmkir"]) / p["p3tmkir"])
-                + np.exp((v - p["p4tmkir"]) / p["p5tmkir"])
+        if "kir" in self.channels:
+            # The source writes `(v - va_kir + 30)`, an inactivation-style Boltzmann
+            # with a hard-coded +30 mV shift; reproduced as written.
+            inf["m_kir"] = 1.0 / (1.0 + np.exp((v - p["va_kir"] + 30.0) / p["ka_kir"]))
+            tau["m_kir"] = (
+                p["p1tmkir"]
+                / (
+                    np.exp(-(v - p["p2tmkir"]) / p["p3tmkir"])
+                    + np.exp((v - p["p4tmkir"]) / p["p5tmkir"])
+                )
+                + p["p6tmkir"]
             )
-            + p["p6tmkir"]
-        )
 
         # --- UNC-2 (CaV2) -------------------------------------------------
-        inf["m_unc2"] = _boltzmann(v, p["va_unc2"] - p["stm2"], p["ka_unc2"])
-        tau["m_unc2"] = (
-            p["p1tmunc2"]
-            / (
-                np.exp(-(v - p["p2tmunc2"] + p["shiftmunc2"]) / p["p3tmunc2"])
-                + np.exp((v - p["p2tmunc2"] + p["shiftmunc2"]) / p["p4tmunc2"])
-            )
-            + p["p5tmunc2"]
-        ) * p["constmunc2"]
-        inf["h_unc2"] = 1.0 / (1.0 + np.exp((v - p["vi_unc2"] + p["sth2"]) / p["ki_unc2"]))
-        tau["h_unc2"] = (
-            p["p1thunc2"] / (1.0 + np.exp((v - p["p2thunc2"] + p["shifthunc2"]) / p["p3thunc2"]))
-            + p["p4thunc2"] / (1.0 + np.exp(-(v - p["p5thunc2"] + p["shifthunc2"]) / p["p6thunc2"]))
-        ) * p["consthunc2"]
+        if "unc2" in self.channels:
+            inf["m_unc2"] = _boltzmann(v, p["va_unc2"] - p["stm2"], p["ka_unc2"])
+            tau["m_unc2"] = (
+                p["p1tmunc2"]
+                / (
+                    np.exp(-(v - p["p2tmunc2"] + p["shiftmunc2"]) / p["p3tmunc2"])
+                    + np.exp((v - p["p2tmunc2"] + p["shiftmunc2"]) / p["p4tmunc2"])
+                )
+                + p["p5tmunc2"]
+            ) * p["constmunc2"]
+            inf["h_unc2"] = 1.0 / (1.0 + np.exp((v - p["vi_unc2"] + p["sth2"]) / p["ki_unc2"]))
+            tau["h_unc2"] = (
+                p["p1thunc2"]
+                / (1.0 + np.exp((v - p["p2thunc2"] + p["shifthunc2"]) / p["p3thunc2"]))
+                + p["p4thunc2"]
+                / (1.0 + np.exp(-(v - p["p5thunc2"] + p["shifthunc2"]) / p["p6thunc2"]))
+            ) * p["consthunc2"]
 
         # --- EGL-19 (CaV1) ------------------------------------------------
-        inf["m_egl19"] = _boltzmann(v, p["va_egl19"] - p["stm19"], p["ka_egl19"])
-        tau["m_egl19"] = (
-            p["pdg1"]
-            + p["pdg2"] * np.exp(-((v - p["pdg3"] + p["stau19"]) ** 2) / p["pdg4"] ** 2)
-            + p["pdg5"] * np.exp(-((v - p["pdg6"] + p["stau19"]) ** 2) / p["pdg7"] ** 2)
-        )
-        inf["hs_egl19"] = (
-            p["p1hegl19"] / (1.0 + np.exp(-(v - p["p2hegl19"] + p["sth19"]) / p["p3hegl19"]))
-            + p["p4hegl19"]
-        ) * (
-            p["p5hegl19"] / (1.0 + np.exp((v - p["p6hegl19"] + p["sth19"]) / p["p7hegl19"]))
-            + p["p8hegl19"]
-        )
-        tau["hs_egl19"] = p["pds1"] * (
-            (p["pds2"] * p["pds3"]) / (1.0 + np.exp((v - p["pds4"] + p["shiftdps"]) / p["pds5"]))
-            + p["pds6"]
-            + (p["pds7"] * p["pds8"]) / (1.0 + np.exp((v - p["pds9"] + p["shiftdps"]) / p["pds10"]))
-            + p["pds11"]
-        )
+        if "egl19" in self.channels:
+            inf["m_egl19"] = _boltzmann(v, p["va_egl19"] - p["stm19"], p["ka_egl19"])
+            tau["m_egl19"] = (
+                p["pdg1"]
+                + p["pdg2"] * np.exp(-((v - p["pdg3"] + p["stau19"]) ** 2) / p["pdg4"] ** 2)
+                + p["pdg5"] * np.exp(-((v - p["pdg6"] + p["stau19"]) ** 2) / p["pdg7"] ** 2)
+            )
+            inf["hs_egl19"] = (
+                p["p1hegl19"] / (1.0 + np.exp(-(v - p["p2hegl19"] + p["sth19"]) / p["p3hegl19"]))
+                + p["p4hegl19"]
+            ) * (
+                p["p5hegl19"] / (1.0 + np.exp((v - p["p6hegl19"] + p["sth19"]) / p["p7hegl19"]))
+                + p["p8hegl19"]
+            )
+            tau["hs_egl19"] = p["pds1"] * (
+                (p["pds2"] * p["pds3"])
+                / (1.0 + np.exp((v - p["pds4"] + p["shiftdps"]) / p["pds5"]))
+                + p["pds6"]
+                + (p["pds7"] * p["pds8"])
+                / (1.0 + np.exp((v - p["pds9"] + p["shiftdps"]) / p["pds10"]))
+                + p["pds11"]
+            )
 
         # --- CCA-1 (CaV3, T-type) -----------------------------------------
-        inf["m_cca1"] = _boltzmann(v, p["va_cca1"] - p["sscca1"], p["ka_cca1"] * p["fcca"])
-        tau["m_cca1"] = (
-            p["p1tmcca1"]
-            / (1.0 + np.exp(-(v - p["p2tmcca1"] + p["stmcca1"]) / (p["p3tmcca1"] * p["f3ca"])))
-            + p["p4tmcca1"]
-        ) * p["constmcca1"]
-        inf["h_cca1"] = 1.0 / (
-            1.0 + np.exp((v - p["vi_cca1"] + p["sshcca1"]) / (p["ki_cca1"] * p["f2cca1"]))
-        )
-        tau["h_cca1"] = (
-            p["p1thcca1"]
-            / (1.0 + np.exp((v - p["p2thcca1"] + p["sthcca1"]) / (p["p3thcca1"] * p["f4ca"])))
-            + p["p4thcca1"]
-        ) * p["consthcca1"]
+        if "cca1" in self.channels:
+            inf["m_cca1"] = _boltzmann(v, p["va_cca1"] - p["sscca1"], p["ka_cca1"] * p["fcca"])
+            tau["m_cca1"] = (
+                p["p1tmcca1"]
+                / (1.0 + np.exp(-(v - p["p2tmcca1"] + p["stmcca1"]) / (p["p3tmcca1"] * p["f3ca"])))
+                + p["p4tmcca1"]
+            ) * p["constmcca1"]
+            inf["h_cca1"] = 1.0 / (
+                1.0 + np.exp((v - p["vi_cca1"] + p["sshcca1"]) / (p["ki_cca1"] * p["f2cca1"]))
+            )
+            tau["h_cca1"] = (
+                p["p1thcca1"]
+                / (1.0 + np.exp((v - p["p2thcca1"] + p["sthcca1"]) / (p["p3thcca1"] * p["f4ca"])))
+                + p["p4thcca1"]
+            ) * p["consthcca1"]
 
         # --- calcium nanodomains, seen only by BK/SLO ----------------------
-        # A local calcium concentration at the mouth of a channel, far higher than
-        # the bulk cytosolic value and decaying over nanometres. It is what gates
-        # the BK-type channels here.
-        cao_nano = (
-            np.abs(p["gsc"] * (v - p["eca"]) * 1e-3)
-            / (8.0 * np.pi * p["r"] * p["d"] * p["F"])
-            * np.exp(-p["r"] / np.sqrt(p["d"] / (p["kb"] * p["b"])))
-        ) * 1e6 * 1e-3 + p["backgr"]
-        cac_nano = p["backgr"]
+        if self._reads_nanodomain:
+            # A local calcium concentration at the mouth of a channel, far higher than
+            # the bulk cytosolic value and decaying over nanometres. It is what gates
+            # the BK-type channels here.
+            cao_nano = (
+                np.abs(p["gsc"] * (v - p["eca"]) * 1e-3)
+                / (8.0 * np.pi * p["r"] * p["d"] * p["F"])
+                * np.exp(-p["r"] / np.sqrt(p["d"] / (p["kb"] * p["b"])))
+            ) * 1e6 * 1e-3 + p["backgr"]
+            cac_nano = p["backgr"]
 
-        def rates(
-            w_om: float,
-            w_yx: float,
-            k_yx: float,
-            n_yx: float,
-            w_op: float,
-            w_xy: float,
-            k_xy: float,
-            n_xy: float,
-        ) -> tuple[Any, Any, Any]:
-            kcm = w_om * np.exp(-w_yx * v) / (1.0 + (cac_nano / k_yx) ** n_yx)
-            kom = w_om * np.exp(-w_yx * v) / (1.0 + (cao_nano / k_yx) ** n_yx)
-            kop = w_op * np.exp(-w_xy * v) / (1.0 + (k_xy / cao_nano) ** n_xy)
-            return kcm, kom, kop
+            def rates(
+                w_om: float,
+                w_yx: float,
+                k_yx: float,
+                n_yx: float,
+                w_op: float,
+                w_xy: float,
+                k_xy: float,
+                n_xy: float,
+            ) -> tuple[Any, Any, Any]:
+                kcm = w_om * np.exp(-w_yx * v) / (1.0 + (cac_nano / k_yx) ** n_yx)
+                kom = w_om * np.exp(-w_yx * v) / (1.0 + (cao_nano / k_yx) ** n_yx)
+                kop = w_op * np.exp(-w_xy * v) / (1.0 + (k_xy / cao_nano) ** n_xy)
+                return kcm, kom, kop
 
-        # UNC-2-coupled set (BK and SLO-2) and EGL-19-coupled set (SLO-1, BK2).
-        kcm_a, kom_a, kop_a = rates(
-            p["wom"], p["wyx"], p["kyx"], p["nyx"], p["wop"], p["wxy"], p["kxy"], p["nxy"]
-        )
-        kcm_b, kom_b, kop_b = rates(
-            p["wom1"],
-            p["wyx1"],
-            p["kyx1"],
-            p["nyx1"],
-            p["wop1"],
-            p["wxy1"],
-            p["kxy1"],
-            p["nxy1"],
-        )
+            # UNC-2-coupled set (BK and SLO-2) and EGL-19-coupled set (SLO-1, BK2).
+            kcm_a, kom_a, kop_a = rates(
+                p["wom"], p["wyx"], p["kyx"], p["nyx"], p["wop"], p["wxy"], p["kxy"], p["nxy"]
+            )
+            kcm_b, kom_b, kop_b = rates(
+                p["wom1"],
+                p["wyx1"],
+                p["kyx1"],
+                p["nyx1"],
+                p["wop1"],
+                p["wxy1"],
+                p["kxy1"],
+                p["nxy1"],
+            )
 
-        alpha = inf["m_unc2"] / tau["m_unc2"]
-        beta = 1.0 / tau["m_unc2"] - alpha
-        alpha1 = inf["m_egl19"] / tau["m_egl19"]
-        beta1 = 1.0 / tau["m_egl19"] - alpha1
+            alpha = inf["m_unc2"] / tau["m_unc2"]
+            beta = 1.0 / tau["m_unc2"] - alpha
+            alpha1 = inf["m_egl19"] / tau["m_egl19"]
+            beta1 = 1.0 / tau["m_egl19"] - alpha1
 
-        def bk(
-            carrier: np.ndarray, a: np.ndarray, b_: np.ndarray, kcm: Any, kom: Any, kop: Any
-        ) -> tuple[Any, Any]:
-            denom = (kop + kom) * (kcm + a) + b_ * kcm
-            return carrier * kop * (a + b_ + kcm) / denom, (a + b_ + kcm) / denom
+            def bk(
+                carrier: np.ndarray, a: np.ndarray, b_: np.ndarray, kcm: Any, kom: Any, kop: Any
+            ) -> tuple[Any, Any]:
+                denom = (kop + kom) * (kcm + a) + b_ * kcm
+                return carrier * kop * (a + b_ + kcm) / denom, (a + b_ + kcm) / denom
 
-        inf["mbk"], tau["mbk"] = bk(s["m_unc2"], alpha, beta, kcm_a, kom_a, kop_a)
-        inf["mbk2"], tau["mbk2"] = bk(s["m_egl19"], alpha1, beta1, kcm_b, kom_b, kop_b)
-        # NOTE: the source computes minf_slo1 with `kop` from the UNC-2 rate set
-        # while using `kop2`/`kom2`/`kcm2` -- numerically identical duplicates of
-        # the UNC-2 set -- in the denominator. Reproduced as written rather than
-        # "corrected", because the published behaviour is what this must match.
-        inf["mslo1"], tau["mslo1"] = bk(s["m_egl19"], alpha1, beta1, kcm_a, kom_a, kop_a)
-        inf["mslo2"], tau["mslo2"] = bk(s["m_unc2"], alpha, beta, kcm_b, kom_b, kop_b)
+            inf["mbk"], tau["mbk"] = bk(s["m_unc2"], alpha, beta, kcm_a, kom_a, kop_a)
+            inf["mbk2"], tau["mbk2"] = bk(s["m_egl19"], alpha1, beta1, kcm_b, kom_b, kop_b)
+            # NOTE: the source computes minf_slo1 with `kop` from the UNC-2 rate set
+            # while using `kop2`/`kom2`/`kcm2` -- numerically identical duplicates of
+            # the UNC-2 set -- in the denominator. Reproduced as written rather than
+            # "corrected", because the published behaviour is what this must match.
+            inf["mslo1"], tau["mslo1"] = bk(s["m_egl19"], alpha1, beta1, kcm_a, kom_a, kop_a)
+            inf["mslo2"], tau["mslo2"] = bk(s["m_unc2"], alpha, beta, kcm_b, kom_b, kop_b)
 
         # --- KCNL (SK), gated by bulk calcium ------------------------------
-        ca = state[self.index("ca_intra1")]
-        inf["m_sk"] = ca / (p["k_sk2"] + ca)
-        tau["m_sk"] = p["t_sk"]
+        if "sk" in self.channels:
+            ca = state[self.index("ca_intra1")]
+            inf["m_sk"] = ca / (p["k_sk2"] + ca)
+            tau["m_sk"] = p["t_sk"]
 
         return inf, tau
 
@@ -608,18 +711,26 @@ class ConductanceModel:
             constants[k] = tau[name]
         nxt[rows] = target + (state[rows] - target) * np.exp(-dt_ms / constants)
 
-        # Intracellular calcium: influx from the three calcium currents, with a
-        # first-order return to background. The source only accumulates on influx.
-        i_ca = currents["unc2"] + currents["egl19"] + currents["cca1"]
-        alpha_ca = 1.0 / (2.0 * p["vol"] * p["fd"])
-        backgr2 = p["backgr2"]
-        ca = state[self.index("ca_intra1")]
-        d_ca = np.where(
-            i_ca < 0.0,
-            -p["fca"] * alpha_ca * i_ca - (ca - backgr2) / p["t_ca"],
-            (backgr2 - ca) / p["t_ca"],
-        )
-        nxt[self.index("ca_intra1")] = np.maximum(ca + dt_ms * d_ca, 0.0)
+        if self._reads_bulk_calcium:
+            # Intracellular calcium: influx from the three calcium currents, with a
+            # first-order return to background. The source only accumulates on influx.
+            # Only the calcium channels this model actually has. `currents` is keyed
+            # by self.channels, so naming all three unconditionally raised KeyError
+            # for any model carrying a subset -- AVAL has EGL-19 and neither UNC-2
+            # nor CCA-1. See docs/model_assumptions.md 5X.5.
+            i_ca = sum(
+                (currents[name] for name in _CALCIUM_CHANNELS if name in currents),
+                start=np.zeros_like(state[0]),
+            )
+            alpha_ca = 1.0 / (2.0 * p["vol"] * p["fd"])
+            backgr2 = p["backgr2"]
+            ca = state[self.index("ca_intra1")]
+            d_ca = np.where(
+                i_ca < 0.0,
+                -p["fca"] * alpha_ca * i_ca - (ca - backgr2) / p["t_ca"],
+                (backgr2 - ca) / p["t_ca"],
+            )
+            nxt[self.index("ca_intra1")] = np.maximum(ca + dt_ms * d_ca, 0.0)
 
         # External input is `i_ext - g_ext * V`, not a bare current.
         #

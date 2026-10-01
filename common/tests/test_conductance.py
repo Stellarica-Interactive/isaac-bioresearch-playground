@@ -12,8 +12,10 @@ import pytest
 
 from common.neural.conductance import (
     DEFAULT_DT_MS,
+    MODEL_CHANNELS,
     RMD_STATE_NAMES,
     ConductanceModel,
+    channels_for,
     load_parameters,
     model_provenance,
 )
@@ -282,5 +284,20 @@ def test_awc_gating_variables_stay_in_range() -> None:
 
 
 def test_an_undeclared_model_is_refused() -> None:
+    """Guessing a cell's channel complement is the one thing this must not do.
+
+    There are now two places a channel set may be declared -- MODEL_CHANNELS for
+    the hand-written 2019 models, and ``[source].channels`` in the generated 2024
+    files -- so this also guards that an id matching neither still fails with a
+    message about channel sets rather than about a missing path.
+    """
     with pytest.raises(KeyError, match="no channel set declared"):
         ConductanceModel.load("not_a_model")
+
+
+def test_a_generated_model_declares_its_own_channels() -> None:
+    """The 2024 cells are generated, so requiring a hand-added MODEL_CHANNELS
+    entry would add a step that can be forgotten -- and forgetting it would look
+    like an unknown model rather than a missing line."""
+    assert channels_for("aval_nicoletti2024") == ("egl19", "leak", "kir", "nca")
+    assert "aval_nicoletti2024" not in MODEL_CHANNELS
