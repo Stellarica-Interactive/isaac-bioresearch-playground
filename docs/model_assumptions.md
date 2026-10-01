@@ -3061,6 +3061,62 @@ uniform delay produces propagation, that is a statement about the mechanism rath
 than about a fitted gradient. If it does not, then c302's wave depends on the
 gradient being graded — which would be a sharper result than anything in §5T.
 
+## 5AA. A uniform conduction delay does not produce propagation
+
+§5Z identified the one mechanism c302 uses that this model lacks: delay in
+coupling. Tested as one uniform number rather than c302's eighteen hand-set ones,
+so that a result would be about the mechanism and not about a fitted gradient.
+Sixty seconds, 240 Hz, chemical transmission only.
+
+| delay | distance | amplitude | **phase** | B-type shared variance |
+|---|---|---|---|---|
+| scripted wave (control) | 7.216 BL | 20.99° | **+23.0°** | — |
+| 0 ms (control) | 0.994 BL | 16.67° | **−0.8°** | 99.3% |
+| 5 ms | 0.980 BL | 16.21° | **−0.7°** | — |
+| 20 ms | 1.205 BL | 15.94° | **−0.1°** | 93% |
+| 50 ms | 0.932 BL | 16.42° | **−0.7°** | 93% |
+| 100 ms | 1.056 BL | 16.07° | **−0.8°** | 90% |
+
+**No propagation at any delay.** Phase never leaves ±0.8° of zero. Amplitude is
+unchanged to within 5%. The synchrony that §5O measured at 99.3% falls to 90–93%,
+which is a marginal dent and not a mechanism.
+
+At 100 ms the body is driven into its joint limits — `bend 60.0°`, `pinned 35%`,
+`extent 0.07`, a tight coil — so the larger delays destabilise the mechanics
+without organising them.
+
+### 5AA.1 What this closes
+
+Eight mechanisms have now been tested and rejected, each with an argument behind
+it: gap-junction coupling, B-type bistability, the D-class antagonist, B-to-B
+mutual inhibition, the proprioceptive receptive-field delay, the sign policy for
+unsigned synapses, the body's drag anisotropy, and now conduction delay.
+
+The last of those was the only one the published literature pointed to that this
+project had not tried. So c302's travelling wave does **not** come from the fact
+of delay; it comes from the delay being *graded* — 0, 250, 500, 750, 1000, 1250,
+1500 ms along the body. A gradient of that shape is a phase gradient, and
+installing one would be installing the answer.
+
+### 5AA.2 Two retractions, same cause as three before it
+
+Both were reported before this table existed and both were wrong.
+
+**"The first real dent in the synchrony."** A twenty-second run gave 75% shared
+variance against the baseline's 99.3%, and was reported as the delay partially
+decorrelating the population. At sixty seconds it is 93%. The twenty-second
+window is transient (§5Q.2), and this is the fourth time a number from one has
+been quoted before its sixty-second version existed. The rule that keeps being
+relearned: **in this model, no number from a twenty-second run is reportable.**
+
+**"The larger delays diverged."** Three runs produced no output in a windowed
+sweep, crashing inside `articulation.get_dof_positions`, which is what non-finite
+joint positions look like — and 5 ms had already produced `pinned 39%`, so
+instability was a plausible reading. Run headless, all three complete normally.
+The crashes were the windowed Isaac session, not the physics. Diagnosing a
+numerical failure from a crash in a rendering loop was a guess presented as a
+mechanism.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
