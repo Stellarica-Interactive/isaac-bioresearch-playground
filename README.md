@@ -159,6 +159,97 @@ python tools/visualize_connectome.py --circuit command-interneurons -o circuit.p
 
 ---
 
+## Running the simulation
+
+Every command below is copy-pasteable. Isaac Sim is launched through its own
+Python, not the project venv.
+
+### Watch the worm
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --probe --tint-change
+```
+
+The connectome drives the body: body curvature into the B-type motor neurons,
+302 coupled ODEs, muscle activation, joint torque, movement, back to curvature.
+No scripted wave anywhere.
+
+Windowed runs default to 60 Hz physics so a cycle takes ~45 s of wall clock
+rather than ~3 minutes. **Do not quote numbers from a windowed run** -- pass
+`--physics-hz 240` for anything measured, and see
+[`model_assumptions.md`](docs/model_assumptions.md) §5Y for why.
+
+What to expect, so the run is not misleading: the animal coils and flexes but
+does **not** crawl. Its inter-joint phase is −0.8° against a real gait's +23.0°,
+so most of the distance it covers is a bent body being dragged. That is the open
+problem, written up in [`negative_result.md`](docs/negative_result.md), not a
+broken install.
+
+### The positive control -- what a gait looks like in the same body
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --seed-wave 180
+```
+
+A scripted sinusoidal wave instead of the connectome. Covers ~7 body lengths and
+visibly undulates. The difference between this run and the one above **is** the
+negative result, and it is far clearer to watch than to read.
+
+### Touch
+
+Interactive -- select the red sphere, press `W`, drag it onto the body:
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --probe --tint-change
+```
+
+Scripted and reproducible, with the control that matters:
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --poke 20:24:0.15 --sham 40:44
+```
+
+`--poke START:STOP:FRACTION` is seconds and position along the body (0 head,
+1 tail), so that is a head touch during seconds 20--24. `--sham 40:44` reads the
+same response over a window with **no touch at all**: whatever it reports is what
+the body's own motion contributes, and a real touch has to beat it. A sham window
+once produced the same −21 mV as a genuine touch, so the run withholds a verdict
+unless the response clears background by 2×.
+
+Expect the circuit to respond and the animal not to escape -- touch is a
+transient, so it is not blocked by the locomotion failure, but escaping needs
+locomotion that works.
+
+### Controls worth running
+
+```powershell
+# no muscle drive at all -- the body moves exactly 0.000 BL, so nothing is drift
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 0
+
+# remove VD and the animal locks into a ventral coil, from measured innervation
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --torque-scale 3e-3 --lesion VD
+
+# randomise which synapses excite and which inhibit, keeping the anatomy
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --shuffle-sign
+```
+
+`--help` lists all forty flags. Several exist only to keep results honest:
+`--lesion`, `--no-proprioception`, `--shuffle-sign`, `--sham`, `--unknown-sign`.
+
+### The conductance-based neuron models
+
+```powershell
+.venv\Scripts\python tools\show_neuron_models.py
+```
+
+Nine single-cell models from published electrophysiology -- RMD and AWC^on from
+Nicoletti et al. 2019, and AVAL, AVAR, AIY, RIM, VA5, VD5 and VB6 from Nicoletti
+et al. 2024 -- with each cell's resting potential and the sum of its currents
+there. VB6 reproduces its published resting potential to 0.22 mV (§5AD).
+
+These are **not yet wired into the Isaac loop**, so they change nothing you can
+see in the viewport.
+
 ## Using it as a library
 
 ```python

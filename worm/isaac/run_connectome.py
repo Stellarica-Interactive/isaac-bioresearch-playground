@@ -597,6 +597,13 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         add_ground_grid(plan)
     poke = [float(x) for x in args.poke.split(":")] if args.poke else None
     sham = [float(x) for x in args.sham.split(":")] if args.sham else None
+    if sham is not None and poke is not None and poke[0] < sham[1] and sham[0] < poke[1]:
+        # A sham that overlaps the poke is measuring the touch it is the control
+        # for, which makes both numbers meaningless.
+        raise SystemExit(
+            f"--sham {sham[0]:g}:{sham[1]:g} overlaps --poke {poke[0]:g}:{poke[1]:g}. "
+            "The sham window must contain no touch; move one of them."
+        )
     probe_path = add_probe(plan, collider=args.probe_pushes) if (args.probe or poke) else None
     probe = RigidPrim(probe_path) if probe_path else None
     tint = ActivityTint.build(plan.n_segments, probe_path=probe_path) if not args.no_tint else None
@@ -648,6 +655,11 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
     start = _centroid(links)
     touching = False
+    # The sham window's own state, so it cannot be confused with a real touch.
+    sham_open = False
+    sham_peak: dict[str, float] = {}
+    sham_baseline: dict[str, float] = {}
+    sham_drive: np.ndarray | None = None
     # Rolling history, so a touch is always reported against what the network was
     # doing anyway. Without this the readout cannot tell a response from noise --
     # and with --noise-pa on it reported pure noise as a reversal.
@@ -688,32 +700,39 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             runtime.inject_many(chemo.currents())
         if not args.no_proprioception:
             runtime.inject_many(proprio.currents(angles))
+        # The sham keeps its own state and does not exclude the probe. It used to
+        # be the `if` of an if/elif whose `elif` drove the poke, so passing
+        # --poke and --sham together silently ran only the sham -- and measuring a
+        # touch against a no-touch window in the same run is the only thing
+        # either flag is for. The separate state is necessary too: sharing
+        # `touching` let the sham's open window be reported as a touch release.
         if sham is not None:
             # Same statistic, no stimulus. Anything it reports is confound.
             if sham[0] <= t <= sham[1]:
-                if not touching:
-                    baseline = _command_state(runtime)
-                    drive_at_contact = (
+                if not sham_open:
+                    sham_baseline = _command_state(runtime)
+                    sham_drive = (
                         muscle_model.dorsal_activation() - muscle_model.ventral_activation()
                     )
                     print(f"    t={t:5.1f}s  SHAM window opens (no touch)")
-                touching = True
-                peak = {
-                    k: max(peak.get(k, 0.0), v - baseline[k], key=abs)
+                sham_open = True
+                sham_peak = {
+                    k: max(sham_peak.get(k, 0.0), v - sham_baseline[k], key=abs)
                     for k, v in _command_state(runtime).items()
                 }
-            elif touching:
+            elif sham_open:
                 now = muscle_model.dorsal_activation() - muscle_model.ventral_activation()
-                assert drive_at_contact is not None
-                shift = float(np.abs(now - drive_at_contact).max())
-                rest = max(float(np.abs(drive_at_contact).max()), 1e-12)
+                assert sham_drive is not None
+                shift = float(np.abs(now - sham_drive).max())
+                rest = max(float(np.abs(sham_drive).max()), 1e-12)
                 print(
                     f"    t={t:5.1f}s  SHAM closes  -> "
-                    + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(peak.items()))
+                    + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(sham_peak.items()))
                     + f"; muscle drive moved {100 * shift / rest:.1f}%"
                 )
-                touching, peak = False, {}
-        elif probe is not None:
+                sham_open, sham_peak = False, {}
+
+        if probe is not None:
             if poke is not None:
                 _drive_poke(probe, links, plan, t, poke)
             contact, ventral = _probe_contact(probe, links, plan)
@@ -956,7 +975,21 @@ def _drive_poke(
         target[:2] += normal * reach
     else:
         # Parked well clear of the animal, where it contacts nothing.
-        target = positions.mean(axis=0) + np.array([0.0, 0.5 * plan.total_length_m, 0.0])
+        #
+        # Half a body length from the centroid is not clear enough. The animal
+        # coils -- `extent` reaches 0.15 -- and drifts, so a probe parked that
+        # close registers contact again once the body swings past it. Observed:
+        # spurious touches at t=29.6 s and t=35.9 s from a poke that ended at 24,
+        # the second of them inside a sham window, which is the one place a
+        # stray touch destroys the measurement it is the control for.
+        #
+        # Three body lengths, measured from the furthest segment rather than the
+        # centroid, so a coiled animal cannot reach it.
+        away = positions[:, :2] - positions[:, :2].mean(axis=0)
+        reach_out = float(np.linalg.norm(away, axis=1).max())
+        target = positions.mean(axis=0) + np.array(
+            [0.0, reach_out + 3.0 * plan.total_length_m, 0.0]
+        )
     if not np.all(np.isfinite(target)):
         return  # the body has already diverged; do not feed PhysX a NaN pose
     # Orientation is passed explicitly: PhysX rejects a pose whose quaternion it
