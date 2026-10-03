@@ -82,6 +82,28 @@ parser.add_argument("--damping", type=float, default=2e-5)
 parser.add_argument("--armature", type=float, default=2.0e-8)
 parser.add_argument("--drag-ratio", type=float, default=None)
 parser.add_argument(
+    "--quasistatic",
+    action="store_true",
+    help="Solve the body's force balance instead of integrating its momentum, "
+    "and drive the Isaac articulation kinematically. A worm on agar is deeply "
+    "overdamped -- a segment's velocity relaxes in 2.35 ms against a 4.17 ms "
+    "step -- so the inertial solver's travel depends on the timestep: the same "
+    "scripted gait covers 7.216 BL at 240 Hz and 1.442 BL at 60 Hz. The "
+    "quasi-static body agrees with itself to 3 per cent across an eightfold "
+    "range of rates. See model_assumptions 5Y, 5AE and worm/body/quasistatic.py.",
+)
+parser.add_argument(
+    "--drag-tangential",
+    type=float,
+    default=None,
+    help="Tangential drag coefficient, N s/m per unit segment length. The "
+    "committed 2e-3 is ASSUMED -- chosen alongside the torque scale so the body "
+    "moves at a plausible speed, which leaves the pair with one constraint "
+    "between them (see drag.py). Worth sweeping: at the committed values a "
+    "uniform muscle activation of 0.05 curls the animal from 48 mm to 5 mm in one "
+    "second, so the muscles can out-torque the medium by an order of magnitude.",
+)
+parser.add_argument(
     "--proprioceptive-mv",
     type=float,
     default=20.0,
@@ -354,6 +376,7 @@ from worm.body.muscles import (  # noqa: E402
     sine_wave_drive,
 )
 from worm.body.neural_bridge import MuscleDrive, Proprioception  # noqa: E402
+from worm.body.quasistatic import QuasiStaticBody  # noqa: E402
 from worm.body.touch import TOUCH_RECEPTORS, TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
@@ -588,7 +611,11 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         ),
     )
     drag = GroundDrag(
-        plan, DragParameters(**({"ratio": args.drag_ratio} if args.drag_ratio is not None else {}))
+        plan,
+        DragParameters(
+            **({"ratio": args.drag_ratio} if args.drag_ratio is not None else {}),
+            **({"tangential": args.drag_tangential} if args.drag_tangential is not None else {}),
+        ),
     )
 
     root_path, joint_paths = build_scene(plan, self_collision=args.self_collision)
@@ -611,6 +638,20 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     masses = plan.masses_kg()
     articulation = Articulation(root_path)
     links = RigidPrim([f"{root_path}/segment_{i:02d}" for i in range(plan.n_segments)])
+
+    # The quasi-static body owns the configuration when enabled; the
+    # articulation becomes a kinematic display of it rather than a solver.
+    quasistatic = (
+        QuasiStaticBody(plan, drag=drag.params, muscle=muscle_model.params)
+        if args.quasistatic
+        else None
+    )
+    if quasistatic is not None:
+        print(
+            "  body: quasi-static force balance, articulation driven "
+            "kinematically. Momentum is not integrated -- see "
+            "worm/body/quasistatic.py for why that is the right regime."
+        )
 
     omni.timeline.get_timeline_interface().play()
     simulation_app.update()
@@ -653,6 +694,29 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             + ". A gait here is Boyle's, not the connectome's."
         )
 
+    def drive_body(torques: np.ndarray) -> None:
+        """Advance the body by one step, by whichever solver is in use."""
+        if quasistatic is None:
+            articulation.set_dof_efforts(torques.reshape(1, -1), dof_indices=dofs)
+            _apply_drag(links, drag, dt, masses)
+            return
+        quasistatic.step(torques, dt_s=dt)
+        # Written straight into the articulation: the force balance has already
+        # determined the configuration, so PhysX is being told where the body is
+        # rather than asked to work it out.
+        heading = quasistatic.heading
+        articulation.set_world_poses(
+            positions=np.array([[*quasistatic.origin, 0.0]], dtype=np.float32),
+            orientations=np.array(
+                [[np.cos(heading / 2.0), 0.0, 0.0, np.sin(heading / 2.0)]],
+                dtype=np.float32,
+            ),
+        )
+        articulation.set_dof_positions(
+            quasistatic.joint_angles.reshape(1, -1).astype(np.float32),
+            dof_indices=dofs,
+        )
+
     start = _centroid(links)
     touching = False
     # The sham window's own state, so it cannot be confused with a real touch.
@@ -685,7 +749,10 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
     for _ in range(int(args.seconds * args.physics_hz)):
         angles = np.asarray(
-            articulation.get_dof_positions(dof_indices=dofs), dtype=np.float64
+            quasistatic.joint_angles
+            if quasistatic is not None
+            else articulation.get_dof_positions(dof_indices=dofs),
+            dtype=np.float64,
         ).reshape(-1)
 
         # --- body -> nervous system -------------------------------------
@@ -821,10 +888,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 * sine_wave_drive(plan, t * 1000.0, frequency_hz=0.5, wavelength_fraction=0.65),
                 dt_ms=dt * 1000.0,
             )
-            articulation.set_dof_efforts(
-                muscle_model.joint_torques().reshape(1, -1), dof_indices=dofs
-            )
-            _apply_drag(links, drag, dt, masses)
+            drive_body(muscle_model.joint_torques())
             simulation_app.update()
             t += dt
             history.append(angles.copy())
@@ -846,8 +910,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 touching=touching,
                 reference=drive_reference if args.tint_change else None,
             )
-        articulation.set_dof_efforts(muscle_model.joint_torques().reshape(1, -1), dof_indices=dofs)
-        _apply_drag(links, drag, dt, masses)
+        drive_body(muscle_model.joint_torques())
 
         simulation_app.update()
         t += dt

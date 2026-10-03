@@ -3595,6 +3595,87 @@ subject to prove the subject is what you think it is.** Angular momentum,
 torque and heading were all correct and all useless without the body's extent
 beside them.
 
+## 5AF. A quasi-static body, and the negative result survives it
+
+§5AE established that the inertial body solver is in the wrong regime: a
+segment's velocity relaxes in 2.35 ms against a 4.17 ms step, so drag erases
+momentum faster than the simulator advances, and the same scripted gait covered
+7.216 BL at 240 Hz against 1.442 BL at 60 Hz. Making that solver correct needs
+``c dt/m`` well below one -- about 4250 Hz, some forty-five minutes of wall clock
+per ten simulated seconds.
+
+`worm/body/quasistatic.py` drops inertia instead, which is what the medium
+already does physically and what the standard neuromechanical models do. At every
+instant the body moves at the velocity that makes the external forces balance: a
+3x3 linear solve per step, no stability constraint.
+
+### 5AF.1 It is timestep-independent, and faster
+
+| | 60 Hz | 240 Hz | 480 Hz |
+|---|---|---|---|
+| quasi-static, scripted gait | 3.069 BL | 3.000 BL | 2.988 BL |
+
+2.7% spread across an eightfold range of rates, against fivefold for the solver
+it replaces. The body solve runs at **238x real time** at 60 Hz — 0.04 s for ten
+simulated seconds — so the mechanics are no longer anywhere near the bottleneck.
+
+In the Isaac runner, driving the articulation kinematically from the force
+balance:
+
+| | 240 Hz | 60 Hz |
+|---|---|---|
+| scripted wave, quasi-static | 8.976 BL | 9.513 BL |
+| scripted wave, inertial | 7.216 BL | 1.442 BL |
+
+### 5AF.2 Anisotropy is the mechanism, isolated
+
+| drag ratio | travel |
+|---|---|
+| 1 (isotropic) | 0.021 BL |
+| 3 (Rabets lower bound) | 0.890 BL |
+| 10 (Rabets upper bound) | 2.268 BL |
+| 20 (committed) | 3.000 BL |
+
+With equal drag along and across the body every push forward is matched by a
+sideways slip and the animal goes nowhere. This is the clearest demonstration in
+the project that the thrust comes from the medium rather than from a numerical
+artefact — and at the *measured* anisotropy of 3 to 10 the body still crawls, so
+the physics no longer depends on our above-measurement ratio of 20 (§5U).
+
+### 5AF.3 The connectome still does not locomote
+
+| | distance | amplitude | **phase** | period |
+|---|---|---|---|---|
+| scripted wave, quasi-static | 8.976 BL | 16.51° | **+23.0°** | 2.0 s |
+| connectome, quasi-static, 240 Hz | 0.469 BL | 15.52° | **−0.6°** | 12.0 s |
+| connectome, quasi-static, 60 Hz | 0.387 BL | 15.45° | **−0.8°** | 12.0 s |
+| connectome, inertial, 240 Hz | 0.994 BL | 16.67° | −0.8° | 12.0 s |
+
+**The failure was never mechanical.** With the body solver in the correct regime
+the inter-joint phase is unchanged at −0.6°, against +23.0° for a real gait in the
+same body. Amplitude is unchanged too, as it must be: nothing about the neural
+output changed.
+
+What does change is the honest distance. The connectome covers **0.4 to 0.5 body
+lengths** in sixty seconds, not the 0.994 the inertial solver reported — that
+figure carried timestep-dependent travel which §5AE could not separate from
+locomotion. Every distance in §5Q through §5U should be read as an upper bound
+for the same reason; the phase columns are unaffected, and they are what the nine
+rejected hypotheses rest on.
+
+### 5AF.4 What the new solver does not do
+
+No contact and no self-collision: it knows only drag. Touch is unaffected because
+the touch model is already proximity-based and the probe deliberately carries no
+collider (§5D), but `--self-collision` has no effect under `--quasistatic` and a
+body that should not pass through itself needs a separate check.
+
+The joints are also closed separately, from their own overdamped dynamics rather
+than from the full generalised force balance including the medium's resistance to
+bending. Defensible because the joints are heavily overdamped on their own —
+damping ratio 7 to 49, measured — but it lets the body change shape slightly too
+freely, which will overestimate amplitude and therefore thrust.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
