@@ -46,15 +46,14 @@ solution is exactly zero net displacement, which the tests assert.
 What is simplified, and what that costs
 ---------------------------------------
 
-**The joints are closed separately.** Their rates come from their own
-overdamped dynamics, ``qdot = (torque - k q) / b``, rather than from the full
-generalised force balance including the medium's resistance to bending. That is
-defensible here because the joints are heavily overdamped on their own -- damping
-ratio 7 for the armature and 49 for a segment, measured -- so their own damping
-dominates. It is still a simplification: the medium resists shape change as well
-as translation, and that resistance is not in the joint closure. The consequence
-is that the body changes shape slightly too freely, which will overestimate
-amplitude and therefore thrust.
+**The joints were closed separately in the first version, and should not have
+been.** Their rates came from their own damping alone, ``qdot = (torque - k q)/b``,
+leaving the medium's resistance to *bending* out. The shape then changed too
+freely, and the zero-net-torque condition answered the large shape rates with a
+large counter-rotation of the whole body -- visible in the viewport as a worm
+yawing back and forth rather than travelling. Every configuration rate is now an
+unknown of the same balance, so the medium resists bending through the same
+``J^T D J`` that resists translation.
 
 **No contact, no self-collision.** This solver knows only drag. The existing
 touch model is already proximity-based rather than contact-based -- the probe
@@ -71,11 +70,17 @@ import numpy as np
 from worm.body.drag import DragParameters
 from worm.body.geometry import BodyPlan
 from worm.body.muscles import MuscleParameters
-
-#: Joint limit, radians. The same ceiling the Isaac articulation enforces, kept
-#: here so the two solvers constrain the body identically -- a quasi-static body
-#: free to fold past 60 degrees would not be comparable with the committed runs.
 from worm.isaac_limits import JOINT_LIMIT_RAD
+
+#: How close to a joint limit counts as being at it, radians.
+#:
+#: ``JOINT_LIMIT_RAD`` is the same 60 degree ceiling the Isaac articulation
+#: enforces, imported rather than restated so the two solvers constrain the body
+#: identically -- one free to fold further would not be comparable with the
+#: committed runs. This tolerance is one part in ten thousand of it: far below
+#: any angle that matters biologically, and far above the rounding of a single
+#: integration step.
+_LIMIT_TOL = 1.0e-4 * JOINT_LIMIT_RAD
 
 
 def _perp(v: np.ndarray) -> np.ndarray:
@@ -123,64 +128,101 @@ class QuasiStaticBody:
 
     # -- dynamics ----------------------------------------------------------
 
-    def _joint_rates(self, torques: np.ndarray) -> np.ndarray:
-        """Overdamped joint dynamics: ``b qdot = torque - k q``.
+    def _jacobian(self) -> np.ndarray:
+        """Segment velocities per configuration rate, shape ``(n, 2, 3 + joints)``.
 
-        Closed separately from the body's rigid motion; see the module
-        docstring for why that is defensible here and what it costs.
-        """
-        restoring = self.muscle.joint_stiffness * self.joint_angles
-        return (np.asarray(torques, dtype=np.float64) - restoring) / (self.muscle.joint_damping)
-
-    def _solve_rigid_motion(self, rates: np.ndarray) -> np.ndarray:
-        """``(vx, vy, omega)`` such that no net force or torque acts.
-
-        Each segment's velocity is ``A_i u + b_i``, linear in the rigid motion
-        ``u`` with ``b_i`` from the shape change. Substituting into
-        ``sum -D_i v_i = 0`` and ``sum r_i x (-D_i v_i) = 0`` gives a 3x3 system.
+        Columns are: translation in x, translation in y, rotation about the first
+        node, then one per joint. A joint swings everything downstream of it
+        about its own node, which is why its column is ``perp(centre - node)``.
         """
         length = self.segment_length_m
         directions = self._directions()
-        normals = _perp(directions)
+        nodes = self.nodes()
         centres = self.segment_centres()
-        # Positions relative to the first node, which is the reference point the
-        # rotation column and the torque row are both written about.
-        arms = centres - self.origin
+        n, joints = self.plan.n_segments, self.plan.n_joints
 
-        # Shape contribution. Segment i's angular rate from bending alone is the
-        # sum of the joint rates before it; the node it starts from has already
-        # accumulated the swing of every segment upstream.
-        segment_rates = np.concatenate([[0.0], np.cumsum(rates)])
-        swing = length * segment_rates[:, None] * normals
-        node_shape = np.vstack([np.zeros((1, 2)), np.cumsum(swing, axis=0)[:-1]])
-        b = node_shape + 0.5 * swing
+        jac = np.zeros((n, 2, 3 + joints), dtype=np.float64)
+        jac[:, 0, 0] = 1.0
+        jac[:, 1, 1] = 1.0
+        jac[:, :, 2] = _perp(centres - self.origin)
+        # Joint j moves segment i only if it lies upstream of it.
+        for j in range(joints):
+            downstream = np.arange(n) > j
+            jac[downstream, :, 3 + j] = _perp(centres[downstream] - nodes[j + 1])
+        del length, directions
+        return jac
 
-        # Rotation about the reference point contributes perp(arm) per unit omega.
-        rotation = _perp(arms)
+    def _drag_tensors(self) -> np.ndarray:
+        """Anisotropic drag per segment as a 2x2 tensor.
 
-        # Anisotropic drag as a tensor per segment.
-        c_par, c_perp = self.drag.tangential, self.drag.perpendicular
-        d_tensor = c_par * np.einsum("ij,ik->ijk", directions, directions) + (
-            c_perp * np.einsum("ij,ik->ijk", normals, normals)
+        ``c_par t t^T + c_perp n n^T`` -- the same coefficients as
+        :mod:`worm.body.drag`, written so they can enter a linear solve. The
+        difference between the two coefficients is the entire reason undulation
+        becomes thrust; with them equal the solution is no net travel.
+        """
+        directions = self._directions()
+        normals = _perp(directions)
+        return self.drag.tangential * np.einsum(
+            "ij,ik->ijk", directions, directions
+        ) + self.drag.perpendicular * np.einsum("ij,ik->ijk", normals, normals)
+
+    def _solve_rates(self, joint_torques: np.ndarray) -> np.ndarray:
+        """``(vx, vy, omega, qdot)`` from one generalised force balance.
+
+        The three rigid rows are homogeneous: no external force or torque acts on
+        the animal beyond the ground it is pushing against. The joint rows carry
+        the muscle torque against the passive stiffness, and the medium resists
+        bending through the same ``J^T D J`` that resists translation -- which is
+        what the earlier two-stage version left out.
+
+        Joints held at their limit are **locked out of the unknowns** and the
+        balance re-solved over the rest, rather than solved freely and then
+        clipped. Clipping is not a harmless safety net here: the rigid rates are
+        solved jointly with ``qdot``, so discarding part of ``qdot`` leaves a
+        velocity field that no longer satisfies zero net torque, and the leftover
+        rotation accumulates every step without bound. A uniform drive of
+        1e-3 N m saturates all 23 joints and spun the body at **-26814 deg/s,
+        sustained**. The committed drive does not reach that, so this is not what
+        anyone has seen on screen; it fires on any drive strong enough to pin a
+        joint. A joint limit is an *internal* constraint, equal and
+        opposite across the joint like the muscle torque, so it cannot torque the
+        animal as a whole; locking the joint and re-solving is therefore exact,
+        not an approximation. See model_assumptions 5AF.6.
+        """
+        jac = self._jacobian()
+        drag = self._drag_tensors()
+        # J^T D J, summed over segments.
+        matrix = np.einsum("nai,nab,nbj->ij", jac, drag, jac)
+        # The joints' own internal damping, which is not part of the medium.
+        joints = self.plan.n_joints
+        matrix[3:, 3:] += np.eye(joints) * self.muscle.joint_damping
+
+        forces = np.zeros(3 + joints, dtype=np.float64)
+        forces[3:] = np.asarray(joint_torques, dtype=np.float64) - (
+            self.muscle.joint_stiffness * self.joint_angles
         )
 
-        # A_i columns: translation in x, translation in y, rotation.
-        a_cols = np.zeros((self.plan.n_segments, 2, 3), dtype=np.float64)
-        a_cols[:, 0, 0] = 1.0
-        a_cols[:, 1, 1] = 1.0
-        a_cols[:, :, 2] = rotation
-
-        # Force rows and the torque row, which is perp(arm) dotted into them.
-        d_a = np.einsum("nij,njk->nik", d_tensor, a_cols)
-        d_b = np.einsum("nij,nj->ni", d_tensor, b)
-        matrix = np.zeros((3, 3), dtype=np.float64)
-        matrix[:2] = d_a.sum(axis=0)
-        matrix[2] = np.einsum("ni,nik->k", rotation, d_a)
-        rhs = np.zeros(3, dtype=np.float64)
-        rhs[:2] = -d_b.sum(axis=0)
-        rhs[2] = -np.einsum("ni,ni->", rotation, d_b)
-
-        return np.linalg.solve(matrix, rhs)
+        # Active-set iteration. Each pass solves over the free joints, then locks
+        # any that the solution drives further into a limit they already sit on.
+        # Locking only ever shrinks the free set, so this terminates in at most
+        # one pass per joint; in practice it converges in one or two.
+        locked = np.zeros(joints, dtype=bool)
+        at_high = self.joint_angles >= JOINT_LIMIT_RAD - _LIMIT_TOL
+        at_low = self.joint_angles <= -JOINT_LIMIT_RAD + _LIMIT_TOL
+        rates = np.zeros(3 + joints, dtype=np.float64)
+        for _ in range(joints + 1):
+            free = np.flatnonzero(~locked)
+            index = np.concatenate([[0, 1, 2], 3 + free])
+            solved = np.linalg.solve(matrix[np.ix_(index, index)], forces[index])
+            rates = np.zeros(3 + joints, dtype=np.float64)
+            rates[:3] = solved[:3]
+            rates[3 + free] = solved[3:]
+            pushing_out = (at_high & (rates[3:] > 0.0)) | (at_low & (rates[3:] < 0.0))
+            newly = pushing_out & ~locked
+            if not newly.any():
+                break
+            locked |= newly
+        return rates
 
     def step(self, joint_torques: np.ndarray, dt_s: float) -> None:
         """Advance the configuration by ``dt_s``.
@@ -188,39 +230,67 @@ class QuasiStaticBody:
         No inertial stability limit: the only thing the step has to resolve is
         the change in shape, so 60 Hz against a two-second gait is ample.
         """
-        rates = self._joint_rates(joint_torques)
-        rigid = self._solve_rigid_motion(rates)
-        if not np.all(np.isfinite(rigid)):
+        rates = self._solve_rates(joint_torques)
+        if not np.all(np.isfinite(rates)):
             raise FloatingPointError("force balance has no finite solution")
 
-        self.origin = self.origin + dt_s * rigid[:2]
-        self.heading = float(self.heading + dt_s * rigid[2])
-        limit = JOINT_LIMIT_RAD
-        self.joint_angles = np.clip(self.joint_angles + dt_s * rates, -limit, limit)
+        self.origin = self.origin + dt_s * rates[:2]
+        self.heading = float(self.heading + dt_s * rates[2])
+        # The solve already holds saturated joints still, so this only trims the
+        # fraction of a step by which a joint first reaches its limit. It must
+        # stay: without it a joint lands just past the limit on the step that
+        # reaches it and never registers as being *at* it.
+        self.joint_angles = np.clip(
+            self.joint_angles + dt_s * rates[3:], -JOINT_LIMIT_RAD, JOINT_LIMIT_RAD
+        )
 
     # -- diagnostics -------------------------------------------------------
+
+    def min_self_distance_m(self) -> float:
+        """Closest approach between two non-neighbouring segments, minus their radii.
+
+        Positive is clear, zero is touching, negative is interpenetrating. This
+        solver has no self-collision, so nothing prevents a negative value; the
+        point of measuring is to find out whether that permission is ever used.
+
+        Geometry says it should rarely bind. The body is at most 3.25 mm in
+        radius and a closed loop of it has a radius of 15.9 mm, so opposite sides
+        of a coil clear each other by a factor of five, and even the tightest
+        hairpin the 60 degree joint limit allows comes to about 4.2 mm. Only a
+        shape that doubles back more than once -- a spiral rather than a coil --
+        could intersect. See model_assumptions 5AF.7.
+
+        Immediate neighbours are skipped: adjacent segments share a node and so
+        always "overlap" by construction, which says nothing about the body
+        folding onto itself.
+        """
+        centres = self.segment_centres()
+        radii = np.array(
+            [self.plan.radius_at(i) for i in range(self.plan.n_segments)],
+            dtype=np.float64,
+        )
+        gap = np.linalg.norm(centres[:, None, :] - centres[None, :, :], axis=-1) - (
+            radii[:, None] + radii[None, :]
+        )
+        # Mask the diagonal and the two off-diagonals: self, and the neighbours
+        # that share a node.
+        index = np.arange(self.plan.n_segments)
+        neighbours = np.abs(index[:, None] - index[None, :]) <= 1
+        return float(gap[~neighbours].min())
 
     def residual_force_and_torque(self, joint_torques: np.ndarray) -> tuple[float, float]:
         """How well the solved motion balances, for tests to assert on.
 
-        Should be zero to solver precision. A non-zero residual means the body is
-        being pushed by something that is not the ground.
+        Zero to solver precision. A non-zero residual means the body is being
+        pushed by something that is not the ground -- the failure that made a
+        frozen body appear to rotate for an hour (model_assumptions 5AE).
         """
-        rates = self._joint_rates(joint_torques)
-        rigid = self._solve_rigid_motion(rates)
-        directions = self._directions()
-        normals = _perp(directions)
+        rates = self._solve_rates(joint_torques)
+        jac = self._jacobian()
+        drag = self._drag_tensors()
+        velocities = np.einsum("naj,j->na", jac, rates)
+        forces = -np.einsum("nab,nb->na", drag, velocities)
         arms = self.segment_centres() - self.origin
-        c_par, c_perp = self.drag.tangential, self.drag.perpendicular
-        d_tensor = c_par * np.einsum("ij,ik->ijk", directions, directions) + (
-            c_perp * np.einsum("ij,ik->ijk", normals, normals)
-        )
-        length = self.segment_length_m
-        segment_rates = np.concatenate([[0.0], np.cumsum(rates)])
-        swing = length * segment_rates[:, None] * normals
-        node_shape = np.vstack([np.zeros((1, 2)), np.cumsum(swing, axis=0)[:-1]])
-        velocities = rigid[:2] + rigid[2] * _perp(arms) + node_shape + 0.5 * swing
-        forces = -np.einsum("nij,nj->ni", d_tensor, velocities)
         net_force = float(np.linalg.norm(forces.sum(axis=0)))
         net_torque = float(np.sum(arms[:, 0] * forces[:, 1] - arms[:, 1] * forces[:, 0]))
         return net_force, net_torque

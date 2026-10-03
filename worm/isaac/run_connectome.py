@@ -705,8 +705,17 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         # determined the configuration, so PhysX is being told where the body is
         # rather than asked to work it out.
         heading = quasistatic.heading
+        # The solver's origin is node 0, the nose tip; the root prim is built at
+        # segment 0's *centre*, half a segment ahead of it. Writing the nose
+        # position straight into the root pose shifts the whole rendered body
+        # 2.08 mm back along its own heading -- 2 per cent of a body length, and
+        # it reaches the sensory loop, because touch and the nose position are
+        # read back out of the articulation rather than from the solver.
+        root = quasistatic.origin + 0.5 * quasistatic.segment_length_m * np.array(
+            [np.cos(heading), np.sin(heading)]
+        )
         articulation.set_world_poses(
-            positions=np.array([[*quasistatic.origin, 0.0]], dtype=np.float32),
+            positions=np.array([[*root, 0.0]], dtype=np.float32),
             orientations=np.array(
                 [[np.cos(heading / 2.0), 0.0, 0.0, np.sin(heading / 2.0)]],
                 dtype=np.float32,
@@ -895,6 +904,17 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             if motor_idx.size:
                 motor_trace.append(runtime.state[1, motor_idx].copy())
                 motor_v.append(runtime.state[0, motor_idx].copy())
+            # The same follow and report as the main loop below. This branch
+            # used to `continue` straight past both, so the scripted wave -- the
+            # one path that actually crawls, several body lengths of it -- left
+            # the frame within seconds and printed nothing until FINAL. The
+            # positive control the README tells people to watch was the one run
+            # nobody could see, in the viewport or in the output.
+            if len(history) % 4 == 0:
+                camera.follow(_centroid(links))
+            if t - reported >= args.report_every:
+                reported = t
+                _report(t, start, links, plan, angles, history, hz=args.physics_hz)
             continue
 
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
@@ -1204,6 +1224,20 @@ def _motor_phase(trace: list[np.ndarray]) -> tuple[float, float]:
     return float(np.mean(adjacent)), shared
 
 
+def _min_self_distance(xy: np.ndarray, plan: BodyPlan) -> float:
+    """Closest approach between non-neighbouring segments, minus their radii.
+
+    Immediate neighbours are skipped: they share a node, so they always overlap
+    by construction, which says nothing about the body folding onto itself.
+    """
+    radii = np.array([plan.radius_at(i) for i in range(plan.n_segments)], dtype=np.float64)
+    gap = np.linalg.norm(xy[:, None, :] - xy[None, :, :], axis=-1) - (
+        radii[:, None] + radii[None, :]
+    )
+    index = np.arange(plan.n_segments)
+    return float(gap[~(np.abs(index[:, None] - index[None, :]) <= 1)].min())
+
+
 def _report(  # noqa: PLR0913
     t: float,
     start: np.ndarray,
@@ -1236,6 +1270,14 @@ def _report(  # noqa: PLR0913
     # Fraction of joints pinned against the 60 deg limit. Anything above zero
     # means the mechanics, not the nervous system, are setting the body shape.
     saturated = float(np.mean(np.abs(np.degrees(angles)) > 59.0))
+    # Closest approach between two non-neighbouring segments, minus their radii:
+    # positive is clear, negative is the body passing through itself. Neither
+    # body solver prevents it -- the quasi-static one has no contact at all, and
+    # the articulation only collides with --self-collision -- so this says
+    # whether that permission is being used. What binds is the nose meeting the
+    # tail, where the body is thinnest: 1.09 mm of radius each way, so a closing
+    # coil has 2.18 mm of clearance and no more. See model_assumptions 5AF.7.
+    clear_mm = _min_self_distance(xyz[:, :2], plan) * 1e3
     print(
         f"  {label}  moved {np.linalg.norm(delta) * 1e3:7.2f} mm "
         f"({np.linalg.norm(delta) / plan.total_length_m:5.3f} BL)  "
@@ -1245,7 +1287,8 @@ def _report(  # noqa: PLR0913
         # measurement, and phase is meaningless without one. See common/body/gait.py.
         f"period {f'{gait.period_s:4.1f}s' if np.isfinite(gait.period_s) else '  -- '}  "
         f"travel {gait.travel:+5.2f}  "
-        f"extent {extent:4.2f}  pinned {saturated:4.0%}  head {heading:+7.1f}deg"
+        f"extent {extent:4.2f}  pinned {saturated:4.0%}  head {heading:+7.1f}deg  "
+        f"clear {clear_mm:+6.2f}mm"
     )
     if final:
         print(

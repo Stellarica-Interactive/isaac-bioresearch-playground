@@ -167,12 +167,19 @@ Python, not the project venv.
 ### Watch the worm
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --probe --tint-change
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --probe --tint-change
 ```
 
 The connectome drives the body: body curvature into the B-type motor neurons,
 302 coupled ODEs, muscle activation, joint torque, movement, back to curvature.
 No scripted wave anywhere.
+
+`--quasistatic` solves the body's force balance instead of integrating its
+momentum, and it is on every command here because a worm on agar is overdamped
+enough that the inertial solver's travel depends on the timestep: the same gait
+covers 7.216 BL at 240 Hz and 1.442 BL at 60 Hz, where the quasi-static body
+agrees with itself to 5%. See
+[`model_assumptions.md`](docs/model_assumptions.md) §5AE and §5AF.
 
 Windowed runs default to 60 Hz physics so a cycle takes ~45 s of wall clock
 rather than ~3 minutes. **Do not quote numbers from a windowed run** -- pass
@@ -180,33 +187,43 @@ rather than ~3 minutes. **Do not quote numbers from a windowed run** -- pass
 [`model_assumptions.md`](docs/model_assumptions.md) §5Y for why.
 
 What to expect, so the run is not misleading: the animal coils and flexes but
-does **not** crawl. Its inter-joint phase is −0.8° against a real gait's +23.0°,
-so most of the distance it covers is a bent body being dragged. That is the open
-problem, written up in [`negative_result.md`](docs/negative_result.md), not a
-broken install.
+does **not** crawl. Its inter-joint phase is −6.1° against a real gait's +23.0°
+-- a weak wave travelling the wrong way -- and it covers 0.785 BL where the
+scripted gait covers 13.0. It curls up tightly, until its nose and tail are a
+sixth of a body length apart, and tumbles rather than travelling. That is the
+open problem, written up in
+[`negative_result.md`](docs/negative_result.md), not a broken install.
 
 ### The positive control -- what a gait looks like in the same body
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --seed-wave 180
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --seed-wave 180
 ```
 
-A scripted sinusoidal wave instead of the connectome. Covers ~7 body lengths and
-visibly undulates. The difference between this run and the one above **is** the
-negative result, and it is far clearer to watch than to read.
+A scripted sinusoidal wave instead of the connectome. It crawls: **13.0 body
+lengths in sixty seconds, 0.217 BL/s**, which is a real animal's speed, with a
+clean head-to-tail wave and a slip of 0.33 against the animal's 0.1--0.3
+(§5AG). The difference between this run and the one above **is** the negative
+result, and it is far clearer to watch than to read.
+
+Two columns in the output are worth reading as it runs. `clear` is the closest
+approach between two non-neighbouring segments, so a negative value means the
+body is passing through itself -- neither solver prevents that. `extent` is how
+extended the body is, 1.0 straight and 0 a closed loop; the scripted gait holds
+0.73, and the connectome run above drops to 0.17.
 
 ### Touch
 
 Interactive -- select the red sphere, press `W`, drag it onto the body:
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --probe --tint-change
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --probe --tint-change
 ```
 
 Scripted and reproducible, with the control that matters:
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --poke 20:24:0.15 --sham 40:44
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --quasistatic --poke 20:24:0.15 --sham 40:44
 ```
 
 `--poke START:STOP:FRACTION` is seconds and position along the body (0 head,
@@ -227,10 +244,10 @@ locomotion that works.
 C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 0
 
 # remove VD and the animal locks into a ventral coil, from measured innervation
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --torque-scale 3e-3 --lesion VD
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --torque-scale 3e-3 --quasistatic --lesion VD
 
 # randomise which synapses excite and which inhibit, keeping the anatomy
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --shuffle-sign
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --quasistatic --shuffle-sign
 ```
 
 `--help` lists all forty flags. Several exist only to keep results honest:

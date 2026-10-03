@@ -3606,35 +3606,69 @@ per ten simulated seconds.
 
 `worm/body/quasistatic.py` drops inertia instead, which is what the medium
 already does physically and what the standard neuromechanical models do. At every
-instant the body moves at the velocity that makes the external forces balance: a
-3x3 linear solve per step, no stability constraint.
+instant the body moves at the velocity that makes the external forces balance --
+every configuration rate, the three rigid freedoms and all 23 joint angles
+together, from one 26x26 linear solve per step. No stability constraint.
 
 ### 5AF.1 It is timestep-independent, and faster
 
+Scripted gait, travel over ten simulated seconds:
+
 | | 60 Hz | 240 Hz | 480 Hz |
 |---|---|---|---|
-| quasi-static, scripted gait | 3.069 BL | 3.000 BL | 2.988 BL |
+| quasi-static, scripted gait | 1.285 BL | 1.243 BL | 1.236 BL |
 
-2.7% spread across an eightfold range of rates, against fivefold for the solver
-it replaces. The body solve runs at **238x real time** at 60 Hz — 0.04 s for ten
-simulated seconds — so the mechanics are no longer anywhere near the bottleneck.
+3.8% spread across an eightfold range of rates, against fivefold for the solver
+it replaces. The body solve runs at **34 to 42x real time** at 60 Hz — a quarter
+of a second for ten simulated seconds, varying with how many joints the active
+set of §5AF.6 has to lock — so the mechanics are no longer anywhere near the
+bottleneck.
+
+Both numbers in that paragraph were first reported from the two-stage solver
+described in §5AF.4, which travelled 3.000 BL at 238x. The full balance is six to eight
+times slower, because a 26x26 solve replaced a 3x3 one, and travels less than
+half as far, because the medium now resists bending so the body cannot flex as
+freely. The second change is the point: 1.24 BL over ten seconds is **0.12 body
+lengths per second**, which is what a crawling *C. elegans* actually does. The
+two-stage figure was 2.4x too fast.
 
 In the Isaac runner, driving the articulation kinematically from the force
 balance:
 
-| | 240 Hz | 60 Hz |
-|---|---|---|
-| scripted wave, quasi-static | 8.976 BL | 9.513 BL |
-| scripted wave, inertial | 7.216 BL | 1.442 BL |
+| | 240 Hz | 60 Hz | spread |
+|---|---|---|---|
+| scripted wave, quasi-static | 13.045 BL | 13.762 BL | **5.2%** |
+| scripted wave, inertial | 7.216 BL | 1.442 BL | **500%** |
+
+That is the claim of this section, measured end to end through Isaac rather than
+on the solver alone: the same gait at two rates four times apart, agreeing to
+5 per cent where the solver it replaces differed fivefold. Both runs report
+`phase +23.0°`, `period 2.0 s` and `travel +0.78` identically.
+
+The quasi-static row previously read 8.976 BL and 9.513 BL. **Both were taken on
+the two-stage solver of §5AF.4 and are withdrawn**, not merely adjusted: that
+solver let the body flex too freely, and the standalone figures above moved by a
+factor of 2.4 when it was replaced. They were left blank rather than scaled.
+
+**The standalone table above and this Isaac row are not comparable, and it would
+be easy to read them as contradicting each other.** They measure different gaits.
+The standalone figures use the amplitude and wavelength of `test_quasistatic.py`
+— 2e-5 N m and one wavelength — which works out at 0.124 BL/s. The Isaac row uses
+the runner's own `sine_wave_drive`, 1.54 wavelengths at a gain-corrected
+amplitude, which is a materially better gait: 0.217 BL/s. Driven at the *runner's*
+parameters the standalone solver gives 0.209 BL/s against Isaac's 0.217, agreeing
+to 4 per cent, which is the actual cross-check between the two paths (§5AG.2).
+The timestep columns are still valid for what they are — the same gait at three
+rates — and only the comparison across the two tables is meaningless.
 
 ### 5AF.2 Anisotropy is the mechanism, isolated
 
 | drag ratio | travel |
 |---|---|
-| 1 (isotropic) | 0.021 BL |
-| 3 (Rabets lower bound) | 0.890 BL |
-| 10 (Rabets upper bound) | 2.268 BL |
-| 20 (committed) | 3.000 BL |
+| 1 (isotropic) | 0.014 BL |
+| 3 (Rabets lower bound) | 0.516 BL |
+| 10 (Rabets upper bound) | 1.047 BL |
+| 20 (committed) | 1.243 BL |
 
 With equal drag along and across the body every push forward is matched by a
 sideways slip and the animal goes nowhere. This is the clearest demonstration in
@@ -3644,17 +3678,43 @@ the physics no longer depends on our above-measurement ratio of 20 (§5U).
 
 ### 5AF.3 The connectome still does not locomote
 
-| | distance | amplitude | **phase** | period |
-|---|---|---|---|---|
-| scripted wave, quasi-static | 8.976 BL | 16.51° | **+23.0°** | 2.0 s |
-| connectome, quasi-static, 240 Hz | 0.469 BL | 15.52° | **−0.6°** | 12.0 s |
-| connectome, quasi-static, 60 Hz | 0.387 BL | 15.45° | **−0.8°** | 12.0 s |
-| connectome, inertial, 240 Hz | 0.994 BL | 16.67° | −0.8° | 12.0 s |
+Re-measured on the full balance, sixty seconds at 240 Hz:
 
-**The failure was never mechanical.** With the body solver in the correct regime
-the inter-joint phase is unchanged at −0.6°, against +23.0° for a real gait in the
-same body. Amplitude is unchanged too, as it must be: nothing about the neural
-output changed.
+| | distance | amplitude | **phase** | period | travel |
+|---|---|---|---|---|---|
+| **scripted wave, full balance** | **13.045 BL** | 15.91° | **+23.0°** | 2.0 s | **+0.78** |
+| connectome, full balance | 0.785 BL | 8.45° | **−6.1°** | *none detected* | −0.21 |
+| connectome, two-stage *(withdrawn)* | 0.469 BL | 15.52° | −0.6° | 12.0 s | — |
+| connectome, inertial *(upper bound)* | 0.994 BL | 16.67° | −0.8° | 12.0 s | — |
+
+The gap is a factor of **sixteen in distance** and a change of sign in phase. The
+scripted wave covers 13 body lengths at 0.217 BL/s, which is a real animal's
+crawling speed (§5AG.2), with `travel` at +0.78 — a clean wave propagating head
+to tail. The connectome covers 0.785 BL with `travel` at −0.21, a weak wave
+going the wrong way. Same body, same drag, same solver, same torque scale.
+
+**A claim in the previous version of this section was wrong and is retracted.**
+It read: "Amplitude is unchanged too, as it must be: nothing about the neural
+output changed." There is no "as it must be" about it. This is a closed loop —
+proprioception reads the joint angles, so changing the mechanics changes the
+neural input and therefore the neural output. Amplitude duly halved, from 15.52°
+to 8.45°, when the medium began resisting bending. The argument was comfortable
+and the reasoning behind it was simply absent.
+
+What survives is the comparison that matters, and it survives on its own terms:
+the inter-joint phase is **−6.1°** against the scripted gait's **+23.0°** in the
+same body. Negative phase is a wave travelling the wrong way, tail to head, and
+the `travel` statistic agrees at −0.21. The sign of the thing is wrong, not its
+size, and that cannot be fixed by a mechanics change.
+
+The `period` column now reads *none detected*, which is itself a finding. Across
+the run the reported period was 23, 24, 25, 26, 27, 28, 29, 30 s at successive
+samples — **tracking the measurement window exactly**. A spectrum asked for the
+dominant period of a signal with no periodicity in band returns the longest
+period the window can represent. §5R caught the same failure in a different
+statistic; this is the second time a period column has reported its own window
+back. It is now read as "no rhythm", which is the honest reading and consistent
+with the B-type adjacent correlation of +1.00.
 
 What does change is the honest distance. The connectome covers **0.4 to 0.5 body
 lengths** in sixty seconds, not the 0.994 the inertial solver reported — that
@@ -3663,18 +3723,388 @@ locomotion. Every distance in §5Q through §5U should be read as an upper bound
 for the same reason; the phase columns are unaffected, and they are what the nine
 rejected hypotheses rest on.
 
-### 5AF.4 What the new solver does not do
+### 5AF.4 The joints are solved with everything else, and were not at first
+
+The first version of this solver closed the joints separately, from their own
+overdamped dynamics `qdot = (torque − k q) / b`, and then solved the three rigid
+freedoms to make the external forces balance. That was defended on the grounds
+that the joints are heavily overdamped on their own — damping ratio 7 to 49,
+measured — and it was wrong, because the medium resists *bending* as well as
+translation and that resistance was nowhere in the joint closure.
+
+The consequence was not subtle. With nothing opposing shape change but the
+joints' own damping, the shape rates came out too large, and the zero-net-torque
+condition answered them with a correspondingly large counter-rotation of the
+whole body. Watching it, the animal rocked instead of travelling. **This was
+caught by the user from the viewport, not by any test** — every test in
+`test_quasistatic.py` passed on the two-stage solver, including the force-balance
+residual, because the residual only asks whether the motion balances the forces,
+not whether the right forces are present.
+
+The fix is to treat every configuration rate as an unknown of one system:
+
+    (J^T D J + B) u = Q        u = (vx, vy, omega, qdot)
+
+where `J` maps configuration rates to segment velocities, `D` is the anisotropic
+drag tensor per segment, `B` is the joints' own internal damping, and `Q` is zero
+for the three rigid freedoms and `torque − k q` for each joint. The medium now
+resists bending through the same `J^T D J` that resists translation.
+
+The Jacobian column for joint `j` has a clean geometric form: rotating that joint
+swings everything downstream of it about its own node, so for `j < i`,
+`d(centre_i)/d(q_j) = perp(centre_i − node_(j+1))`, and zero otherwise.
+
+### 5AF.5 The head swings through 62°; the body holds its course
+
+The full balance travels in a nearly straight line and still swings a large
+angle every cycle, which looked contradictory until the angle was attributed
+properly. `QuasiStaticBody.heading` is **segment 0's direction**, and segment 0
+is the head. Measured per gait cycle, after discarding the start transient:
+
+| | swing per cycle |
+|---|---|
+| head — `heading`, segment 0 | **61.8°** |
+| body axis — mean of all 24 segment directions | **13.2°** |
+| body axis — nose-to-tail vector | **13.2°** |
+| course drift | **0.00° per cycle** |
+| path straightness | 0.997 |
+
+The two independent measures of body orientation agree to a decimal. So the
+animal waves its head through tens of degrees while its body axis holds within
+about 13° and its course does not wander at all — which is what a crawling
+*C. elegans* does.
+
+That the remaining swing is real mechanics rather than solver error is settled by
+sweeping how many wavelengths the body carries. Nothing external torques the
+animal, so the frame must counter-rotate as the bending wave carries mass around;
+one wavelength does that asymmetrically, because the front and back of the wave
+are not mirror images across the mid-point, and more wavelengths should cancel
+more completely:
+
+| wavelengths | head swing | body swing | drift/cycle | straightness | speed |
+|---|---|---|---|---|---|
+| 0.75 | 61.0° | 12.4° | +0.00° | 0.997 | 0.095 BL/s |
+| 1.00 (committed gait) | 61.8° | 13.2° | +0.00° | 0.997 | 0.129 BL/s |
+| 1.25 | 52.9° | 10.6° | −0.00° | 0.998 | 0.140 BL/s |
+| 1.50 (*C. elegans*) | 45.7° | 5.2° | +0.00° | 0.999 | 0.130 BL/s |
+| 2.00 | 36.4° | 4.2° | +0.00° | 1.000 | 0.092 BL/s |
+
+Yaw falls monotonically with wavelength, which is the counter-rotation signature;
+had it been flat, it would have been the solver. `tools/diagnose_yaw.py` takes
+this table, and three tests in `test_quasistatic.py` guard the drift, the
+head-to-body ratio and the monotonicity.
+
+Two things worth recording from it. The committed scripted gait carries **one**
+wavelength, where a crawling *C. elegans* carries about 1.5 (Gray & Lissmann
+1964) — ASSUMED, and it costs a factor of 2.5 in body-axis swing. And speed peaks
+at 1.25 wavelengths, not at the extremes, so the scripted control is near but not
+at the optimum this body can reach.
+
+**This was the seventh statistic in the project to be built on a signal that did
+not have the structure it assumed** (§5R, §5AC, §5AE and others). The first
+reading of this measurement was "81° peak-to-peak", from a straight line fitted
+through a heading curve that jumps once and then flattens — fitting a trend to a
+step. The per-cycle figure is 61.8°, and the step was the start transient, which
+is a one-off reorientation as the wave winds onto a straight body and is now
+explicitly discarded.
+
+### 5AF.6 A joint at its limit broke the balance, and the body spun
+
+Found while investigating the report in §5AF.7, and **it is not the cause of that
+report** — the connectome run never saturates a joint, as its `pinned 0%` column
+says at every sample. Recording it separately, because attributing a fix to a
+symptom it does not explain is how a project convinces itself it has finished.
+This is a real defect that would fire on any drive strong enough to pin a joint,
+and it was found by looking rather than by the suite.
+
+`step` integrated the solved `qdot` and then clipped the angles to the 60° limit.
+That is not a harmless safety net. The rigid rates are solved **jointly** with
+`qdot`, so the zero-net-torque condition holds for the whole velocity field at
+once; discard part of `qdot` by clipping and the field that is actually applied
+no longer balances. With a drive that holds the joints pinned, the solver returns
+the same large `qdot` every step, the clip discards it every step, and the
+leftover rotation accumulates without bound.
+
+Measured, uniform constant drive, heading rate over seconds 20–30:
+
+| drive | joints at the limit | heading rate, before | after |
+|---|---|---|---|
+| 1e-6 N m | 0 / 23 | −0.006 °/s | −0.006 °/s |
+| 1e-5 N m | 0 / 23 | −0.103 °/s | −0.103 °/s |
+| 1e-4 N m | 0 / 23 | +0.000 °/s | +0.000 °/s |
+| **1e-3 N m** | **23 / 23** | **−26814 °/s** | **+0.000 °/s** |
+
+74 revolutions per second, sustained for as long as the run lasted — found by
+sweeping the drive rather than by watching, since the committed drive does not
+reach it. A constant uniform drive bends the body into a static arc, which can generate no thrust at
+all — anisotropic drag converts *undulation* into force and there is no
+undulation — so the correct answer is that it stops, which it now does.
+
+The fix is an active set. A joint limit is an **internal** constraint, equal and
+opposite across the joint exactly like the muscle torque, so it cannot torque the
+animal as a whole. Joints sitting at a limit that the solution drives further
+into it are therefore removed from the unknowns and the balance re-solved over
+the rest; that is exact rather than approximate, and locking only ever shrinks
+the free set, so it terminates in at most one pass per joint. Locking is
+one-sided — a joint comes straight back off its limit under a reversed drive.
+
+Two things to record about how this was found.
+
+**Every test in `test_quasistatic.py` passed on the broken solver**, including
+the force-balance residual, because `test_the_force_balance_is_satisfied` runs an
+unsaturated gait and never reaches the clipping path. `test_joints_respect_the
+_shared_limit` drives at exactly the torque that triggers the defect — 1e-3 N m,
+all 23 joints pinned — and asserts only that the angles stay inside the limit,
+which they do, while the body spins at 74 rev/s underneath. A test that
+exercises the path and asserts the wrong thing is worse than no test, because it
+reports the path as covered. Three tests now cover it: the heading rate under
+saturation, the residual under saturation, and the one-sidedness of the lock.
+
+**Watching the viewport is what started this, even though this particular defect
+is not what was on screen.** §5AF.4's rocking was seen directly; this was found
+because that report sent me to read the limit handling, where the clip was
+obviously wrong once looked at. Both were invisible to a suite of thirteen
+passing tests. That is the argument for the standing rule that Isaac runs are
+watched rather than run headless — not that watching finds every bug, but that
+it is the only thing in this project that has ever found one the tests asserted
+was absent.
+
+### 5AF.7 What the reported rotation actually was: a coiling body, uncollided
+
+The user, watching the connectome run under the full balance, reported "this one
+idle rotates too". It does. It is neither the counter-rotation of §5AF.5 nor the
+saturation defect of §5AF.6 — `pinned` reads **0% at every sample of the run**, so
+no joint is ever at its limit.
+
+The `extent` column says what is happening. Extent is how extended the body is,
+1.0 for straight and 0 for a closed loop:
+
+| t | extent | head direction |
+|---|---|---|
+| 10 s | 0.94 | +32.0° |
+| 20 s | 0.46 | +3.8° |
+| 22 s | **0.28** | −146.8° |
+| 24 s | **0.25** | +39.7° |
+| 38 s | 0.95 | +147.0° |
+| 46 s | **0.17** | −0.8° |
+| 60 s | 0.94 | −128.8° |
+
+The body curls up until it is nearly a closed loop, unwinds, and curls again,
+while the head direction sweeps through the entire circle. That is the rotation
+on screen, and the mechanics producing it are correct: a coiled body has very
+little drag resistance to rotation about its own centre, so a given change of
+shape rotates the frame much further than the same change would on an extended
+body. Zero net torque demands it.
+
+**The shape is the problem, not the rotation.** The cause of the shape is already
+known and is not new: the connectome's output is one signal — adjacent B-type
+correlation +1.00, 100% of variance shared — so it contracts the whole body on
+one side at once. That curls an animal; it does not undulate one. This is the
+negative result of `negative_result.md`, seen from the mechanics side rather than
+the neural side. A real worm coils too, an omega turn being a coil, so the shape
+is not in itself impossible.
+
+**Does the missing self-collision (§5AF.9) matter here?** Written twice and wrong
+once, so both attempts are recorded.
+
+The first draft asserted it was the cause and made it the top mechanical
+priority. The second withdrew that on a geometric argument: the body is at most
+3.25 mm in radius and a closed loop of it has a radius of 15.9 mm, so opposite
+sides of a coil are some 32 mm apart where the body is 6.5 mm thick — clearance
+by a factor of five. That argument is sound and answers the wrong question.
+Measuring instead, with `QuasiStaticBody.min_self_distance_m`:
+
+| configuration | closest approach between non-neighbouring segments |
+|---|---|
+| straight | **+1.86 mm** clear |
+| closed coil (extent 0.04) | **−2.18 mm** interpenetrating |
+| uniform 45° joints (extent 0.00) | **−6.13 mm** interpenetrating |
+| uniform 60° joints, the limit | **−6.29 mm** interpenetrating |
+
+What binds is not opposite sides of the coil. It is the **nose meeting the tail**,
+at the two places where the body is thinnest — 1.09 mm of radius each, so 2.18 mm
+of total closure is all the clearance there is. A coil that closes therefore does
+interpenetrate, by about a body diameter, and the solver permits it.
+
+Whether the committed connectome run ever gets there is still unmeasured. Its
+lowest sampled extent is 0.17, nose and tail 17 mm apart, which is clear with
+room to spare — but extent is sampled every two seconds and the metric is not in
+the run output at all. The runner now reports it as a `clear` column so the next
+run answers it.
+
+Either way this is not between the connectome and locomotion: the solver computes
+the right rotation for the shape it is given, the shape comes from the neural
+output, and the phase is −6.1° regardless.
+
+### 5AF.8 The positive control was the one run nobody could see
+
+Reported from the viewport as "worm not visible lol", and it was not a rendering
+problem.
+
+`camera.follow(_centroid(links))` is called in the runner's main loop, every
+fourth step, because the animal travels several body lengths. The `--seed-wave`
+branch is a separate path that ends in `continue`, and it `continue`d straight
+past the follow. So during the scripted wave — **the one configuration in this
+project that actually crawls** — the camera never moved. The worm left the frame
+within a few seconds and stayed gone for the rest of the run.
+
+`--seed-wave N` on a run of `--seconds N` puts the whole run in that branch,
+which is exactly the command `README.md` gives for "the positive control — what a
+gait looks like in the same body". The run that exists to be *watched* was the
+only one that could not be.
+
+Two things follow. Any earlier qualitative claim about how the scripted gait
+*looks* was made on at most the first few seconds of a run, before the body
+cleared the frame; the measured columns are unaffected, since they never read the
+camera. And a one-line follow in the wrong branch survived every test in the
+suite, because nothing tests what is on screen — which is the third defect in
+this section found by a person watching rather than by an assertion, after
+§5AF.4's rocking and the limit handling of §5AF.6.
+
+### 5AF.9 What the new solver does not do
 
 No contact and no self-collision: it knows only drag. Touch is unaffected because
 the touch model is already proximity-based and the probe deliberately carries no
-collider (§5D), but `--self-collision` has no effect under `--quasistatic` and a
-body that should not pass through itself needs a separate check.
+collider (§5D), but `--self-collision` has no effect under `--quasistatic`.
 
-The joints are also closed separately, from their own overdamped dynamics rather
-than from the full generalised force balance including the medium's resistance to
-bending. Defensible because the joints are heavily overdamped on their own —
-damping ratio 7 to 49, measured — but it lets the body change shape slightly too
-freely, which will overestimate amplitude and therefore thrust.
+It is now at least *measured* rather than merely absent. `min_self_distance_m`
+reports the closest approach between non-neighbouring segments minus their radii,
+the runner prints it as a `clear` column for both body solvers, and a test
+asserts that a closed coil interpenetrates — so whoever adds a contact model has
+a failing assertion to turn green rather than a paragraph to interpret.
+Enforcement is still missing, and the §5AF.7 question of whether the committed
+connectome run ever actually folds onto itself is answered by reading that column
+on the next run.
+
+One rendering defect found while reading the drive code, now fixed: the solver's
+`origin` is node 0, the nose tip, while the articulation's root prim is built at
+segment 0's *centre*, half a segment ahead of it. Writing the nose position
+straight into the root pose displaced the whole rendered body 2.08 mm — 2% of a
+body length — back along its own heading. It reached the sensory loop rather than
+staying cosmetic, because touch and the nose position are read back out of the
+articulation rather than from the solver.
+
+## 5AG. The body slides: slip measured against the animal
+
+Reported from the viewport: "It still slides, as if only calculating friction in
+the center of the animal." The first half of that is right and the diagnosis is
+not, which makes it worth separating carefully.
+
+### 5AG.1 The drag is per-segment, and correct
+
+Drag computed at one point could not distinguish a straight body from a bent one,
+so that is the test. Pull the whole body sideways as a rigid object and compare
+the net force against what resistive force theory says:
+
+| configuration | measured | theory |
+|---|---|---|
+| straight, pulled along its axis | 0.048 | `n · c_par` = 0.048 |
+| straight, pulled across it | 0.960 | `n · c_perp` = 0.960 |
+| L-shaped, pulled across it | **0.504** | `n/2 · (c_perp + c_par)` = **0.504** |
+
+All three agree to the digit, and the L-shaped body differs from the straight one
+by exactly the predicted amount. The drag tensor varies along the body as it must.
+`tools/diagnose_slip.py` takes this check.
+
+### 5AG.2 The committed gait slips 0.33, against the animal's 0.1 to 0.3
+
+Slip is the standard measure for undulatory locomotion. A bending wave travels
+backwards along the body at `frequency × wavelength` and the animal advances at
+some fraction of that; what it fails to advance, it slipped. A real *C. elegans*
+crawling on agar advances **70 to 90 per cent** of its wave speed, so slip is
+**0.1 to 0.3**.
+
+Measured on the committed positive control, sixty seconds at 240 Hz under the
+full balance — `--seed-wave 60 --torque-scale 3e-3 --quasistatic`:
+
+| | |
+|---|---|
+| distance | 13.045 BL in 60 s = **0.217 BL/s** |
+| wavelength on the body | 0.65 BL, so 1.54 waves |
+| wave speed | 0.5 Hz × 0.65 BL = 0.325 BL/s |
+| **slip** | **0.332** |
+| maximum bend | 22.7° |
+| inter-joint phase | +23.0° |
+| `travel` | +0.78, a clean forward wave |
+| `clear` | +1.63 mm, no self-intersection |
+
+**0.33 against 0.1 to 0.3 is just outside the biological range**, not two to five
+times it. The body slides somewhat more than a real worm and otherwise crawls at
+a biological speed with a biological gait.
+
+The standalone solver, swept over muscle torque at the same wavelength, agrees:
+
+| joint torque | max bend | body speed | **slip** |
+|---|---|---|---|
+| 2e-5 | 9.6° | 0.131 BL/s | 0.596 |
+| **5e-5** | **24.2°** | **0.209 BL/s** | **0.356** |
+| 8e-5 | 38.8° | 0.127 BL/s | 0.610 |
+| 1e-4 | 48.5° | 0.054 BL/s | 0.833 |
+| 2e-4 | 60.0°, all joints pinned | 0.067 BL/s | 0.794 |
+
+Slip bottoms at 0.356 at 24.2° of bend, and the Isaac run sits at 22.7° and
+0.332. **The committed gait is already at this body's optimum.** That the two
+independent paths agree to within 7 per cent — a standalone force balance and a
+driven Isaac articulation — is the first cross-validation between them.
+
+Slip is also **not monotonic** in the drive. Past roughly 24° of bend it rises
+steeply, because the body stops undulating and starts curling; at 1e-4 the animal
+is three times slower than at half the torque. This is the same failure mode as
+§5AF.7 reached from the mechanical side. More muscle is not more locomotion, and
+the committed scale is near the peak rather than below it.
+
+**A recommendation written here and withdrawn.** The first version of this section
+reported the sweep at **one** wavelength, where slip bottoms at 0.508, labelled
+its 2e-5 row "the committed gait", and concluded the positive control was
+under-driven by 2.5x with half its speed available for free. Every part of that
+was wrong. 2e-5 is the amplitude in `test_quasistatic.py`, a test fixture; the
+runner drives through `sine_wave_drive` with `wavelength_fraction=0.65` and a
+gain correction, which is 1.54 wavelengths and about 5e-5 equivalent. Reading a
+sweep taken under a test's parameters as though it described the committed
+configuration is a straightforward failure to check which number was which, and
+it produced a confident recommendation to change a parameter that was already
+optimal.
+
+The residual gap — 0.33 against 0.1 to 0.3 — is real but small, and
+`worm/body/drag.py` already names its cause. Rabets et al. 2014, the same
+measurement this project takes its anisotropy range from, found that linear
+resistive force theory is *not* what agar does: substrate viscoelasticity makes
+the force–velocity relation nonlinear and the coefficients non-constant, and
+**the major contributing factor is the formation of a shallow groove** in the
+surface. A real worm crawls in a groove it has made, which is geometric
+confinement, and it blocks lateral slip in a way no velocity-proportional
+coefficient reproduces. This model has a flat plane, a force linear in velocity,
+and no static friction at all. Closing the last of the gap needs a groove or a
+static-friction term — not a larger anisotropy ratio, which is already 20, twice
+the top of the measured range (§5U).
+
+### 5AG.3 The scripted gait crawls in a wide arc
+
+Visible in the 60 Hz control's `head` column, which is the nose-to-tail axis
+angle: +21.3°, +25.9°, +30.5°, +35.0°, +39.3°, +43.5° at two-second intervals.
+About **2.2° per second**, steady — some 130° of turn over a sixty-second run, so
+the animal crawls a wide circle rather than a straight line.
+
+This is in the drive and not in the mechanics. The standalone solver given a pure
+sine wave drifts **0.00° per cycle** at every wavelength tested (§5AF.5), so the
+force balance has no handedness of its own. The runner reaches the body through
+`sine_wave_drive` and the muscle model, and something in that path is
+dorsoventrally asymmetric — ASSUMED to be the muscle model's activation dynamics
+rather than the wave itself, which is a guess and not yet measured.
+
+It is worth separating from the sliding because it looks similar in the viewport
+and is a different thing: a gentle constant turn, not a loss of grip. Real worms
+do crawl in arcs, so the magnitude is not in itself wrong; what is wrong is that
+nothing asked for it. Not yet diagnosed.
+
+### 5AG.4 What this does not explain
+
+None of it is between the connectome and locomotion. The connectome's inter-joint
+phase is **−6.1°** against the scripted gait's **+23.0°** in the same body, and
+that sign is wrong rather than small: a wave travelling the wrong way. Slip sets
+how far a correct gait gets; it does not create or destroy the gait. Every
+distance in §5Q through §5U is depressed by it and every phase column is
+untouched, which is the same division §5AF.3 arrived at by a different route.
 
 ## 6. Decisions taken, and what remains open
 
