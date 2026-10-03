@@ -355,6 +355,7 @@ sub = connectome.subgraph(["ASHL", "ASHR"], hops=1)
 | [docs/model_assumptions.md](docs/model_assumptions.md) | **The central document.** Every departure from measured biology, and the open decisions before W1. |
 | [docs/datasets.md](docs/datasets.md) | Per-dataset factsheets, including what each one omits. |
 | [docs/architecture.md](docs/architecture.md) | How the layers separate, and what is deliberately absent. |
+| [docs/roadmap.md](docs/roadmap.md) | What is left: the open problem, the loose ends, and the parameters that are fitted rather than measured. |
 | [docs/references.md](docs/references.md) | Every dataset and paper, with licences. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute, and the one rule: never invent biology. |
 | [DATA_LICENSES.md](DATA_LICENSES.md) | Licences and attribution for the scientific data, which the MIT licence does **not** cover. |

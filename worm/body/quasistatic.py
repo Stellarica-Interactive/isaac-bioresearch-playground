@@ -102,6 +102,37 @@ _LIMIT_TOL = 1.0e-4 * JOINT_LIMIT_RAD
 _NONLINEAR_PASSES = 80
 _NONLINEAR_TOL = 1.0e-10
 
+#: Band around touching within which self-contact resists approach, metres.
+#:
+#: ARBITRARY ENGINEERING, but bounded above by a measurement rather than chosen
+#: freely: **the scripted gait's closest self-approach is 1.57 mm**, so a band
+#: wider than that would engage during ordinary crawling and make every
+#: locomotion number contingent on this contact model. 1 mm leaves a margin and,
+#: measured, changes the gait's speed by 0.00 per cent -- 0.2176 BL/s with
+#: contact on and off alike.
+#:
+#: Bounded below by the timestep: the band has to be wide enough that an
+#: approaching segment is seen inside it before it passes through.
+CONTACT_BAND_M = 1.0e-3
+
+#: Drag coefficient along a contact normal, as a multiple of the perpendicular
+#: body drag. Large enough that approach stops, small enough to leave the solve
+#: well conditioned.
+#:
+#: ARBITRARY ENGINEERING, and the reason this is a penalty rather than a
+#: constraint: a true non-penetration constraint would add a row per contact to
+#: the active set of ``_solve_with_limits`` and iterate over contacts and joint
+#: limits together. This is the smaller change and it behaves like the groove of
+#: model_assumptions 5AH -- very stiff resistance to one direction of motion.
+#:
+#: Measured together with the band above, on a curl of the depth the connectome
+#: actually produces: worst self-clearance goes from **-5.80 mm to +0.79 mm**,
+#: so the body stops folding through itself. It cannot undo every overlap -- at
+#: the 60 degree joint limit the body wraps 3.8 times and self-intersection is
+#: geometrically forced, since a closed circle of this body needs only 15.7
+#: degrees per joint. That is a fact about the joint limit, not about contact.
+CONTACT_STIFFNESS = 2.0e4
+
 
 def _perp(v: np.ndarray) -> np.ndarray:
     """Rotate planar vectors 90 degrees: ``(x, y) -> (-y, x)``."""
@@ -116,10 +147,19 @@ class QuasiStaticBody:
     drag: DragParameters = field(default_factory=DragParameters)
     muscle: MuscleParameters = field(default_factory=MuscleParameters)
 
+    #: Whether the body resists passing through itself. Off by default: every
+    #: number in model_assumptions was measured without it, and the connectome
+    #: run is the only configuration that ever reaches contact (`clear` -1.39 mm,
+    #: against +1.57 and better for the scripted gait).
+    self_contact: bool = False
+
     #: First node position, body heading, and joint angles.
     origin: np.ndarray = field(init=False)
     heading: float = field(init=False, default=0.0)
     joint_angles: np.ndarray = field(init=False)
+
+    #: Segment radii, cached: the contact test needs them every step.
+    _radii: np.ndarray = field(init=False, repr=False)
 
     #: Last solved segment velocities, used to warm-start the nonlinear fixed
     #: point. Not part of the configuration -- a quasi-static body has no
@@ -132,6 +172,10 @@ class QuasiStaticBody:
         self.origin = np.zeros(2, dtype=np.float64)
         self.joint_angles = np.zeros(self.plan.n_joints, dtype=np.float64)
         self._last_velocities = np.zeros((self.plan.n_segments, 2), dtype=np.float64)
+        self._radii = np.array(
+            [self.plan.radius_at(i) for i in range(self.plan.n_segments)],
+            dtype=np.float64,
+        )
 
     # -- kinematics --------------------------------------------------------
 
@@ -223,8 +267,56 @@ class QuasiStaticBody:
             c_perp = c_perp * self.drag.speed_factor(speed_perp) + self.drag.yield_coefficient(
                 speed_perp
             )
-            return c_par[:, None, None] * along + c_perp[:, None, None] * across
-        return c_par * along + c_perp * across
+            tensors = c_par[:, None, None] * along + c_perp[:, None, None] * across
+        else:
+            tensors = c_par * along + c_perp * across
+        if self.self_contact:
+            extra = self._contact_drag(velocities)
+            if extra is not None:
+                tensors = tensors + extra
+        return tensors
+
+    def _contact_drag(self, velocities: np.ndarray | None) -> np.ndarray | None:
+        """Extra per-segment drag resisting self-approach, or ``None`` if clear.
+
+        A contact is really a constraint -- two segments that have closed to
+        touching must not approach further -- and the honest treatment is an
+        extra row in the active set of :meth:`_solve_with_limits`. This is a
+        penalty instead: along the line between two touching segments, and only
+        when they are closing, the medium becomes very stiff. Same shape as the
+        yield force of :mod:`worm.body.drag`, and the same physics as the groove
+        it stands in for.
+
+        Only non-neighbouring pairs count. Adjacent segments share a node and
+        always overlap by construction, so including them would make a straight
+        body self-collide.
+        """
+        centres = self.segment_centres()
+        radii = self._radii
+        delta = centres[:, None, :] - centres[None, :, :]
+        distance = np.linalg.norm(delta, axis=-1)
+        gap = distance - (radii[:, None] + radii[None, :])
+        index = np.arange(self.plan.n_segments)
+        far_enough = np.abs(index[:, None] - index[None, :]) > 1
+        close = far_enough & (gap < CONTACT_BAND_M) & (distance > 1e-12)
+        pairs = np.argwhere(np.triu(close))
+        if pairs.size == 0:
+            return None
+
+        extra = np.zeros((self.plan.n_segments, 2, 2), dtype=np.float64)
+        scale = CONTACT_STIFFNESS * self.drag.perpendicular
+        for i, j in pairs:
+            normal = delta[i, j] / distance[i, j]
+            if velocities is not None:
+                # Only on approach: a contact resists closing, never separation,
+                # and a penalty that resisted both would glue the body together.
+                closing = float((velocities[j] - velocities[i]) @ normal)
+                if closing > 0.0:
+                    continue
+            outer = scale * np.outer(normal, normal)
+            extra[i] += outer
+            extra[j] += outer
+        return extra
 
     def _solve_rates(self, joint_torques: np.ndarray) -> np.ndarray:
         """``(vx, vy, omega, qdot)`` from one generalised force balance.
@@ -356,10 +448,7 @@ class QuasiStaticBody:
         folding onto itself.
         """
         centres = self.segment_centres()
-        radii = np.array(
-            [self.plan.radius_at(i) for i in range(self.plan.n_segments)],
-            dtype=np.float64,
-        )
+        radii = self._radii
         gap = np.linalg.norm(centres[:, None, :] - centres[None, :, :], axis=-1) - (
             radii[:, None] + radii[None, :]
         )

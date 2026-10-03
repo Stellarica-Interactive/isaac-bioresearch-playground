@@ -47,6 +47,23 @@ import numpy as np
 #: degenerate case.
 MIN_CYCLES_IN_WINDOW = 2.0
 
+#: How far the spectral peak must stand above the median of the spectrum for a
+#: period to count as resolved.
+#:
+#: :data:`MIN_CYCLES_IN_WINDOW` bounds how *long* a period may be, which is not
+#: the same question as whether there is one. With no periodicity the spectrum is
+#: roughly flat, the peak lands on the lowest admissible bin -- period exactly
+#: half the window -- and the length check passes it. Measured on the phasic run
+#: of §5AK: `period` read 6.0 s at t=12, 7.0 s at t=14 and 8.0 s at t=16, each
+#: half the elapsed window, on 1.3 degrees of amplitude that was decaying, and
+#: `travel` was duly derived from it and reported +0.28 for a body at a standstill.
+#:
+#: A clean sinusoid concentrates its energy in one bin and clears this by orders
+#: of magnitude; white noise sits near 3. 8 is comfortably between, and the
+#: scripted gait measures in the hundreds. ARBITRARY ENGINEERING, but checked
+#: against both ends.
+MIN_PEAK_PROMINENCE = 8.0
+
 #: Amplitude below which no phase is reported, in degrees. A body frozen in a
 #: bend still jitters by a fraction of a float, and correlating that jitter
 #: returns a confident, structured, meaningless number: ablating VD froze the body
@@ -127,6 +144,12 @@ def dominant_period_samples(fluct: np.ndarray) -> float:
     spectrum[0] = 0.0  # the mean is already removed; bin 0 is numerical residue
     peak = int(np.argmax(spectrum))
     if peak == 0:
+        return float("nan")
+    # Is there an oscillation at all? A flat spectrum has no peak worth naming,
+    # and `argmax` over one returns the lowest bin the length check admits, which
+    # is half the window. See MIN_PEAK_PROMINENCE.
+    background = float(np.median(spectrum[1:]))
+    if background <= 0.0 or spectrum[peak] < MIN_PEAK_PROMINENCE * background:
         return float("nan")
     period = fluct.shape[0] / peak
     if period * MIN_CYCLES_IN_WINDOW > fluct.shape[0]:

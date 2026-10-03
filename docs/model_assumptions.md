@@ -1962,6 +1962,61 @@ mechanism — noise, a head oscillator, an asymmetric initial condition. A model
 collapses an existing wave has something in it that is actively synchronising, and
 adding a starter would not help.
 
+### 5P.3 Re-run with a real gait, and with a measurement that can see it
+
+§5P.1 was measured on the inertial solver, where the seeded wave reached only
+`travel +0.12` — a figure later shown to be a strong wave seen through a metric
+compressed sixfold (`common/body/gait.py`). Two objections followed from that and
+both are now answered: the loop was handed a weak wave, and the statistic pooled
+the whole recording so the seeded phase kept propping it up afterwards.
+
+The hand-over now gives the seeded phase its own report and then clears the
+history and the distance origin, so everything after it is the loop measured on
+its own data. Twenty seconds of the §5AI.4 gait, then sixty seconds alone:
+
+| | distance | amplitude | **travel** | period |
+|---|---|---|---|---|
+| the seed, at hand-over | 3.796 BL / 20 s | 16.17° | **+0.92** | 2.0 s |
+| t + 2 s | 0.025 BL | 4.55° | **+0.00** | *none* |
+| t + 4 s | 0.026 BL | 3.64° | +0.00 | *none* |
+| t + 8 s | 0.027 BL | 2.86° | +0.00 | *none* |
+| t + 18 s | 0.027 BL | **2.48°** | +0.00 | *none* |
+| t + 60 s, whole window | 0.250 BL | 7.19° | **+0.00** | *none* |
+
+**The wave is gone within one gait cycle.** `travel` falls from +0.92 to +0.00 in
+two seconds and never returns; `period` reports no resolvable oscillation for the
+rest of the run, which is a refusal to answer rather than a small number.
+Amplitude collapses to 28% of the seeded value immediately and decays to 2.48°,
+15% of it.
+
+**It does not stay slack, and an earlier version of this section said it did.**
+That was written from the eighteen-second window above, where amplitude is still
+falling and the animal has covered 2.68 mm. Over the full sixty seconds amplitude
+recovers to 7.19°, `extent` falls back to 0.54 as the body curls again, the frame
+tumbles through 115°, and the animal covers 0.250 BL. So the loop does resume
+moving the body — it simply never propagates anything, which is the §5O failure
+reasserting itself rather than a quiet death. Reporting the decay without the
+recovery made the result look cleaner than it is.
+
+So §5P's conclusion holds in its strong form, and the two objections to it are
+closed. The loop was handed a gait that covers nearly four body lengths with a
+clean head-to-tail wave, in the same body, with the same drag and the same torque
+scale. It destroyed the wave in one cycle and went back to doing what it does
+without one.
+
+That is worth separating from "it cannot start a wave". A model that could carry
+a wave but not initiate one needs a symmetry-breaking mechanism, and several
+exist. A model that **annihilates** one has something actively synchronising, and
+adding a starter would not help — which is what the +1.00 adjacent correlation
+has been saying all along.
+
+One asymmetry makes it stranger rather than clearer. While the scripted wave is
+driving the body, the B-type population is **decorrelated**: adjacent correlation
+−0.40 with 57% of variance shared, against +1.00 and 100% under the connectome.
+Proprioception does differentiate these cells when the body genuinely undulates.
+The circuit can represent a travelling wave; it cannot produce or hold one. The
+mechanism that collapses it once the external drive stops is not identified.
+
 ### 5P.2 What that rules out
 
 * **Symmetry breaking alone is not the answer.** Anything that merely creates an
@@ -3690,7 +3745,7 @@ Re-measured on the full balance, sixty seconds at 240 Hz:
 | | distance | amplitude | **phase** | period | travel |
 |---|---|---|---|---|---|
 | scripted wave, full balance *(§5AJ config)* | **19.03 BL / 90 s** | 16.13° | **+27.2°** | 2.0 s | **+0.92** |
-| connectome, full balance | **0.717 BL / 60 s** | 8.45° | **−6.1°** | *none detected* | **−0.21** |
+| connectome, full balance | **0.717 BL / 60 s** | 8.45° | **−6.1°** | *none* | **+0.00** |
 | connectome, two-stage *(withdrawn)* | — | 15.52° | −0.6° | 12.0 s | — |
 | connectome, inertial *(upper bound)* | 0.994 BL | 16.67° | −0.8° | 12.0 s | — |
 
@@ -3700,11 +3755,13 @@ a body displaced 47.9 mm and wrongly rotated; the connectome's moved by 9% when
 that was fixed, and the scripted row is not comparable at all because it is now
 taken with the §5AI.4 configuration rather than the defaults.
 
-**The solver-side columns did not move by a digit.** Amplitude, phase and travel
-are identical between the corrupted run and the corrected one — 8.45°, −6.1° and
-−0.21 — which is what §5AJ.5's provenance table predicts and is independent
-confirmation that the division between simulator-measured and solver-measured
-numbers was drawn in the right place.
+**The solver-side columns did not move by a digit.** Amplitude and phase are
+identical between the corrupted run and the corrected one — 8.45° and −6.1° —
+which is what §5AJ.5's provenance table predicts and is independent confirmation
+that the division between simulator-measured and solver-measured numbers was
+drawn in the right place. `travel` was identical too, at −0.21, and has since been
+withdrawn for an unrelated reason: it was computed from a period the metric
+fabricated (§5AK.3). Being reproducible is not being right.
 
 **`travel` was withdrawn here too and should not have been.** The first version
 of this correction struck it alongside the distance on the assumption that both
@@ -3721,9 +3778,10 @@ articulation-side and were affected; `bend`, `amp`, `phase`, `period`, `travel`
 and `pinned` are solver-side and were not.
 
 So the comparison the argument rests on is intact: the inter-joint phase is
-**−6.1°** against the scripted gait's **+23.0°** in the same body, with `travel`
-at **−0.21** against **+0.78** — a wave travelling the wrong way, and a wrong
-*sign* rather than a wrong size.
+**−6.1°** against the scripted gait's **+23.0°** in the same body, and `travel` is
+**+0.00** against **+0.78** — no propagation at all, where a real gait propagates
+cleanly. An earlier version of this read "−0.21 against +0.78 — a wave travelling
+the wrong way"; §5AK.3 withdraws the −0.21, and the result is cleaner without it.
 
 That the load-bearing columns are solver-side and the withdrawn ones are
 simulator-side is the division §5AJ.5 draws. It is worth not reading as luck:
@@ -3741,8 +3799,8 @@ and the reasoning behind it was simply absent.
 What survives is the comparison that matters, and it survives on its own terms:
 the inter-joint phase is **−6.1°** against the scripted gait's **+23.0°** in the
 same body. Negative phase is a wave travelling the wrong way, tail to head, and
-the `travel` statistic agrees at −0.21. The sign of the thing is wrong, not its
-size, and that cannot be fixed by a mechanics change.
+the `travel` statistic agrees at +0.00 (−0.21 as first measured, withdrawn in
+§5AK.3). There is no propagation to have a size, and that cannot be fixed by a mechanics change.
 
 The `period` column now reads *none detected*, which is itself a finding. Across
 the run the reported period was 23, 24, 25, 26, 27, 28, 29, 30 s at successive
@@ -4634,6 +4692,111 @@ of §5AF.8, the sliding of §5AG, and this — and the automated suite found non
 them. That is not an argument for fewer tests. It is an argument for not
 mistaking a green suite for a working simulation, and for the standing rule that
 Isaac runs are watched rather than run headless.
+
+## 5AK. A proprioceptive law that cannot latch — hypothesis eleven, rejected
+
+§5C.5 listed four options for the latch and marked option 3 untried: *a law
+responding to the rate of change of curvature rather than to curvature cannot
+latch.* The reasoning was sound. The curvature law is monotone positive feedback
+— a dorsal bend excites DB, DB contracts dorsal muscle, the bend deepens — so a
+**static bend is a stable fixed point of the loop**, which is what §5C.4's latch
+and §5P.3's settling both are. A rate term has no fixed point there: a body that
+has stopped moving produces no drive.
+
+`Proprioception.rate_fraction` implements it, off by default. Mechanically it does
+exactly what it claims — a held 20° bend injects **139.63 pA** under the tonic law
+and **0.00 pA** under the pure phasic one.
+
+### 5AK.1 It was gain-matched first, because §5Q is a warning
+
+Curvature is in radians and its rate in radians per second, so blending them raw
+changes the signal's magnitude as well as its character: measured, the pure rate
+law delivered **1117 pA** where the tonic law delivered 195 for the same motion,
+a factor of 5.7. A run that then oscillated could not be told from a 5.7-fold
+gain increase — which is precisely the mistake §5Q records making when
+binarising an output turned out to be a sixfold gain change.
+
+For a bend oscillating at `f`, `|dk/dt| = 2 pi f |k|`, so the rate is divided by
+`2 pi f` at the gait frequency. After that all three settings deliver 139 to 161
+pA for an oscillating bend, while a *held* bend gives 139.63 tonic and 0.00
+phasic. The law changes; the gain does not.
+
+### 5AK.2 The result, at matched drag
+
+Both rows are the connectome driving the body for sixty seconds under the §5AI.4
+mechanics. Matched drag matters: an earlier reading compared a phasic run at the
+new drag law against a tonic run at the old one, which is two changes at once.
+
+| | distance | bend | amplitude | extent | **adjacent corr** | **shared variance** |
+|---|---|---|---|---|---|---|
+| tonic, `rate_fraction` 0 | 0.737 BL | 20.8° | 5.97° | 0.14 | **+0.83** | **89%** |
+| blended, `rate_fraction` 0.5 | 0.483 BL | 5.1° | 1.05° | 0.95 | **+0.29** | **100%** |
+| pure phasic, `rate_fraction` 1 | 0.480 BL | 5.2° | 1.27° | 0.95 | — | — |
+
+**The latch is genuinely removed.** Extent holds at 0.95 instead of folding to
+0.14, and the body never curls. That part of the prediction holds.
+
+**And it is not progress.** Two things happen together. The drive collapses —
+amplitude 5.97° to 1.05°, bend 20.8° to 5.1° — so nothing reaches the body;
+`travel` is +0.00 either way. And the **shared variance rises to 100%**: the
+population becomes *more* one-dimensional, not less. Adjacent cells differ more
+while the population as a whole differs less, which are different measurements and
+only the first one improved.
+
+A travelling wave needs several components in fixed phase relationships. A single
+component is what §5O identified as the failure, and the phasic law makes that
+worse while making its local symptom better. So **hypothesis eleven is rejected**,
+and the useful form of the rejection is: the latch and the activity come from the
+same monotone feedback, so removing one removes the other. Option 3 is not a
+partial fix awaiting a parameter sweep; it trades one failure for another.
+
+`--proprio-gain` is now exposed — `neural_bridge` calls it "the single parameter
+that decides whether the loop oscillates at all" and it had never been reachable
+from the command line. Whether more gain recovers the amplitude without restoring
+the latch is **untested**.
+
+### 5AK.3 A metric artifact, and `travel −0.21` withdrawn
+
+`dominant_period_samples` bounded how *long* a period could be
+(`MIN_CYCLES_IN_WINDOW`) and never asked whether there was one. With no
+periodicity the spectrum is roughly flat, `argmax` lands on the lowest bin the
+length check admits — **period exactly half the window** — and the check passes
+it, because exactly two cycles is exactly enough.
+
+Observed in the phasic run: `period 6.0 s` at t=12, `7.0 s` at t=14, `8.0 s` at
+t=16, each precisely half the elapsed window, on 1.3° of decaying amplitude —
+with `travel +0.28` duly derived from it, since `travel` is evaluated at a quarter
+of the detected period.
+
+The guard is now spectral prominence: the peak must stand `MIN_PEAK_PROMINENCE`
+times above the median of the spectrum. A clean sinusoid clears it by orders of
+magnitude, white noise sits near 3, and a genuine two-cycles-in-window
+oscillation still resolves — that last case is why the test is prominence rather
+than rejecting the bin.
+
+**This reaches a number quoted repeatedly in this document.** The connectome
+baseline reported `travel −0.21` with `period 30.0 s` on a sixty-second window —
+again exactly half. Re-measured with the guard in place it reports **`travel
++0.00` and `period --`**.
+
+So the honest statement is **no wave at all**, not "a weak wave travelling the
+wrong way". That is a cleaner negative result rather than a weaker one, and the
+phrase appears in §5AF.3, `negative_result.md` and the roadmap, each of which is
+corrected. The inter-joint phase of **−6.1°** against the scripted gait's
+**+23.0°** is unaffected: phase is measured at a lag derived from the period, and
+where no period resolves the phase is reported as +0.0° rather than invented.
+
+### 5AK.4 What the connectome still does under the better mechanics
+
+Worth recording, since the §5AI.4 drag law changes the baseline as well as the
+positive control: the connectome covers **0.737 BL in sixty seconds**, curls to
+an extent of **0.14**, and reaches `clear −0.64 mm` — it still passes through
+itself, which `--self-collision` now prevents and which is off by default.
+
+Its adjacent correlation is **+0.83** with 89% shared variance under this drag
+law, against +1.00 and 100% under the old one. Not a meaningful improvement, and
+worth stating only so that the +0.83 is not later read as a different result from
+the +1.00 quoted elsewhere: the mechanics changed, not the circuit.
 
 ## 6. Decisions taken, and what remains open
 

@@ -82,6 +82,31 @@ parser.add_argument("--damping", type=float, default=2e-5)
 parser.add_argument("--armature", type=float, default=2.0e-8)
 parser.add_argument("--drag-ratio", type=float, default=None)
 parser.add_argument(
+    "--proprio-gain",
+    type=float,
+    default=None,
+    metavar="PA_PER_RAD",
+    help="Current injected per radian of sensed curvature, pA. The default is "
+    "400 and worm/body/neural_bridge.py calls it the single parameter that "
+    "decides whether the loop oscillates at all, which is a reason to be able to "
+    "sweep it rather than a reason to trust it. ASSUMED: no measurement sets it.",
+)
+parser.add_argument(
+    "--proprio-rate",
+    type=float,
+    default=None,
+    metavar="FRACTION",
+    help="Fraction of the proprioceptive signal that responds to the rate of "
+    "change of curvature rather than to curvature. 0 is the law every result in "
+    "model_assumptions was measured with, and it is monotone positive feedback: "
+    "a dorsal bend excites DB, DB deepens the bend, and a static bend is a stable "
+    "fixed point of the loop. That is what the latch of 5C.4 and the hand-over of "
+    "5P.3 both are. A rate term has no fixed point at a static bend, because a "
+    "body that has stopped moving produces no drive. 5C.5 lists this as option 3 "
+    "and it had not been tried. ASSUMED -- real mechanoreceptors have phasic and "
+    "tonic components, but nothing measures the balance. See 5AK.",
+)
+parser.add_argument(
     "--seed-wavelength",
     type=float,
     default=0.65,
@@ -430,7 +455,11 @@ from worm.body.muscles import (  # noqa: E402
     MuscleParameters,
     sine_wave_drive,
 )
-from worm.body.neural_bridge import MuscleDrive, Proprioception  # noqa: E402
+from worm.body.neural_bridge import (  # noqa: E402
+    RATE_LAG_MS,
+    MuscleDrive,
+    Proprioception,
+)
 from worm.body.quasistatic import QuasiStaticBody  # noqa: E402
 from worm.body.touch import TOUCH_RECEPTORS, TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
@@ -511,6 +540,8 @@ def main() -> int:
             else {}
         ),
         asymmetric=args.asymmetric_proprioception,
+        **({"rate_fraction": args.proprio_rate} if args.proprio_rate is not None else {}),
+        **({"gain_pa_per_rad": args.proprio_gain} if args.proprio_gain is not None else {}),
     )
     b_type = [c for c in proprio.targets if c in runtime.network.cell_ids]
     proprio = replace(
@@ -699,7 +730,14 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     # The quasi-static body owns the configuration when enabled; the
     # articulation becomes a kinematic display of it rather than a solver.
     quasistatic = (
-        QuasiStaticBody(plan, drag=drag.params, muscle=muscle_model.params)
+        QuasiStaticBody(
+            plan,
+            drag=drag.params,
+            muscle=muscle_model.params,
+            # --self-collision used to be silently ignored here, because the
+            # quasi-static solver had no contact model at all. It has one now.
+            self_contact=args.self_collision,
+        )
         if args.quasistatic
         else None
     )
@@ -815,6 +853,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         )
 
     start = _centroid(links)
+    # Whether the scripted wave has stopped and the loop is on its own. Used once,
+    # to give the seeded phase its own report and then reset the measurement.
+    handed_over = args.seed_wave <= 0.0
     touching = False
     # The sham window's own state, so it cannot be confused with a real touch.
     sham_open = False
@@ -863,7 +904,19 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             chemo.step(food.concentration(nose), dt_ms=dt * 1000.0)
             runtime.inject_many(chemo.currents())
         if not args.no_proprioception:
-            runtime.inject_many(proprio.currents(angles))
+            # The rate term compares against the body a short while ago, which
+            # `history` already holds; the lag is the smoothing, so no state is
+            # needed and Proprioception stays frozen. Before the history is that
+            # long the rate is simply absent and the law is the tonic one.
+            lag_steps = max(1, int(round(RATE_LAG_MS / (dt * 1000.0))))
+            earlier = history[-lag_steps] if len(history) >= lag_steps else None
+            runtime.inject_many(
+                proprio.currents(
+                    angles,
+                    earlier_angles_rad=earlier,
+                    elapsed_ms=lag_steps * dt * 1000.0,
+                )
+            )
         # The sham keeps its own state and does not exclude the probe. It used to
         # be the `if` of an if/elif whose `elif` drove the poke, so passing
         # --poke and --sham together silently ran only the sham -- and measuring a
@@ -1010,6 +1063,26 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                 reported = t
                 _report(t, start, links, plan, angles, history, hz=args.physics_hz)
             continue
+
+        if not handed_over:
+            handed_over = True
+            if args.seed_wave > 0.0:
+                # The seeded phase, measured on its own data before any of it is
+                # discarded. This is the gait the loop is about to be handed.
+                _report(t, start, links, plan, angles, history, final=True, hz=args.physics_hz)
+                print(
+                    f"         ^ end of the scripted wave. Everything below is the "
+                    f"connectome alone, measured from t={t:.1f}s."
+                )
+                # `measure` pools its whole input by design, which is right inside
+                # one regime and wrong across two: left intact, the seeded wave
+                # keeps the statistic high for the rest of the run and the result
+                # cannot be read. See docs/roadmap.md 1.1.
+                history.clear()
+                motor_trace.clear()
+                motor_v.clear()
+                start = _centroid(links)
+                reported = t
 
         muscle_model.step(bridge.drive(runtime.state[1]), dt_ms=dt * 1000.0)
         command_history.append((t, _command_state(runtime)))

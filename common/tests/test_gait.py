@@ -12,7 +12,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from common.body.gait import measure, travel_at
+from common.body.gait import dominant_period_samples, measure, travel_at
 
 HZ = 240.0
 
@@ -153,3 +153,77 @@ def test_a_frozen_body_is_not_given_a_phase() -> None:
     # floor on noise and not a blanket refusal.
     real = coil + np.deg2rad(10.0) * np.sin(2 * np.pi * t / 480.0 - np.deg2rad(30.0) * j)
     assert measure(real).inter_joint_phase_deg == pytest.approx(30.0, abs=2.0)
+
+
+# -- is there an oscillation at all? ----------------------------------------
+#
+# MIN_CYCLES_IN_WINDOW bounds how long a period may be, which is not the same
+# question as whether there is one. With no periodicity the spectrum is roughly
+# flat, argmax lands on the lowest bin the length check admits -- period exactly
+# half the window -- and the check passes it. Observed in a run that reported
+# `period 6.0s` at t=12, `7.0s` at t=14 and `8.0s` at t=16, each half the elapsed
+# window, on 1.3 degrees of decaying amplitude, with `travel +0.28` derived from
+# it. See MIN_PEAK_PROMINENCE and model_assumptions 5AK.
+
+
+def _travelling(seconds: float, hz: float, *, waves: float = 1.5, amp_deg: float = 16.0):
+    """A travelling wave over a given span, for the prominence tests.
+
+    Named apart from the module's own `_wave`: defining a second helper under
+    that name silently replaced the first and broke five unrelated tests with a
+    TypeError, which is a neater demonstration of why than any comment.
+    """
+    t = np.arange(int(seconds * hz)) / hz
+    j = np.arange(23)
+    phase = 2.0 * np.pi * (0.5 * t[:, None] - waves * j[None, :] / 23)
+    return np.radians(amp_deg) * np.sin(phase)
+
+
+def test_a_real_wave_is_still_resolved() -> None:
+    """The guard must not cost the thing the metric exists to measure."""
+    gait = measure(_travelling(20.0, 240.0), hz=240.0)
+    assert gait.period_s == pytest.approx(2.0, abs=0.05)
+    assert gait.travel > 0.5
+
+
+@pytest.mark.parametrize(
+    "name",
+    ("noise", "drift", "decay"),
+)
+def test_a_signal_with_no_rhythm_resolves_no_period(name: str) -> None:
+    """Each of these used to return a period of exactly half the window.
+
+    `travel` is computed at a lag of a quarter period, so a fabricated period
+    produces a fabricated propagation: these reported up to +0.28 for bodies
+    doing nothing rhythmic at all.
+    """
+    rng = np.random.default_rng(0)
+    samples, joints = 240 * 20, 23
+    t = np.arange(samples) / 240.0
+    signals = {
+        "noise": np.radians(1.3) * rng.standard_normal((samples, joints)),
+        "drift": np.radians(5.0) * np.linspace(0.0, 1.0, samples)[:, None] * np.ones(joints),
+        "decay": np.radians(1.3)
+        * np.exp(-t / 8.0)[:, None]
+        * rng.standard_normal((samples, joints)),
+    }
+    gait = measure(signals[name], hz=240.0)
+    assert not np.isfinite(gait.period_s), f"{name} resolved a period of {gait.period_s}"
+    assert gait.travel == 0.0, f"{name} reported travel {gait.travel}"
+
+
+def test_the_guard_is_about_prominence_and_not_the_bin() -> None:
+    """A genuine two-cycles-in-window oscillation lands on the same bin a flat
+    spectrum does, so rejecting that bin would throw away real slow rhythms.
+
+    This is the case the fix had to keep: exactly two cycles of a clean sine,
+    which is the shortest the minimum-cycles rule allows.
+    """
+    hz = 240.0
+    samples = int(20.0 * hz)
+    t = np.arange(samples) / hz
+    # Two cycles in twenty seconds: period 10 s, exactly at the limit.
+    slow = np.radians(10.0) * np.sin(2.0 * np.pi * 0.1 * t)[:, None] * np.ones(23)
+    period = dominant_period_samples(slow - slow.mean(axis=0, keepdims=True))
+    assert np.isfinite(period), "a clean two-cycle oscillation must still resolve"
+    assert period / hz == pytest.approx(10.0, abs=0.5)

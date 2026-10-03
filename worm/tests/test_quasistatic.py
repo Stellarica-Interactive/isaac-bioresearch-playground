@@ -483,3 +483,70 @@ def test_segment_angles_agree_with_the_direction_vectors() -> None:
     angles = body.segment_angles()
     expected = np.stack([np.cos(angles), np.sin(angles)], axis=1)
     assert np.allclose(body._directions(), expected)
+
+
+# -- self-contact -----------------------------------------------------------
+#
+# The connectome curls the body until `clear` reaches -1.39 mm: it passes through
+# itself by a little over a tail diameter. `self_contact` adds stiff drag along
+# the line between two non-neighbouring segments that have closed to touching,
+# acting only on approach. Off by default, because every number in
+# model_assumptions was measured without it.
+#
+# The band width is bounded above by a measurement rather than chosen freely: the
+# scripted gait's closest self-approach is 1.57 mm, so a wider band would engage
+# during ordinary crawling and make every locomotion figure contingent on this
+# model. See model_assumptions 5AF.7.
+
+CURLING_TORQUE = 6.0e-5
+
+
+def _worst_clearance(*, contact: bool, seconds: float = 12.0) -> float:
+    """Closest the body comes to itself while curling, in metres."""
+    body = QuasiStaticBody(PLAN, self_contact=contact)
+    drive = np.full(PLAN.n_joints, CURLING_TORQUE)
+    worst = 1.0
+    for _ in range(int(seconds * 240)):
+        body.step(drive, dt_s=1.0 / 240.0)
+        worst = min(worst, body.min_self_distance_m())
+    return worst
+
+
+def test_without_contact_the_body_folds_through_itself() -> None:
+    """The permission being removed, asserted so the fix has something to fix.
+
+    A uniform drive curls the body until non-neighbouring segments overlap. The
+    solver knows only drag, so nothing stops them.
+    """
+    assert _worst_clearance(contact=False) < -1.0e-3, "expected the body to interpenetrate"
+
+
+def test_self_contact_keeps_the_body_clear_of_itself() -> None:
+    """The same curl, with contact on, must not interpenetrate at all.
+
+    Measured over a longer curl: worst clearance goes from -5.80 mm to +0.79 mm.
+    Asserting merely "less overlap" would pass on the first version of this,
+    which improved -6.29 mm to -5.18 mm and did not work.
+    """
+    assert _worst_clearance(contact=True) > 0.0
+
+
+def test_self_contact_does_not_disturb_the_gait() -> None:
+    """A contact model that changed the gait would make every locomotion number
+    in model_assumptions contingent on two arbitrary constants.
+
+    It does not, and that is a property of the band width rather than luck: the
+    scripted gait never comes within 1.57 mm of itself, which is outside the
+    band, so no contact ever engages. Measured, the speed is identical to four
+    decimal places with contact on and off.
+    """
+    start = QuasiStaticBody(PLAN).segment_centres().mean(axis=0)
+    distances = []
+    for contact in (False, True):
+        body = QuasiStaticBody(PLAN, drag=DragParameters(), self_contact=contact)
+        for step in range(int(8.0 * 120)):
+            body.step(_wave_torques(body, step / 120.0, amplitude=5.0e-5), dt_s=1.0 / 120.0)
+        distances.append(_distance_bl(body, start))
+    assert distances[0] == pytest.approx(distances[1], rel=1e-9), (
+        f"contact changed the gait: {distances[0]:.6f} vs {distances[1]:.6f} BL"
+    )

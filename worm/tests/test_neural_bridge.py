@@ -25,6 +25,9 @@ from common.data.schemas import (
 )
 from worm.body.geometry import QUADRANTS, BodyPlan
 from worm.body.neural_bridge import (
+    DEFAULT_PROPRIOCEPTIVE_GAIN,
+    RATE_LAG_MS,
+    RATE_REFERENCE_HZ,
     MuscleDrive,
     Proprioception,
     muscle_slots,
@@ -283,3 +286,82 @@ def test_sensing_offset_moves_the_sensed_region_anteriorly() -> None:
     # Clamping at the head means some entries tie; none may move posteriorly.
     assert np.all(far.sensed_segment <= near.sensed_segment)
     assert np.any(far.sensed_segment < near.sensed_segment)
+
+
+# -- the phasic proprioceptive term -----------------------------------------
+#
+# The curvature law is monotone positive feedback: a dorsal bend excites DB, DB
+# deepens the bend, and a static bend is a stable fixed point of the loop. That
+# fixed point is the latch of model_assumptions 5C.4 and the settled body of
+# 5P.3. A law responding to curvature *rate* has no fixed point there, because a
+# body that has stopped moving produces no drive. 5C.5 lists this as option 3.
+
+
+def _probe(rate_fraction: float) -> Proprioception:
+    """Two targets reading the same joints, so only the law is under test."""
+    return Proprioception(
+        ("DB1", "VB1"),
+        np.array([5, 5]),
+        DEFAULT_PROPRIOCEPTIVE_GAIN,
+        receptive_joints=3,
+        rate_fraction=rate_fraction,
+    )
+
+
+def test_the_default_law_is_pure_curvature() -> None:
+    """Every result in model_assumptions assumed it, so it has to stay."""
+    assert Proprioception(("DB1",), np.array([0]), 1.0).rate_fraction == 0.0
+
+
+def test_a_held_bend_drives_the_tonic_law_and_not_the_phasic_one() -> None:
+    """The fixed point being removed, which is the whole point.
+
+    A body holding a bend reports it forever under the curvature law -- that is
+    what sustains the latch -- and reports nothing at all under the rate law.
+    """
+    held = np.full(23, np.radians(20.0))
+    tonic = _probe(0.0).currents(held, earlier_angles_rad=held, elapsed_ms=RATE_LAG_MS)
+    phasic = _probe(1.0).currents(held, earlier_angles_rad=held, elapsed_ms=RATE_LAG_MS)
+    assert abs(tonic["DB1"]) > 100.0
+    assert phasic["DB1"] == pytest.approx(0.0)
+
+
+def test_the_rate_term_is_gain_matched_at_the_gait_frequency() -> None:
+    """The blend must change the law without changing the gain.
+
+    Raw, the rate term is 5.7x the tonic one for the same motion, because
+    radians per second are numerically larger than radians. A phasic run that
+    then oscillated could not be told from a 5.7-fold gain increase -- which is
+    the mistake 5Q records making with a binarised output. Scaling by
+    1/(2 pi f) puts them in the same units at the gait's own frequency.
+    """
+    bend = np.full(23, np.radians(20.0))
+    step = bend * np.sin(2.0 * np.pi * RATE_REFERENCE_HZ * RATE_LAG_MS / 1000.0)
+    currents = [
+        _probe(f).currents(bend + step, earlier_angles_rad=bend, elapsed_ms=RATE_LAG_MS)["DB1"]
+        for f in (0.0, 0.5, 1.0)
+    ]
+    # Within 20%: exact equality is not expected, since a finite lag on a sine
+    # is not the derivative, but a factor of 5.7 would be a different experiment.
+    assert max(currents) < 1.2 * min(currents), f"not gain-matched: {currents}"
+
+
+def test_without_history_only_the_tonic_share_is_reported() -> None:
+    """A phasic receptor with no motion history has nothing to report.
+
+    Written first as "degrades to the tonic law", which is what it felt like it
+    should do and is not what it does: with no past posture the rate is zero, so
+    the blend returns only its tonic share -- nothing at all when that share is
+    zero. The behaviour is the right one. Substituting the curvature law for the
+    first RATE_LAG_MS would mean the loop briefly obeys a law the run was not
+    configured with, which is worse than a short transient.
+    """
+    bend = np.full(23, np.radians(15.0))
+    tonic = _probe(0.0).currents(bend)["DB1"]
+
+    assert _probe(1.0).currents(bend)["DB1"] == pytest.approx(0.0)
+    assert _probe(1.0).currents(bend, earlier_angles_rad=bend)["DB1"] == pytest.approx(0.0)
+    # A half-and-half law keeps half of it, which is the same rule.
+    assert _probe(0.5).currents(bend)["DB1"] == pytest.approx(0.5 * tonic)
+    # And nothing raises for the missing arguments.
+    assert _probe(0.5).currents(bend, elapsed_ms=RATE_LAG_MS)["DB1"] == pytest.approx(0.5 * tonic)

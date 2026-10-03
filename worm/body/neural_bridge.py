@@ -79,6 +79,44 @@ VENTRAL_GAIN = 1.0
 #: parameter that decides whether the loop oscillates at all.
 DEFAULT_PROPRIOCEPTIVE_GAIN = 400.0
 
+#: Fraction of the proprioceptive signal that responds to the *rate of change* of
+#: curvature rather than to curvature itself. 0.0 is the pure curvature law every
+#: result in ``docs/model_assumptions.md`` was measured with.
+#:
+#: Why it exists: the curvature law is monotone positive feedback, so a static
+#: bend is a stable fixed point of the loop -- which is what §5C.4's latch and
+#: §5P.3's hand-over both are. A rate term has no fixed point at a static bend,
+#: because a body that has stopped moving produces no drive. §5C.5 lists this as
+#: option 3 and it had not been tried.
+#:
+#: ASSUMED, and a modelling choice rather than a parameter. Real mechanoreceptors
+#: usually have both a phasic and a tonic component, so a blend is more
+#: defensible than either pure law -- but **the fraction is ours and nothing
+#: measures it.** See model_assumptions 5AK.
+DEFAULT_RATE_FRACTION = 0.0
+
+#: Lag over which curvature rate is measured, ms. A difference between
+#: consecutive physics steps is mostly solver jitter; comparing against the body
+#: a while ago is the same thing smoothed, without needing any state.
+#:
+#: ARBITRARY ENGINEERING: short against a 2 s gait so the rate is still local in
+#: time, long against a 4.17 ms step so it is not reading noise.
+RATE_LAG_MS = 50.0
+
+#: Frequency at which the rate term is scaled to match the curvature term, Hz.
+#:
+#: Curvature is in radians and its rate in radians per second, so blending them
+#: raw would change the signal's magnitude as well as its character: measured, a
+#: pure rate law delivers 1117 pA where the tonic law delivers 195 for the same
+#: motion. A run that then oscillated could not tell the law from a 5.7-fold gain
+#: increase, which is the mistake §5Q records making with a binarised output.
+#:
+#: For a bend oscillating at ``f``, ``|dk/dt| = 2 pi f |k|``, so dividing the rate
+#: by ``2 pi f`` puts it in the same units and at the same magnitude. 0.5 Hz is
+#: the gait frequency used throughout (`sine_wave_drive`), drawn from observed
+#: crawling on agar.
+RATE_REFERENCE_HZ = 0.5
+
 
 def muscle_slots(plan: BodyPlan, cell_ids: tuple[str, ...]) -> dict[str, tuple[int, int]]:
     """Map each body wall muscle cell to ``(quadrant index, segment index)``.
@@ -203,6 +241,12 @@ class Proprioception:
     Off by default: measured here, it latches the model. See
     :data:`DEFAULT_RECEPTIVE_FRACTION`."""
 
+    rate_fraction: float = DEFAULT_RATE_FRACTION
+    """How much of the signal responds to curvature *rate* instead of curvature.
+
+    0 is the pure curvature law, which cannot help latching; 1 is purely phasic
+    and cannot report a held posture at all. See :data:`DEFAULT_RATE_FRACTION`."""
+
     @classmethod
     def build(
         cls,
@@ -214,6 +258,7 @@ class Proprioception:
         classes: tuple[str, ...] = PROPRIOCEPTIVE_CLASSES,
         receptive_fraction: float = DEFAULT_RECEPTIVE_FRACTION,
         asymmetric: bool = False,
+        rate_fraction: float = DEFAULT_RATE_FRACTION,
     ) -> Proprioception:
         positions = neuron_body_positions(connectome, plan)
         by_class = {
@@ -239,10 +284,29 @@ class Proprioception:
             gain_pa_per_rad,
             receptive_joints=receptive,
             asymmetric=asymmetric,
+            rate_fraction=rate_fraction,
         )
 
-    def currents(self, joint_angles_rad: np.ndarray) -> dict[str, float]:
+    def currents(
+        self,
+        joint_angles_rad: np.ndarray,
+        *,
+        earlier_angles_rad: np.ndarray | None = None,
+        elapsed_ms: float | None = None,
+    ) -> dict[str, float]:
         """Curvature to injected current, one entry per target neuron.
+
+        With :attr:`rate_fraction` above zero the sensed quantity is a blend of
+        curvature and its rate of change, and the rate needs a past posture to
+        compare against: pass ``earlier_angles_rad`` from ``elapsed_ms`` ago, by
+        preference :data:`RATE_LAG_MS`.
+
+        Omitting them leaves the *rate* at zero, so the blend returns only its
+        tonic share -- nothing at all for a purely phasic law. That is deliberate
+        rather than a degenerate case: a phasic receptor with no motion history
+        has genuinely nothing to report, and silently substituting the curvature
+        law for the first :data:`RATE_LAG_MS` of a run would mean the loop briefly
+        obeys a law the run was not configured with.
 
         Each neuron integrates curvature over a stretch of body starting anterior
         to itself, rather than reading a single joint. DB neurons drive dorsal
@@ -255,11 +319,34 @@ class Proprioception:
         one way from the other.
         """
         angles = np.asarray(joint_angles_rad, dtype=np.float64)
+        rate = np.zeros_like(angles)
+        if (
+            self.rate_fraction > 0.0
+            and earlier_angles_rad is not None
+            and elapsed_ms is not None
+            and elapsed_ms > 0.0
+        ):
+            earlier = np.asarray(earlier_angles_rad, dtype=np.float64)
+            if earlier.shape == angles.shape:
+                # Scaled by 1 / (2 pi f) so a bend oscillating at the gait
+                # frequency gives the same magnitude as the curvature it
+                # replaces. Without this the blend would be a gain change as
+                # well as a change of law, and the two could not be separated.
+                rate = (angles - earlier) / (elapsed_ms / 1000.0)
+                rate = rate / (2.0 * np.pi * RATE_REFERENCE_HZ)
+
         out: dict[str, float] = {}
         for cell, start in zip(self.targets, self.sensed_segment, strict=True):
-            window = angles[int(start) : int(start) + self.receptive_joints]
+            stop = int(start) + self.receptive_joints
+            window = angles[int(start) : stop]
+            rate_window = rate[int(start) : stop]
             if window.size == 0:
                 window = angles[int(start) : int(start) + 1]
+                rate_window = rate[int(start) : int(start) + 1]
+            if self.rate_fraction > 0.0:
+                # Blended in the sensed quantity rather than in the current, so
+                # the asymmetric gains below apply to whatever is being sensed.
+                window = (1.0 - self.rate_fraction) * window + self.rate_fraction * rate_window
             dorsal = cell.startswith("DB")
             sign = 1.0 if dorsal else -1.0
             if self.asymmetric and dorsal:
