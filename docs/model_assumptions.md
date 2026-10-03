@@ -3531,12 +3531,69 @@ and the whole-recording window of §5AC.2. The general form has not changed:
 assumes** — and here the structure assumed was that a swinging end-to-end vector
 implies a turning body.
 
-### 5AE.5 What is still open
+### 5AE.5 A uniform drive curls the body into a ball in one second
 
-Why a *constant* drive produces a precessing bend at all. With no feedback the
-joints should reach static equilibrium, and `amp` decaying from 3.27° to 1.53°
-suggests they are slowly doing so — the precession may be nothing but that
-transient, two hundred seconds long. Being measured.
+The precession was measured, found to be perfectly steady over ninety seconds
+with angular momentum conserved, and reported as a self-sustained *mechanical*
+oscillator — a striking result, since §5C.9 had established the neural model has
+no limit cycle anywhere, and a body with its own rhythm would invert the problem.
+
+It was a collapsed body spinning.
+
+`tools/diagnose_rotation.py` omitted two setup steps the runner performs,
+`set_dof_armatures` and zeroing the position targets. Adding them, the body is
+built correctly — 47.9 mm from its centroid for a 100 mm animal — and then:
+
+| uniform dorsal drive | outcome |
+|---|---|
+| 0.05 | **collapses to 5.3 mm within 1 second** |
+| 0.005 | holds its shape; precession 0.011°/s, i.e. none |
+
+So there is no mechanical limit cycle. With a drive that leaves the animal
+extended, the body does nothing at all, which is what a system of overdamped
+joints should do under constant load. The conservation checks had been satisfied
+because a spinning ball conserves angular momentum perfectly well.
+
+**What is real, and was the user's observation before it was a measurement:** a
+uniform activation of 0.05 at `--torque-scale 3e-3` curls the animal into a ball
+in one second. Watching a windowed run they described it as "overshoots... crumples
+in a spiral... closes in a tight circle", which is exactly this. The torque
+available to the muscles is an order of magnitude more than the body's joint
+limits and drag can absorb, and §5U already recorded that the torque scale and
+the drag magnitude are a pair of free parameters with a single constraint between
+them. This is what that costs.
+
+The diagnostic now checks the body's extent **every second** and refuses to report
+mechanics measured on a collapsed scene. A guard that only ran before the loop
+could not catch a collapse that takes a second to happen, which is why the first
+reading got through.
+
+### 5AE.6 Four wrong diagnoses in one investigation
+
+Recorded as a set, because the sequence is the lesson:
+
+1. "The rotation must be decaying, and a long time constant makes it look
+   constant." Wrong: the rotational time constant is milliseconds.
+2. "It is therefore driven — an external torque leak, probably the planar
+   constraint, contaminating 80% of every distance in §5Q–§5U." Wrong: net torque
+   fluctuates about zero and angular momentum is conserved.
+3. "The body is not rotating at all — it carries 2.3% of a rigid spin's angular
+   momentum, so this is a precessing bend." Wrong: that compared a measured `L`
+   against an `I·ω` computed elsewhere under different assumptions about the
+   body's shape, while the diagnostic derived its own `ω` from `L` using its own
+   inertia. The two inertias differed by a factor of 43 because the body in the
+   diagnostic was collapsed.
+4. "The body has a self-sustained mechanical limit cycle." Wrong, same cause.
+
+Each was argued from a real measurement. What was never checked, until the
+diagnostic was made to print its own `spread` and `inertia`, was whether the
+object being measured was a worm. The arithmetic was fine every time; the subject
+was not.
+
+The rule this adds to §5O.3's: **a diagnostic must report enough about its
+subject to prove the subject is what you think it is.** Angular momentum,
+torque and heading were all correct and all useless without the body's extent
+beside them.
 
 ## 6. Decisions taken, and what remains open
 

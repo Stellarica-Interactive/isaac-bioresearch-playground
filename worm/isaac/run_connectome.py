@@ -861,9 +861,9 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
 
         if t - reported >= args.report_every:
             reported = t
-            _report(t, start, links, plan, angles, history)
+            _report(t, start, links, plan, angles, history, hz=args.physics_hz)
 
-    _report(args.seconds, start, links, plan, angles, history, final=True)
+    _report(args.seconds, start, links, plan, angles, history, final=True, hz=args.physics_hz)
     if switch is not None:
         print(f"         latched high at the end: {100 * switch.fraction_on:.0f}% of them")
     if motor_trace and args.dump_motor:
@@ -1149,6 +1149,7 @@ def _report(  # noqa: PLR0913
     angles: np.ndarray,
     history: list[np.ndarray],
     final: bool = False,
+    hz: float = 240.0,
 ) -> None:
     xyz = np.asarray(links.get_world_poses()[0])
     if not np.all(np.isfinite(xyz)):
@@ -1156,7 +1157,13 @@ def _report(  # noqa: PLR0913
         return
     delta = np.asarray(links.get_world_poses()[0])[:, :2].mean(axis=0) - start
     extent = float(np.linalg.norm(xyz[-1] - xyz[0])) / plan.total_length_m
-    gait = measure_gait(history)
+    # The real sampling rate, not the default. `history` is appended once per
+    # physics step, so a 60 Hz run gives the metric a quarter of the samples per
+    # second it assumes -- which made the scripted wave's period read 0.5 s
+    # instead of 2.0 s, exactly the ratio of the rates. Amplitude and phase were
+    # unaffected (both are computed in samples), so the error showed up only in
+    # the one column nobody was comparing across rates.
+    gait = measure_gait(history, hz=hz)
     label = "FINAL" if final else f"t={t:5.1f}s"
     # Heading tells crawling apart from being stirred. A body held in a fixed bend
     # can still travel a long way by rotating against anisotropic drag, and the
