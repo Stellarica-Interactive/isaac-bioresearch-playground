@@ -24,7 +24,12 @@ from worm.body.geometry import (
     parse_muscle,
     segment_of_muscle,
 )
-from worm.body.muscles import MuscleModel, MuscleParameters, sine_wave_drive
+from worm.body.muscles import (
+    MuscleModel,
+    MuscleParameters,
+    sine_wave_drive,
+    wave_envelope,
+)
 from worm.importers.naming import body_wall_muscle_ids
 
 
@@ -166,9 +171,7 @@ class TestMuscleModel:
         m.step(drive, dt_ms=1e6)
         assert np.all(m.joint_torques() < 0)
 
-    def test_co_contraction_produces_no_net_torque_but_real_stiffness(
-        self, plan: BodyPlan
-    ) -> None:
+    def test_co_contraction_produces_no_net_torque_but_real_stiffness(self, plan: BodyPlan) -> None:
         """Pulling both sides equally stiffens the joint without bending it.
 
         Real behaviour, and it falls out of the antagonist model rather than being
@@ -268,9 +271,7 @@ class TestGroundDrag:
         pos[:, 1] = 0.01 * np.sin(np.linspace(0, 4 * np.pi, plan.n_segments))
         assert np.allclose(np.linalg.norm(drag.tangents(pos), axis=1), 1.0)
 
-    def test_sideways_motion_is_resisted_far_more_than_forward(
-        self, plan: BodyPlan
-    ) -> None:
+    def test_sideways_motion_is_resisted_far_more_than_forward(self, plan: BodyPlan) -> None:
         """The whole point. Ratio of resistance must equal the drag ratio."""
         drag = GroundDrag(plan, DragParameters(tangential=1.0, ratio=20.0))
         pos = self.straight_body(plan)
@@ -304,9 +305,7 @@ class TestGroundDrag:
         vel = np.tile(np.array([0.3, 0.7]), (plan.n_segments, 1))
         assert np.allclose(drag.forces(pos, 2 * vel), 2 * drag.forces(pos, vel))
 
-    def test_isotropic_drag_is_expressible_and_shows_why_it_fails(
-        self, plan: BodyPlan
-    ) -> None:
+    def test_isotropic_drag_is_expressible_and_shows_why_it_fails(self, plan: BodyPlan) -> None:
         """With ratio 1 the surface cannot distinguish directions at all, which is
         the configuration in which an undulating body goes nowhere."""
         drag = GroundDrag(plan, DragParameters(tangential=1.0, ratio=1.0))
@@ -329,3 +328,91 @@ class TestGroundDrag:
         drag = GroundDrag(plan)
         with pytest.raises(ValueError, match="must match"):
             drag.forces(self.straight_body(plan), np.zeros((3, 2)))
+
+
+# -- the scripted wave's amplitude envelope --------------------------------
+#
+# sine_wave_drive drove the head and tail exactly as hard as the mid-body, which
+# was never a decision -- it is what the simplest expression producing a
+# travelling wave happens to do. It matters because a finite undulating body yaws
+# at its undulation frequency, and how hard the ends are driven sets how much.
+#
+# `taper` is a WIDTH, the fraction of the body over which the amplitude ramps up
+# at each end. It began as an exponent on sin(pi s), which tapers the whole body
+# at once and at any useful setting nearly switched the head off -- measured, that
+# cost the track following the taper existed to improve. See model_assumptions
+# 5AI.
+
+
+def _signal(plan: BodyPlan, t_ms: float, **kwargs) -> np.ndarray:
+    """What the joints actually see: dorsal minus ventral.
+
+    Each side is half-wave rectified because a muscle can only pull, so neither
+    row alone is the wave.
+    """
+    drive = sine_wave_drive(plan, t_ms, **kwargs)
+    return drive[0] - drive[2]
+
+
+def test_the_wave_is_flat_by_default() -> None:
+    """Every committed measurement assumed a flat envelope, so it has to stay."""
+    plan = BodyPlan()
+    assert np.allclose(wave_envelope(plan.n_segments, 0.0), 1.0)
+    flat = _signal(plan, 250.0)
+    assert np.abs(flat).max() > 0.0
+    assert np.allclose(flat, _signal(plan, 250.0, taper=0.0))
+    assert not np.allclose(flat, _signal(plan, 250.0, taper=0.15))
+
+
+def test_a_narrow_taper_leaves_most_of_the_body_alone() -> None:
+    """The point of a width rather than an exponent.
+
+    At a width of 0.08 on 24 segments the ramp spans 1.92 segments, so the two
+    outermost at each end are touched and the other 20 stay at full amplitude.
+    An exponent cannot express that -- it scales every segment -- which is why
+    one setting of it had to trade the head against the rocking.
+    """
+    plan = BodyPlan()
+    envelope = wave_envelope(plan.n_segments, 0.08)
+    untouched = np.count_nonzero(envelope > 0.999)
+    assert untouched == plan.n_segments - 4, f"{untouched} of {plan.n_segments} untouched"
+    assert envelope[0] < 0.25
+    assert envelope[-1] < 0.25
+    # Symmetric, or the animal would have a built-in turning preference.
+    assert np.allclose(envelope, envelope[::-1])
+
+
+def test_the_taper_reduces_the_ends_and_not_the_middle() -> None:
+    """A taper must shape the body, not just turn the gain down.
+
+    If it scaled everything, the yaw it is meant to reduce would fall only
+    because the animal stopped undulating, which §5AG shows is a bad trade --
+    slip rises steeply once the bend drops.
+    """
+    plan = BodyPlan()
+    middle = plan.n_segments // 2
+    envelope = wave_envelope(plan.n_segments, 0.15)
+    assert envelope[middle] == pytest.approx(1.0)
+    assert envelope[0] < 0.2
+    assert envelope[-1] < 0.2
+
+
+@pytest.mark.parametrize("taper", (0.04, 0.08, 0.15, 0.25, 0.5))
+def test_the_taper_never_inverts_or_amplifies(taper: float) -> None:
+    """The envelope is in [0, 1], so it can only ever reduce."""
+    plan = BodyPlan()
+    envelope = wave_envelope(plan.n_segments, taper)
+    assert np.all(envelope >= 0.0)
+    assert np.all(envelope <= 1.0 + 1e-12)
+    for ms in (0.0, 137.0, 500.0, 1234.0):
+        flat = sine_wave_drive(plan, ms)
+        tapered = sine_wave_drive(plan, ms, taper=taper)
+        assert np.all(tapered >= 0.0), "a muscle can only pull"
+        assert np.all(tapered <= flat + 1e-12), f"taper {taper} amplified at t={ms}"
+
+
+def test_a_wide_taper_is_clamped_at_half_the_body() -> None:
+    """Past 0.5 the ramps would overlap. Clamping keeps the envelope a shape
+    rather than letting it fold over itself and rise again in the middle."""
+    plan = BodyPlan()
+    assert np.allclose(wave_envelope(plan.n_segments, 0.5), wave_envelope(plan.n_segments, 4.0))

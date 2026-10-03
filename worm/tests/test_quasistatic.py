@@ -325,3 +325,161 @@ def test_a_closed_coil_interpenetrates() -> None:
     extent = float(np.linalg.norm(nodes[-1] - nodes[0])) / PLAN.total_length_m
     assert extent < 0.1, f"not actually coiled: extent {extent:.2f}"
     assert body.min_self_distance_m() < 0.0, "a closed coil should interpenetrate"
+
+
+# -- a drag law with a threshold --------------------------------------------
+#
+# Linear drag inverts to v = F/c, so no force is too small to move the body and
+# nothing is ever stuck. Observed in the viewport as a body holding a stable
+# shape while sliding steadily across the ground. Two departures from linearity
+# are available, both off by default so every committed measurement is
+# reproducible: a sublinear exponent and a yield force. These check that the
+# nonlinear solve is a solve rather than an approximation that happens to look
+# plausible. See model_assumptions 5AH.
+
+SUBLINEAR = DragParameters(exponent=0.6)
+YIELDING = DragParameters(yield_force=1.0e-4)
+
+
+def test_the_default_drag_law_is_linear() -> None:
+    """Everything measured in this project assumed it, so it has to stay."""
+    assert DragParameters().is_linear
+    assert not SUBLINEAR.is_linear
+    assert not YIELDING.is_linear
+    assert not DragParameters(exponent=0.6, yield_force=1.0e-4).is_linear
+
+
+def test_the_sublinear_law_stiffens_below_its_reference_speed() -> None:
+    """That is the whole mechanism: a groove resists more as you slow down."""
+    reference = SUBLINEAR.reference_speed
+    slow, fast = np.array([reference / 100.0]), np.array([reference * 100.0])
+    assert SUBLINEAR.speed_factor(slow)[0] > 1.0
+    assert SUBLINEAR.speed_factor(fast)[0] < 1.0
+    assert np.isclose(SUBLINEAR.speed_factor(np.array([reference]))[0], 1.0)
+    # The linear law must be exactly inert, not merely close to it.
+    assert np.all(DragParameters().speed_factor(slow) == 1.0)
+
+
+def test_the_yield_force_saturates() -> None:
+    """A yield term is a force, not a coefficient: past the regularisation speed
+    it must stop growing, or it is just more viscosity under another name."""
+    speed = np.array([YIELDING.yield_speed * 1e3, YIELDING.yield_speed * 1e4])
+    force = YIELDING.yield_coefficient(speed) * speed
+    assert np.allclose(force, YIELDING.yield_force, rtol=1e-3)
+    assert np.all(DragParameters().yield_coefficient(speed) == 0.0)
+
+
+@pytest.mark.parametrize("drag", (SUBLINEAR, YIELDING), ids=("sublinear", "yielding"))
+def test_the_force_balance_holds_under_a_nonlinear_law(drag: DragParameters) -> None:
+    """The fixed point has to actually converge.
+
+    The balance is solved with coefficients that depend on the velocities it
+    produces, so it is closed by iteration. An iteration that stopped early
+    would leave a velocity field that does not balance -- the same class of
+    defect as clipping the joint limits, which spun the body at 26814 deg/s
+    while every other test passed.
+    """
+    body = QuasiStaticBody(PLAN, drag=drag)
+    worst = 0.0
+    for step in range(40):
+        torques = _wave_torques(body, step / 60.0, amplitude=5.0e-5)
+        worst = max(worst, body.residual_fraction(torques))
+        body.step(torques, dt_s=1.0 / 60.0)
+    # Relative, not absolute: an absolute bound on a nonlinear solve just encodes
+    # the drag magnitude. Written first as the linear path's 1e-12 N, which
+    # failed at 1.6e-8 N -- correctly, and the bound was wrong rather than the
+    # solver. At the committed tolerance the achieved fraction is 5e-9, so this
+    # has two orders of headroom and would still catch a stalled iteration.
+    assert worst < 1.0e-7, f"{worst:.3e} of the drag force fails to cancel"
+
+
+@pytest.mark.parametrize("drag", (SUBLINEAR, YIELDING), ids=("sublinear", "yielding"))
+def test_a_nonlinear_law_still_needs_anisotropy_to_travel(drag: DragParameters) -> None:
+    """The mechanism check, repeated for each law.
+
+    Thrust must still come from the medium resisting sideways motion more than
+    lengthwise motion. A nonlinear law that travelled under isotropic drag would
+    be generating motion out of its own nonlinearity.
+    """
+    start = QuasiStaticBody(PLAN).segment_centres().mean(axis=0)
+    isotropic = QuasiStaticBody(
+        PLAN, drag=DragParameters(ratio=1.0, exponent=drag.exponent, yield_force=drag.yield_force)
+    )
+    anisotropic = QuasiStaticBody(PLAN, drag=drag)
+    # Four seconds is two gait cycles, which separates the two cases by an order
+    # of magnitude. Kept short on purpose: the nonlinear solve runs up to 80
+    # passes per step, so simulated seconds here are expensive in a way they are
+    # not for the linear law.
+    for step in range(int(4.0 * 120)):
+        for body in (isotropic, anisotropic):
+            body.step(_wave_torques(body, step / 120.0, amplitude=5.0e-5), dt_s=1.0 / 120.0)
+    flat = _distance_bl(isotropic, start)
+    curved = _distance_bl(anisotropic, start)
+    assert flat < 0.2 * curved, f"{flat=:.4f} {curved=:.4f}"
+
+
+@pytest.mark.parametrize("drag", (SUBLINEAR, YIELDING), ids=("sublinear", "yielding"))
+def test_a_nonlinear_law_still_sits_still_with_no_drive(drag: DragParameters) -> None:
+    """A threshold must not become a source. With no muscle torque the body has
+    to stay exactly where it is, as it does under the linear law."""
+    body = QuasiStaticBody(PLAN, drag=drag)
+    start = body.segment_centres().mean(axis=0)
+    for _ in range(120):
+        body.step(np.zeros(PLAN.n_joints), dt_s=1.0 / 60.0)
+    assert _distance_bl(body, start) < 1e-9
+    assert abs(body.heading) < 1e-12
+
+
+# -- per-segment orientation ------------------------------------------------
+#
+# `heading` is segment 0's angle and nothing else's. Driving an articulation
+# whose root link is the MIDDLE of the chain with the head's angle displaced the
+# rendered body 47.9 mm and rotated it by a figure that oscillated at the gait
+# frequency, which is what a user spent a session reporting as the animal
+# rotating. See model_assumptions 5AJ.
+#
+# Note what these tests cannot do: the defect was in the articulation, and this
+# suite cannot launch Isaac. `tools/check_kinematic_drive.py` is the real guard
+# and has to be run by hand. These cover only the solver side.
+
+
+def test_segment_angles_start_at_the_heading() -> None:
+    """Segment 0 is the head, so its angle is the heading by definition."""
+    body = QuasiStaticBody(PLAN)
+    body.heading = 0.7
+    body.joint_angles = np.linspace(-0.2, 0.2, PLAN.n_joints)
+    angles = body.segment_angles()
+    assert angles.shape == (PLAN.n_segments,)
+    assert angles[0] == pytest.approx(0.7)
+
+
+def test_segment_angles_diverge_from_the_heading_along_the_body() -> None:
+    """The whole point: no other segment's angle is the heading.
+
+    A bent body's segments point in different directions, so anything that needs
+    one segment's orientation has to ask for that segment. Writing `heading` for
+    all of them is the 5AJ defect.
+    """
+    body = QuasiStaticBody(PLAN)
+    body.heading = 0.0
+    body.joint_angles = np.full(PLAN.n_joints, np.radians(5.0))
+    angles = np.degrees(body.segment_angles())
+    assert angles[0] == pytest.approx(0.0)
+    assert angles[-1] == pytest.approx(5.0 * PLAN.n_joints)
+    # Monotonic under a uniform bend, and spanning a large angle: the middle
+    # segment is already 55 degrees off the head on a gently curled body.
+    assert np.all(np.diff(angles) > 0)
+    assert abs(angles[PLAN.n_segments // 2]) > 50.0
+
+
+def test_segment_angles_agree_with_the_direction_vectors() -> None:
+    """One source of truth. ``_directions`` is built from this, and the force
+    balance uses ``_directions``, so a disagreement would mean the solver and
+    anything driving a display were working from different bodies."""
+    body = QuasiStaticBody(PLAN)
+    body.heading = -1.1
+    rng = np.random.default_rng(0)
+    body.joint_angles = rng.uniform(-0.3, 0.3, PLAN.n_joints)
+    angles = body.segment_angles()
+    expected = np.stack([np.cos(angles), np.sin(angles)], axis=1)
+    assert np.allclose(body._directions(), expected)

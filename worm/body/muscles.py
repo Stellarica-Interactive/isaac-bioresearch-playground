@@ -156,6 +156,46 @@ class MuscleModel:
         return 0.5 * (both[:-1] + both[1:])
 
 
+#: Fraction of the body over which the scripted wave's amplitude ramps up at
+#: each end. 0.0 is flat, which drives the head and tail exactly as hard as the
+#: mid-body and is what this control did originally -- not a modelling choice but
+#: the simplest thing to write. 0.5 ramps over the whole body with no flat part.
+#:
+#: A finite undulating body yaws at its undulation frequency because the wave
+#: entering at the head and leaving at the tail is never balanced, and the size
+#: of that yaw is set by how hard the ends are driven. Real *C. elegans*
+#: undulation is roughly constant over most of the body and falls off near the
+#: ends, so a flat envelope overstates the end effect.
+#:
+#: The shape is a raised cosine: flat through the middle, smoothly to zero over
+#: the outer ``taper`` of the body at each end. An earlier version used
+#: ``sin(pi s)**k``, which tapers the *whole* body at once -- at k=1 the end
+#: segments sit at 6.5% of amplitude, nearly switching the head off, and that
+#: cost the track following the taper was meant to improve. A width is
+#: controllable where an exponent is not. See model_assumptions 5AI.
+#:
+#: ASSUMED. That the real profile falls off near the ends is established; this
+#: shape is not fitted to any published curvature profile.
+DEFAULT_WAVE_TAPER = 0.0
+
+
+def wave_envelope(n_segments: int, taper: float) -> np.ndarray:
+    """Raised-cosine amplitude envelope along the body, in ``[0, 1]``.
+
+    Flat through the middle and ramping to zero over the outer ``taper``
+    fraction at each end. ``taper`` of 0 returns all ones, so a flat envelope
+    costs nothing and is exactly the original behaviour.
+    """
+    position = (np.arange(n_segments) + 0.5) / n_segments
+    if taper <= 0.0:
+        return np.ones(n_segments)
+    width = min(taper, 0.5)
+    # Distance into the body from whichever end is nearer, as a fraction of the
+    # ramp width; clipped at 1 through the flat middle.
+    edge = np.minimum(position, 1.0 - position) / width
+    return 0.5 * (1.0 - np.cos(np.pi * np.clip(edge, 0.0, 1.0)))
+
+
 def sine_wave_drive(
     plan: BodyPlan,
     t_ms: float,
@@ -163,6 +203,7 @@ def sine_wave_drive(
     frequency_hz: float = 0.5,
     wavelength_fraction: float = 0.65,
     amplitude: float = 1.0,
+    taper: float = DEFAULT_WAVE_TAPER,
 ) -> np.ndarray:
     """A hand-written travelling wave, for testing the body without neurons.
 
@@ -174,6 +215,10 @@ def sine_wave_drive(
     Defaults are drawn from observed forward crawling on agar -- roughly 0.5 Hz
     undulation with a little over one wavelength along the body -- so that the
     control is at least in the right regime.
+
+    ``taper`` is the fraction of the body over which the amplitude ramps up at
+    each end; see :data:`DEFAULT_WAVE_TAPER` for why a flat envelope is not the
+    neutral choice it looks like.
     """
     phase_per_segment = 2.0 * np.pi / (wavelength_fraction * plan.n_segments)
     segments = np.arange(plan.n_segments)
@@ -181,6 +226,11 @@ def sine_wave_drive(
     # direction that drives forward locomotion.
     phase = 2.0 * np.pi * frequency_hz * (t_ms / 1000.0) - phase_per_segment * segments
     signal = amplitude * np.sin(phase)
+    if taper:
+        # The envelope is flat through the middle, so this reduces the ends
+        # without also turning the gain down; otherwise a taper and a weaker
+        # drive could not be told apart, and 5AG shows they behave differently.
+        signal = signal * wave_envelope(plan.n_segments, taper)
 
     drive = np.zeros((len(QUADRANTS), plan.n_segments))
     # A muscle can only pull, so each side gets the half-wave rectified signal.

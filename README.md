@@ -212,6 +212,67 @@ body is passing through itself -- neither solver prevents that. `extent` is how
 extended the body is, 1.0 straight and 0 a closed loop; the scripted gait holds
 0.73, and the connectome run above drops to 0.17.
 
+### Making it grip
+
+The body slides more than a real worm: it advances two thirds of its wave speed
+where a real animal manages 70--90 per cent, and because linear drag has no
+threshold at all, a body holding a near-stable shape still creeps steadily
+across the ground. Both are properties of the drag model. Two flags change the
+force--velocity law:
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --seed-wave 180 --drag-exponent 0.6 --drag-yield 2e-5
+```
+
+| | creep | slip | tail off head's track | axis swing |
+|---|---|---|---|---|
+| default | 0.216 mm/s | 0.343 | 6.51 mm | 25.1° |
+| `--drag-exponent 0.6 --drag-yield 2e-5` | **0.004 mm/s** | **0.283** | **2.65 mm** | 26.1° |
+| `--wave-taper 2.0` as well | 0.004 mm/s | -- | 6.97 mm | **13.0°** |
+| a real *C. elegans* | 0 | 0.1--0.3 | about a body radius | -- |
+
+The drag law is what makes the body *slither*: it takes the tail from sweeping
+sideways by six tail-radii to following the head's own track within about one.
+That is the clearest sign it is doing physical work rather than being a fitted
+speedup.
+
+### Making it go straight
+
+The body also rotates about 26 degrees per undulation and sweeps sideways rather
+than following its own track. Those look like one problem and are two: track
+following is **traction**, rotation is **kinematics**. They need different fixes
+and the fixes compose.
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --seed-wave 180 --seed-wavelength 0.55 --drag-ratio 40 --drag-exponent 0.6 --drag-yield 2e-5
+```
+
+| | rotation | tail off its own track | wobble | speed |
+|---|---|---|---|---|
+| default | 26.6° | 6.51 mm | 2.97 mm | 0.212 BL/s |
+| `--drag-ratio 40` + the drag law | 27.6° | **0.82 mm** | 3.70 mm | 0.241 BL/s |
+| **the command above** | **9.1°** | **1.18 mm** | **1.16 mm** | **0.220 BL/s** |
+| a real *C. elegans* | not established | about a body radius (1.09 mm) | — | 0.1--0.3 BL/s |
+
+The body's bend is 23° in every row, so none of this is achieved by making the
+animal undulate less -- which is the trap two other knobs fall into.
+`--wave-taper` and a weaker drive both reduce the rotation *only* by reducing the
+bend, and both cost the track following; neither is worth using.
+
+What the recipe costs, since none of it is on by default:
+
+* **`--drag-ratio 40`** is above the 3--10 Rabets et al. 2014 measured on agar,
+  but it is the value neuromechanical models conventionally use (Niebur & Erdös
+  1991), so it is better supported than the 20 that was here before.
+* **`--seed-wavelength 0.55`** is shorter than the ~0.65 of a body length a real
+  animal crawls with. This is the honest cost: it is a control that looks right
+  rather than one that matches the animal.
+* **the drag law** carries two parameters nobody has measured for a worm on agar.
+
+All of it is swept, costed and argued in
+[`model_assumptions.md`](docs/model_assumptions.md) §5AG--§5AI, and
+`tools/diagnose_gait.py` reproduces every number.
+
 ### Touch
 
 Interactive -- select the red sphere, press `W`, drag it onto the body:

@@ -3637,13 +3637,20 @@ balance:
 
 | | 240 Hz | 60 Hz | spread |
 |---|---|---|---|
-| scripted wave, quasi-static | 13.045 BL | 13.762 BL | **5.2%** |
+| scripted wave, quasi-static | *withdrawn* | *withdrawn* | — |
 | scripted wave, inertial | 7.216 BL | 1.442 BL | **500%** |
 
-That is the claim of this section, measured end to end through Isaac rather than
-on the solver alone: the same gait at two rates four times apart, agreeing to
-5 per cent where the solver it replaces differed fivefold. Both runs report
-`phase +23.0°`, `period 2.0 s` and `travel +0.78` identically.
+**The quasi-static row is withdrawn under §5AJ.** It read 13.045 BL and 13.762 BL,
+a 5.2% spread, and was presented as this section's claim measured end to end
+through Isaac. Both figures were read off an articulation that §5AJ later showed
+was displaced 47.9 mm and rotated by a wrongly-applied angle oscillating at the
+gait frequency, because the kinematic drive was writing the head's pose onto the
+middle segment. They describe a different body from the one the solver computed.
+
+The timestep claim itself is unaffected and is better supported without them: the
+standalone table above measures the solver directly and agrees to 3.8% across an
+eightfold range of rates. The Isaac row was never the evidence, only a
+confirmation of it, and it was confirming something else.
 
 The quasi-static row previously read 8.976 BL and 9.513 BL. **Both were taken on
 the two-stage solver of §5AF.4 and are withdrawn**, not merely adjusted: that
@@ -3682,16 +3689,46 @@ Re-measured on the full balance, sixty seconds at 240 Hz:
 
 | | distance | amplitude | **phase** | period | travel |
 |---|---|---|---|---|---|
-| **scripted wave, full balance** | **13.045 BL** | 15.91° | **+23.0°** | 2.0 s | **+0.78** |
-| connectome, full balance | 0.785 BL | 8.45° | **−6.1°** | *none detected* | −0.21 |
-| connectome, two-stage *(withdrawn)* | 0.469 BL | 15.52° | −0.6° | 12.0 s | — |
+| scripted wave, full balance *(§5AJ config)* | **19.03 BL / 90 s** | 16.13° | **+27.2°** | 2.0 s | **+0.92** |
+| connectome, full balance | **0.717 BL / 60 s** | 8.45° | **−6.1°** | *none detected* | **−0.21** |
+| connectome, two-stage *(withdrawn)* | — | 15.52° | −0.6° | 12.0 s | — |
 | connectome, inertial *(upper bound)* | 0.994 BL | 16.67° | −0.8° | 12.0 s | — |
 
-The gap is a factor of **sixteen in distance** and a change of sign in phase. The
-scripted wave covers 13 body lengths at 0.217 BL/s, which is a real animal's
-crawling speed (§5AG.2), with `travel` at +0.78 — a clean wave propagating head
-to tail. The connectome covers 0.785 BL with `travel` at −0.21, a weak wave
-going the wrong way. Same body, same drag, same solver, same torque scale.
+Both rows are re-measured after §5AJ, on an articulation that now matches the
+solver to 0.000 mm. The earlier distances of 13.045 BL and 0.785 BL were read off
+a body displaced 47.9 mm and wrongly rotated; the connectome's moved by 9% when
+that was fixed, and the scripted row is not comparable at all because it is now
+taken with the §5AI.4 configuration rather than the defaults.
+
+**The solver-side columns did not move by a digit.** Amplitude, phase and travel
+are identical between the corrupted run and the corrected one — 8.45°, −6.1° and
+−0.21 — which is what §5AJ.5's provenance table predicts and is independent
+confirmation that the division between simulator-measured and solver-measured
+numbers was drawn in the right place.
+
+**`travel` was withdrawn here too and should not have been.** The first version
+of this correction struck it alongside the distance on the assumption that both
+came from the articulation. They do not: `travel`, like amplitude, phase and
+period, comes from `measure_gait(history)`, and `history` is built from `angles`,
+which under `--quasistatic` is `quasistatic.joint_angles` — the solver's own
+state, never read back through the simulator. Over-withdrawing is a smaller error
+than over-claiming and is still an error: the correction was made by pattern
+rather than by reading where the number comes from, which is the same haste that
+produced the thing being corrected.
+
+Of the runner's columns, `moved`, `extent`, `head` and `clear` are
+articulation-side and were affected; `bend`, `amp`, `phase`, `period`, `travel`
+and `pinned` are solver-side and were not.
+
+So the comparison the argument rests on is intact: the inter-joint phase is
+**−6.1°** against the scripted gait's **+23.0°** in the same body, with `travel`
+at **−0.21** against **+0.78** — a wave travelling the wrong way, and a wrong
+*sign* rather than a wrong size.
+
+That the load-bearing columns are solver-side and the withdrawn ones are
+simulator-side is the division §5AJ.5 draws. It is worth not reading as luck:
+the phase comparison survived three separate mechanical corrections this session
+because it never depended on the mechanics at all.
 
 **A claim in the previous version of this section was wrong and is retracted.**
 It read: "Amplitude is unchanged too, as it must be: nothing about the neural
@@ -3773,6 +3810,15 @@ The two independent measures of body orientation agree to a decimal. So the
 animal waves its head through tens of degrees while its body axis holds within
 about 13° and its course does not wander at all — which is what a crawling
 *C. elegans* does.
+
+**That conclusion holds only at this amplitude, and the section did not say so.**
+These figures come from a 2e-5 N m torque wave, which bends the body about 10°.
+The committed scripted gait runs at roughly 5e-5 and bends it 23°, and there the
+body axis swings **25.5°**, not 13°. Both the mean of all 24 segment directions
+and the nose-to-tail chord give 25.5° to two decimals, so at full drive the whole
+animal really is rotating and not merely waving its head. §5AI.6 takes that
+apart. The head-versus-body distinction drawn here is real and the specific
+numbers belong to the shallower wave they were measured on.
 
 That the remaining swing is real mechanics rather than solver error is settled by
 sweeping how many wavelengths the body carries. Nothing external torques the
@@ -3926,11 +3972,15 @@ at the two places where the body is thinnest — 1.09 mm of radius each, so 2.18
 of total closure is all the clearance there is. A coil that closes therefore does
 interpenetrate, by about a body diameter, and the solver permits it.
 
-Whether the committed connectome run ever gets there is still unmeasured. Its
-lowest sampled extent is 0.17, nose and tail 17 mm apart, which is clear with
-room to spare — but extent is sampled every two seconds and the metric is not in
-the run output at all. The runner now reports it as a `clear` column so the next
-run answers it.
+**Measured, and the answer is yes.** The runner now reports a `clear` column, and
+over a sixty-second connectome run it reaches **−1.39 mm** while extent drops to
+0.17. The body does fold onto itself, by a little over a tail diameter, and the
+solver permits it because it has no contact model at all.
+
+For contrast the scripted gait of §5AI.4 never comes close: `clear` stays between
++1.57 and +1.86 mm for ninety seconds. So self-intersection is specifically a
+property of what the connectome does to the body — curling it until the ends
+meet — and not of the mechanics or of undulation in general.
 
 Either way this is not between the connectome and locomotion: the solver computes
 the right rotation for the shape it is given, the shape comes from the neural
@@ -4105,6 +4155,485 @@ that sign is wrong rather than small: a wave travelling the wrong way. Slip sets
 how far a correct gait gets; it does not create or destroy the gait. Every
 distance in §5Q through §5U is depressed by it and every phase column is
 untouched, which is the same division §5AF.3 arrived at by a different route.
+
+## 5AH. A drag law with a threshold, and two parameters nobody has measured
+
+Three reports from the viewport, over one session, all about the body sliding:
+
+* "It still slides, as if only calculating friction in the center of the animal."
+* "Why the hell is the worm sliding in idle?"
+* "Your worm is in stable C shape and sliding to bottom right."
+
+The first is §5AG: slip 0.33 against the animal's 0.1--0.3. The second and third
+are a separate failure, and the diagnosis matters because the obvious one is
+wrong.
+
+### 5AH.1 It is not a residual torque, it is the absence of a threshold
+
+A *constant* residual drive barely creeps at all. Measured on the linear law,
+holding a uniform torque for forty seconds: **0.001 mm/s**. The shape equilibrates
+against the passive stiffness, `qdot` goes to zero, and with it the whole force
+balance -- the rigid block of `J^T D J` is positive definite with zero
+generalised force, so a static shape is exactly stationary. §5AF.6's test asserts
+it.
+
+What the connectome actually does is never settle. Its output drifts
+continuously, so the shape is always changing by a degree or two, and the body is
+never in equilibrium. Linear viscous drag inverts to `v = F / c`: **there is no
+force too small to move the body, and no stuck state at all.** Every bit of that
+drift becomes net translation while the animal looks stationary. Measured with a
+slow shallow standing wobble -- 0.05 Hz, a few degrees, no travelling wave, so
+nothing that should generate thrust -- the body creeps at **0.216 mm/s**, which
+over a minute is an eighth of a body length of pure slip.
+
+A real worm on agar does not do this. Agar is a viscoelastic solid with a yield
+stress, and the animal sits in a groove it has formed; below some force it does
+not translate.
+
+### 5AH.2 Two mechanisms, and they fix different failures
+
+Both are off by default, so every number elsewhere in this document is
+reproducible.
+
+**A sublinear exponent.** `F ~ |v|**n` with `n < 1`, implemented as a rescaling
+of the coefficients around a reference speed. Self-reinforcing in the right
+direction: during good crawling `v_par` is large and `v_perp` small, so the law
+weakens tangential drag and stiffens lateral drag, and the *effective* anisotropy
+rises exactly when the animal is gripping.
+
+**A yield force.** A regularised Coulomb term, `F_yield * v / (|v| + v_reg)`,
+which saturates at `F_yield` and below `v_reg` acts like a very stiff viscous
+coefficient. This is the threshold; the power law never provides one, since
+`F -> 0` as `v -> 0` however steep the slope.
+
+Swept together. Creep is the standing-wobble figure above, slip and speed are the
+committed scripted gait:
+
+| exponent | yield (N) | creep | speed | slip | |
+|---|---|---|---|---|---|
+| 1.00 | 0 | **0.2155 mm/s** | 0.213 BL/s | 0.343 | the committed law |
+| 1.00 | 2e-5 | 0.0006 mm/s | 0.209 BL/s | 0.357 | creep fixed, slip not |
+| 1.00 | 1e-4 | 0.0010 mm/s | 0.181 BL/s | 0.443 | slip getting worse |
+| 1.00 | 5e-4 | 0.0001 mm/s | 0.012 BL/s | 0.962 | gait destroyed |
+| 0.60 | 0 | 0.1568 mm/s | 0.236 BL/s | **0.273** | slip fixed, creep not |
+| **0.60** | **2e-5** | **0.0037 mm/s** | **0.233 BL/s** | **0.283** | **both fixed** |
+| 0.60 | 1e-4 | 0.0002 mm/s | 0.202 BL/s | 0.379 | too much yield |
+| 0.60 | 5e-4 | 0.0001 mm/s | 0.016 BL/s | 0.952 | gait destroyed |
+
+**The two mechanisms need each other.** The exponent alone fixes slip and leaves
+the creep at 0.157 mm/s; the yield alone fixes creep and makes slip slightly
+*worse*. Together, creep falls 58-fold, slip enters the biological range, and the
+gait comes out marginally faster at 0.233 BL/s with its bend unchanged at 24°.
+
+The window is narrow and the failure mode past it is unambiguous: at a yield of
+5e-4 the animal cannot crawl at all, slip 0.96. That the useful value sits an
+order of magnitude below where the gait starts suffering is the only thing
+resembling a constraint on it.
+
+### 5AH.3 What is measured, inferred, assumed and arbitrary
+
+**Measured.** That agar's force--velocity relation is nonlinear with nonconstant
+coefficients, and that the dominant contribution is the shallow groove the animal
+forms in the surface: Rabets et al. 2014, the same work this project takes its
+anisotropy range of 3--10 from. That a groove is lateral confinement follows from
+what a groove is.
+
+**Inferred.** That lateral confinement shows up as resistance rising steeply as
+lateral speed approaches zero, and that a yield stress implies a force below
+which the animal does not translate.
+
+**Assumed, and this is the weak part.** That the nonlinearity is a *power law*,
+and that the threshold is *Coulomb*. Rabets established neither. A power law is
+the simplest function with the right limiting behaviour and a regularised Coulomb
+term is the standard tractable threshold; neither is a fit to anyone's data.
+
+**Arbitrary engineering.** The reference speed (3 mm/s), the regularisation speed
+(0.1 mm/s), the speed floor (0.01 mm/s), the pass budget and tolerance of the
+fixed point. All exist to keep the solve well-conditioned.
+
+**No published value exists for either parameter for a worm on agar**, so 0.6 and
+2e-5 N are chosen by the sweep above against two targets -- biological slip, and
+creep near zero. That is a fit to behaviour, not a measurement of a substrate,
+and it is two free parameters against two targets, which is no constraint at all.
+The defence is only that it is visible: both default to off, the runner prints a
+warning when they are not, and the sweep is here rather than in a commit message.
+
+### 5AH.4 The solve is no longer exact, and the tests say so
+
+With velocity-dependent coefficients the balance is nonlinear and is closed by a
+fixed point: solve, re-read the velocities, update the coefficients, repeat. The
+linear path is a single direct solve and its residual is zero to machine
+precision -- `1e-12` in the tests. The nonlinear path converges only to its
+tolerance, and the residual test failed at **1.6e-8 N** when first written against
+the linear bound.
+
+That failure was the correct result and is recorded rather than tuned away: a
+nonlinear solve has a convergence error and claiming otherwise would hide it.
+The force balance is now asserted as a *fraction* of the total drag force rather
+than an absolute, which is the physically meaningful quantity, and the fraction
+achieved is stated in the test. Note what this means for comparisons: a figure
+taken under the nonlinear law carries an iteration error that a figure under the
+linear law does not.
+
+### 5AH.5 What this does not fix
+
+Nothing here touches the negative result. The connectome's inter-joint phase is
+−6.1° against the scripted gait's +23.0°, and a wave travelling the wrong way is
+not a traction problem. Better drag makes the positive control more believable as
+an animal and makes the comparison cleaner; it does not move the connectome
+toward locomotion. The body sliding was never the reason the worm does not crawl.
+
+## 5AI. The body really does rotate, and the fix needed two separate levers
+
+Reported from the viewport, about the scripted gait rather than the connectome:
+"besides the fact that the animal moves, it happens incorrectly... The whole
+rotation is also sinusoidal. For this scripted movement I expect full straight
+movement."
+
+Every aggregate said the gait was fine: path straightness 0.997, `travel +0.78`,
+`phase +23.0`, a biological speed. All true, and none of them is about the
+*shape* of the motion, so none could see what was wrong.
+`tools/diagnose_gait.py` takes everything below.
+
+### 5AI.1 Track following, which is the other half of the sliding
+
+Real undulatory crawling on agar **slithers**: each body point passes through
+roughly where the point ahead of it was, so the animal travels along a groove its
+own head cut. A body that sweeps sideways through the medium covers the same
+ground with the same aggregates and is doing something else.
+
+Measured as the distance from each tail position to the nearest *earlier* head
+position:
+
+| | tail off the head's track |
+|---|---|
+| committed: linear drag | 6.51 mm |
+| with the §5AH drag law | **1.69 mm** |
+| the body's own radius at the tail | 1.09 mm |
+
+So the nonlinear drag law of §5AH does not merely raise the speed: it takes the
+body from sweeping sideways by six tail-radii to following its own track within
+about one. That is the strongest evidence in the project that the law is doing
+physical work rather than being a fitted speedup.
+
+**The first reading of this was wrong and is recorded.** It reported a 95th
+percentile of **52 mm**, half a body length, by comparing each tail position
+against the whole head track including positions the head had not yet reached.
+Matching only against preceding positions drops it to 2.3 mm. Ninth statistic in
+this project built on a signal that did not have the structure it assumed.
+
+### 5AI.2 The rotation is real, decomposed
+
+The nose-to-tail chord of an undulating body swings even when the body does not
+rotate, because its endpoints ride the wave — the §5AE mistake. So the chord is
+measured three ways: with the real heading, with the heading pinned at zero, and
+as the mean of all 24 segment directions.
+
+| | linear | §5AH drag |
+|---|---|---|
+| chord swing from the **shape alone** | 118.84° | 116.65° |
+| **rigid counter-rotation** | 114.77° | 113.43° |
+| **net chord swing** | **25.47°** | **26.60°** |
+| **mean of all 24 directions** | **25.47°** | **26.60°** |
+
+Two things follow. The counter-rotation that zero net torque demands is already
+removing **77 to 79%** of the shape's apparent swing, which is the mechanics
+working. And the mean direction agrees with the chord to two decimals, so the
+residual is **not** a chord artifact: at this amplitude the whole animal really
+does rotate about ±13° per cycle. The report was right.
+
+The shape term is predicted exactly. A sine curvature wave of amplitude `b` per
+joint over `N` joints at `n` wavelengths varies its tangent angle along the body
+by `b N / (2 pi n)`; at 23.3°, 23 joints and 1.41 waves that is ±60°, a 119°
+range, against 118.84° measured.
+
+### 5AI.3 Two symptoms, two different causes
+
+The rocking and the sliding looked like one problem, and treating them as one is
+why this took four attempts. They are controlled by different things, and the
+sweeps separate them cleanly.
+
+**Track following is traction.** It responds to lateral drag and to nothing else
+much. Swept over the anisotropy ratio, with everything else held:
+
+| drag ratio | tail off track | net rotation | bend | speed |
+|---|---|---|---|---|
+| 20 (previous default) | 1.69 mm | 26.6° | 23.3° | 0.237 BL/s |
+| **40** | **0.82 mm** | 27.6° | 23.6° | 0.241 BL/s |
+| 80 | 0.86 mm | 28.2° | 24.5° | 0.240 BL/s |
+| 160 | 0.95 mm | 28.2° | 25.0° | 0.239 BL/s |
+
+At a ratio of 40 the tail follows the head's track to **0.82 mm, inside its own
+1.09 mm radius** — the body is genuinely slithering — and it saturates there,
+with 80 and 160 no better. The rotation does not move at all across a factor of
+eight. Note that 40 is not an arbitrary choice: it is the Niebur & Erdös 1991
+value that neuromechanical models standardly use, recorded in
+`worm/body/drag.py`, and it is in that sense better supported than the 20 this
+project had been using.
+
+**The rotation is kinematics.** It does not respond to traction at all, because a
+finite body carrying a given wave *must* rotate: the shape's contribution to the
+chord is `bend * joints / (2 pi * waves)` and zero net torque only cancels about
+78% of it. The levers are therefore bend and wavelength.
+
+Bend is a bad lever. Reducing the drive reduces the rotation and takes the
+slithering with it, because a shallow undulation cuts no definite path to follow:
+
+| torque | bend | net rotation | tail off track | speed | slip |
+|---|---|---|---|---|---|
+| 3.0e-5 | 13.9° | 12.3° | 6.64 mm | 0.213 BL/s | — |
+| 3.5e-5 | 16.3° | 15.9° | 5.93 mm | 0.237 BL/s | 0.261 |
+| 4.0e-5 | 18.6° | 19.3° | 4.21 mm | 0.245 BL/s | — |
+| 5.0e-5 (committed) | 23.3° | 26.6° | **1.69 mm** | 0.237 BL/s | 0.282 |
+| 7.0e-5 | 34.8° | 49.8° | — | 0.170 BL/s | 0.477 |
+
+**A claim made from this table and retracted.** Reading only the first four
+columns of an earlier version, 3.5e-5 appeared to dominate the committed 5e-5 —
+less rotation, slightly faster, better slip — and was recommended. That sweep did
+not measure track following. When it was measured the track degraded from 1.69 mm
+to 5.93 mm, which is the opposite of an improvement. A conclusion drawn from a
+table that did not contain the relevant column, which is the same mistake as
+§5AI.1's windowing and §5AG.2's mislabelled row.
+
+The amplitude envelope is also a bad lever, for the same reason: it reduces the
+rotation only where it reduces the bend, which `test_body.py` has a test to
+detect.
+
+| taper width | net rotation | bend | tail off track | speed |
+|---|---|---|---|---|
+| 0.00 | 26.6° | 23.3° | 1.69 mm | 0.237 BL/s |
+| 0.12 | 28.2° | 22.9° | 2.68 mm | 0.244 BL/s |
+| 0.25 | 24.3° | 22.1° | 6.04 mm | 0.252 BL/s |
+| 0.50 | 13.1° | **16.7°** | 7.15 mm | 0.230 BL/s |
+
+A hypothesis recorded and refuted along the way: that tapering hurt the track by
+denying the head the excursion it needs to cut a groove. Head excursion is
+*preserved* at a width of 0.12 — 18.30 mm against 17.68 mm flat — and the track
+degrades anyway. The explanation was wrong and the real one is unknown.
+
+**Wavelength is the good lever**, because it changes the shape without changing
+how hard the body bends:
+
+| waves on the body | net rotation | bend | wobble | tail off track | speed |
+|---|---|---|---|---|---|
+| 1.11 | 25.8° | 23.5° | 3.85 mm | 1.52 mm | 0.256 BL/s |
+| 1.25 | 35.3° | 23.3° | 4.91 mm | 1.14 mm | 0.256 BL/s |
+| 1.54 (biological) | 26.6° | 23.3° | 3.47 mm | 1.69 mm | 0.237 BL/s |
+| **1.82** | **8.1°** | 23.2° | 0.97 mm | 3.14 mm | 0.209 BL/s |
+| 2.22 | 9.0° | 22.8° | 0.83 mm | 4.65 mm | 0.169 BL/s |
+| 2.86 | **1.5°** | 22.2° | **0.10 mm** | 2.17 mm | 0.112 BL/s |
+
+The bend is flat across the whole sweep. 1.54 waves is also close to a
+*half*-integer, near the worst case for the ends being unbalanced, which is
+consistent with the low-rotation rows sitting near 2 and 3 waves.
+
+### 5AI.4 They compose, and the gait is fixed
+
+Because traction and kinematics are separate causes, the two good levers act
+independently:
+
+| configuration | rotation | tail off track | wobble | bend | speed |
+|---|---|---|---|---|---|
+| committed: ratio 20, 1.54 waves, linear drag | 26.6° | 6.51 mm | 2.97 mm | 23.3° | 0.212 BL/s |
+| ratio 40, 1.54 waves | 27.6° | **0.82 mm** | 3.70 mm | 23.6° | 0.241 BL/s |
+| **ratio 40, 1.82 waves** | **9.1°** | **1.18 mm** | **1.16 mm** | 23.2° | **0.220 BL/s** |
+| ratio 40, 2.22 waves | 8.5° | 2.38 mm | 0.88 mm | 22.8° | 0.186 BL/s |
+
+**Both symptoms at once**: the rotation falls threefold to 9.1°, the tail follows
+its own track to within about its own radius, the centroid's wobble falls
+threefold, the bend is unchanged so none of it is a gain reduction, and the speed
+stays biological.
+
+**An earlier version of this section concluded that no configuration gets both,
+and that was wrong.** It was written after testing the envelope against the drag
+law, concluding the two symptoms shared a single cause — the absent groove — and
+therefore never testing anisotropy against wavelength. The conclusion was stated
+as a result rather than as an untested gap, which is the error: "no configuration
+found so far" was true and "the symptoms share one cause" was an inference, and
+the inference stopped the search.
+
+What it costs, stated plainly:
+
+* **ratio 40 instead of 20.** Further above the 3--10 that Rabets et al. 2014
+  measured, but it is the value neuromechanical models use (Niebur & Erdös 1991),
+  so this is a move from an arbitrary number towards a conventional one.
+* **1.82 waves instead of 1.54.** A wavelength shorter than the ~0.65 BL a real
+  animal crawls with (Berri et al. 2009). This is the real cost and it is not
+  defensible as biology — only as a control that looks like what it is modelling.
+* The §5AH drag law, with its two parameters that nobody has measured.
+
+None of it is enabled by default. The point of the sweeps is that the choice is
+visible and costed rather than tuned in silently.
+
+### 5AI.5 The executed wave is clean, and a discrepancy I raised was my own error
+
+Before the envelope was examined the muscle path was suspected of distorting the
+wave, because an earlier sweep gave 5.2° of axis swing at this wavelength where
+`sine_wave_drive` gave 25.1°. Measured per joint at the gait frequency:
+
+| | amplitude along the body | phase gradient | wavelengths |
+|---|---|---|---|
+| joint torque | uniform, 1.00 everywhere | −23.1°/joint, σ 0.0° | 1.41 |
+| joint angle | 0.92 to 1.00 | −23.1°/joint, σ 0.6° | 1.41 |
+
+A clean linear travelling wave matching the prescription, the body's compliance
+barely reshaping it. **The factor of five was two runs at different amplitudes**
+— 10° of bend against 23° — and the rotation grows with amplitude, as §5AI.3's
+bend table now shows directly. No distortion and no bug; the suspicion was mine
+rather than the code's. §5AF.5's "the body axis holds within 13°" belongs to the
+shallower wave in the same way, and has been marked.
+
+### 5AI.6 It still does not touch the negative result
+
+The connectome's inter-joint phase is −6.1° against the scripted gait's +23.0°.
+§5AG, §5AH and §5AI together make the *positive control* a far more convincing
+animal — it slithers along its own track at a biological speed with biological
+slip. None of them moves the connectome, and none could: a wave travelling the
+wrong way is not a traction problem.
+
+## 5AJ. The viewport was showing a different animal
+
+Reported from the viewport across a whole session, in these words: "it is
+stationairy rotating counter-clockwise", "this one idle rotates too", "Your worm
+is in stable C shape and sliding to bottom right", "now constantly rotates
+counter clockwise, while going forward", "now rotating clockwise", "fairly
+fastly".
+
+Every one of those was correct. None of them was physics.
+
+### 5AJ.1 The articulation root is not the head
+
+`build_scene` applies `UsdPhysics.ArticulationRootAPI` to the body's parent
+Xform rather than to a link, so PhysX chooses the root link itself. It chooses
+**segment 11 of 24** -- the middle of the chain, which for a floating-base
+articulation is a reasonable choice and is not the head.
+
+Under `--quasistatic` the runner drives the articulation kinematically by writing
+the root pose and then every joint angle. It wrote **the head's position and the
+head's direction** onto segment 11. Measured on a straight body with a known
+pose:
+
+| | |
+|---|---|
+| as built, segment 0 | 2.083 mm, exactly where the plan puts it |
+| root written to x = 0, segment 0 lands at | **−45.833 mm** |
+| the body's shift | **−47.917 mm = 11.5 segment lengths = segment 11's offset** |
+
+The position error is a constant 47.9 mm on a 100 mm animal. The orientation
+error is worse and is the one that was visible: segment 11's direction differs
+from segment 0's by the joint angles between them, and those swing about ±47°
+over a gait cycle, so the body was being rotated wrongly by an amount
+oscillating at exactly the undulation frequency.
+
+| per-cycle swing of the segment-centre chord | |
+|---|---|
+| the solver, at 1.82 waves | **12.6°** |
+| the same column read out of the articulation | **92°** |
+| the body's shape alone, with no counter-rotation | 104° |
+
+92° against a shape term of 104° says almost none of the counter-rotation was
+reaching the body. That is the rotation that was on screen.
+
+### 5AJ.2 Three wrong diagnoses first
+
+Recorded because each was confidently argued and each was killed by a
+measurement that took minutes:
+
+1. **PhysX's joint drive was fighting the writes.** `set_dof_gains` and
+   `set_dof_position_targets(zeros)` were applied unconditionally, including
+   where the solver owns the joints. That is a real defect and is now guarded,
+   but it is not this one: disabling it left the run's output **byte-identical**.
+   The identical numbers were the answer and were read as a puzzle.
+2. **The quaternion convention was wrong.** Plausible: a w-x-y-z quaternion read
+   as x-y-z-w becomes a rotation about X, which the planar constraint locks,
+   which would leave the body unturned. `tools/check_root_pose.py` writes a known
+   40° heading both ways: w-x-y-z gives exactly +40.00°. Dead.
+3. **The planar constraint was locking rotation about Z.** It locks transZ, rotX
+   and rotY only, by construction. Dead on reading the code.
+
+### 5AJ.3 Two statistics that agreed and proved nothing
+
+Both of these were cited in earlier drafts of §5AI as corroboration, and neither
+is.
+
+**The chord and the mean direction are the same quantity.** §5AI.2 reported that
+the nose-to-tail chord and the mean of all 24 segment directions agree to two
+decimals, and treated that as two independent measures confirming each other.
+They are algebraically identical: `nodes[-1] - nodes[0] = L * sum(unit
+directions)`, so the chord's direction *is* the mean direction. One quantity
+computed twice.
+
+**Solver extent 0.831 against Isaac's 0.81 does not mean the bodies agree.** That
+comparison was used to conclude the render was faithful, minutes before the
+segment-by-segment comparison found **59 mm** of error on a 100 mm animal.
+`extent` is a single scalar and it happened to survive a displacement of 48 mm
+and a wrong rotation. A summary statistic agreeing is not the thing agreeing.
+
+### 5AJ.4 The fix, and why it is calibrated
+
+`_articulation_root_link` writes a known pose with the joints straightened and
+reads back which segment lands on it; the drive then writes that segment's own
+centre and its own direction, which `QuasiStaticBody.segment_angles` now exposes
+because `heading` is the *head's* angle and nothing else should be using it for
+this. If no segment lands within a quarter of a segment length of the written
+pose it raises rather than continuing.
+
+Hardcoding 11 would work until PhysX chose differently and then fail silently,
+which is exactly how this shipped.
+
+### 5AJ.5 What this invalidates
+
+**Every number read off `links.get_world_poses()` under `--quasistatic`**, from a
+body displaced 47.9 mm and rotated wrongly by a figure oscillating at the gait
+frequency. In the runner's output that is `moved`, `extent`, `head` and `clear`;
+in this document it is §5AF.1's and §5AF.3's distance columns.
+
+**Not** `bend`, `amp`, `phase`, `period`, `travel` or `pinned`. Those come from
+the joint-angle history, which under `--quasistatic` is `quasistatic
+.joint_angles` rather than a readback. The first draft of this section withdrew
+`travel` as well, by assuming rather than checking where it comes from; see
+§5AF.3.
+
+**Nothing measured standalone**, which is most of the recent work: §5AG's slip,
+§5AH's creep and drag law, §5AI's track following, rotation decomposition,
+wavelength and taper sweeps, and the anisotropy result. Those run the solver
+directly and never construct an articulation.
+
+The division is not luck. It is worth stating as a rule: **a number measured
+through the simulator tests the simulator as well as the model, and a number
+measured on the solver tests only the model.** When the two disagree the
+simulator is the more likely suspect, and this section is the fourth time in
+this document that it has been (§5AE, §5Y, §5AF.4).
+
+### 5AJ.6 The suite cannot catch this, and that is structural
+
+603 tests pass on the defective code and would have gone on passing. This is not
+a gap that writing more of them closes: **pytest runs in the project venv, which
+has no Isaac Sim**, so nothing in `worm/tests` can construct an articulation, and
+the defect lived entirely in what the articulation did with what it was given.
+Every testable component was correct — the solver, the force balance, the
+quaternion, the joint limits, the drag law.
+
+What exists instead:
+
+* `tools/check_kinematic_drive.py` compares the articulation's segment positions
+  against the solver's, segment by segment, and prints the worst error. It found
+  59 mm and now reports 0.000 mm. **It has to be run by hand after any change to
+  the kinematic drive or to `build_scene`.**
+* `tools/check_root_pose.py` checks that a written root orientation takes effect.
+* `_articulation_root_link` calibrates rather than assuming, and raises if no
+  segment lands where it wrote, so the failure is loud rather than silent.
+* Three tests in `test_quasistatic.py` cover the solver half — that
+  `segment_angles` starts at the heading, diverges along the body, and agrees
+  with the direction vectors that the force balance itself uses.
+
+The honest statement is that this project has two test regimes and only one of
+them is automated. Six defects this session were found by a person watching the
+viewport — §5AF.4's rocking, the limit handling of §5AF.6, the camera and report
+of §5AF.8, the sliding of §5AG, and this — and the automated suite found none of
+them. That is not an argument for fewer tests. It is an argument for not
+mistaking a green suite for a working simulation, and for the standing rule that
+Isaac runs are watched rather than run headless.
 
 ## 6. Decisions taken, and what remains open
 

@@ -39,6 +39,20 @@ parser.add_argument("--frequency-hz", type=float, default=0.5, help="undulation 
 parser.add_argument("--wavelength", type=float, default=0.65, help="wavelengths per body")
 parser.add_argument("--torque-scale", type=float, default=None)
 parser.add_argument(
+    "--wave-taper",
+    type=float,
+    default=0.0,
+    help="Taper of the scripted wave's amplitude along the body, as "
+    "sin(pi s)**taper. 0 is flat, which drives the head and tail exactly as "
+    "hard as the mid-body -- not a neutral choice but the simplest thing to "
+    "write, and it maximises the end effect that makes a finite undulating "
+    "body yaw. Real C. elegans undulation tapers at both ends. Measured here, "
+    "a taper of 1 cuts the body axis swing from 25.1 to 16.6 degrees and the "
+    "centroid's lateral wobble from 2.97 to 1.89 mm while going slightly "
+    "faster. ASSUMED: that the real profile tapers is established, this shape "
+    'is not fitted to any published curvature profile. See 5AI.",',
+)
+parser.add_argument(
     "--stiffness",
     type=float,
     default=None,
@@ -213,6 +227,7 @@ def main() -> int:
             t_ms,
             frequency_hz=args.frequency_hz,
             wavelength_fraction=args.wavelength,
+            taper=args.wave_taper,
         )
         muscles.step(drive, dt_ms=dt * 1000.0)
 

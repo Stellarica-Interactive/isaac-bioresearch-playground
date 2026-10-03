@@ -82,6 +82,26 @@ from worm.isaac_limits import JOINT_LIMIT_RAD
 #: integration step.
 _LIMIT_TOL = 1.0e-4 * JOINT_LIMIT_RAD
 
+#: Fixed-point passes allowed when the drag law is nonlinear, and the relative
+#: change below which the iteration stops.
+#:
+#: Measured over sixty steps of the committed gait with both nonlinearities on,
+#: as net unbalanced force over total drag force:
+#:
+#: ===========  ======  ==============  ======
+#: tolerance    passes  residual        cost
+#: ===========  ======  ==============  ======
+#: 1e-6         24      5.0e-5          0.70 s
+#: **1e-10**    **80**  **5.3e-9**      1.27 s
+#: 1e-14        250     4.8e-14         27.3 s
+#: ===========  ======  ==============  ======
+#:
+#: 1e-10 costs 1.8x the loosest setting and buys four orders of magnitude, so it
+#: is the default. 1e-14 is below what the iteration reaches quickly and burns
+#: the whole budget for no physical gain. See model_assumptions 5AH.4.
+_NONLINEAR_PASSES = 80
+_NONLINEAR_TOL = 1.0e-10
+
 
 def _perp(v: np.ndarray) -> np.ndarray:
     """Rotate planar vectors 90 degrees: ``(x, y) -> (-y, x)``."""
@@ -101,9 +121,17 @@ class QuasiStaticBody:
     heading: float = field(init=False, default=0.0)
     joint_angles: np.ndarray = field(init=False)
 
+    #: Last solved segment velocities, used to warm-start the nonlinear fixed
+    #: point. Not part of the configuration -- a quasi-static body has no
+    #: velocity state, and this is purely the previous iteration's answer kept as
+    #: the next one's starting guess. The converged solution does not depend on
+    #: it, only the number of passes needed to reach it.
+    _last_velocities: np.ndarray = field(init=False)
+
     def __post_init__(self) -> None:
         self.origin = np.zeros(2, dtype=np.float64)
         self.joint_angles = np.zeros(self.plan.n_joints, dtype=np.float64)
+        self._last_velocities = np.zeros((self.plan.n_segments, 2), dtype=np.float64)
 
     # -- kinematics --------------------------------------------------------
 
@@ -111,10 +139,20 @@ class QuasiStaticBody:
     def segment_length_m(self) -> float:
         return self.plan.total_length_m / self.plan.n_segments
 
+    def segment_angles(self) -> np.ndarray:
+        """Direction of each segment as an angle, radians.
+
+        Segment 0 carries the body heading and each joint adds its own, so this
+        is ``heading`` only for the head. Anything that needs a particular
+        segment's orientation -- such as driving an articulation whose root link
+        is not the head -- has to read it from here rather than using
+        ``heading``.
+        """
+        return self.heading + np.concatenate([[0.0], np.cumsum(self.joint_angles)])
+
     def _directions(self) -> np.ndarray:
         """Unit heading of each segment, from the chain of joint angles."""
-        # Segment 0 carries the body heading; each joint adds its angle.
-        angles = self.heading + np.concatenate([[0.0], np.cumsum(self.joint_angles)])
+        angles = self.segment_angles()
         return np.stack([np.cos(angles), np.sin(angles)], axis=1)
 
     def nodes(self) -> np.ndarray:
@@ -152,19 +190,41 @@ class QuasiStaticBody:
         del length, directions
         return jac
 
-    def _drag_tensors(self) -> np.ndarray:
+    def _drag_tensors(self, velocities: np.ndarray | None = None) -> np.ndarray:
         """Anisotropic drag per segment as a 2x2 tensor.
 
         ``c_par t t^T + c_perp n n^T`` -- the same coefficients as
         :mod:`worm.body.drag`, written so they can enter a linear solve. The
         difference between the two coefficients is the entire reason undulation
         becomes thrust; with them equal the solution is no net travel.
+
+        With a sublinear exponent the coefficients depend on the component speeds
+        and ``velocities`` must be supplied; each direction is scaled by its own
+        speed, because the groove the exponent stands in for confines the body
+        laterally without resisting it sliding along its own length.
         """
         directions = self._directions()
         normals = _perp(directions)
-        return self.drag.tangential * np.einsum(
-            "ij,ik->ijk", directions, directions
-        ) + self.drag.perpendicular * np.einsum("ij,ik->ijk", normals, normals)
+        along = np.einsum("ij,ik->ijk", directions, directions)
+        across = np.einsum("ij,ik->ijk", normals, normals)
+
+        c_par, c_perp = self.drag.tangential, self.drag.perpendicular
+        if not self.drag.is_linear:
+            if velocities is None:
+                raise ValueError("a nonlinear drag law needs the segment velocities")
+            speed_par = np.abs(np.einsum("ij,ij->i", velocities, directions))
+            speed_perp = np.abs(np.einsum("ij,ij->i", velocities, normals))
+            # The power law rescales the viscous coefficients; the yield term is
+            # added on top, because a threshold is a separate physical claim
+            # from a nonlinear slope and the two are swept independently.
+            c_par = c_par * self.drag.speed_factor(speed_par) + self.drag.yield_coefficient(
+                speed_par
+            )
+            c_perp = c_perp * self.drag.speed_factor(speed_perp) + self.drag.yield_coefficient(
+                speed_perp
+            )
+            return c_par[:, None, None] * along + c_perp[:, None, None] * across
+        return c_par * along + c_perp * across
 
     def _solve_rates(self, joint_torques: np.ndarray) -> np.ndarray:
         """``(vx, vy, omega, qdot)`` from one generalised force balance.
@@ -190,17 +250,48 @@ class QuasiStaticBody:
         not an approximation. See model_assumptions 5AF.6.
         """
         jac = self._jacobian()
-        drag = self._drag_tensors()
-        # J^T D J, summed over segments.
-        matrix = np.einsum("nai,nab,nbj->ij", jac, drag, jac)
-        # The joints' own internal damping, which is not part of the medium.
         joints = self.plan.n_joints
-        matrix[3:, 3:] += np.eye(joints) * self.muscle.joint_damping
-
         forces = np.zeros(3 + joints, dtype=np.float64)
         forces[3:] = np.asarray(joint_torques, dtype=np.float64) - (
             self.muscle.joint_stiffness * self.joint_angles
         )
+
+        if self.drag.is_linear:
+            return self._solve_with_limits(jac, self._drag_tensors(), forces)
+
+        # A sublinear law makes the coefficients depend on the velocities they
+        # determine, so the balance is nonlinear and is closed by a fixed point:
+        # solve with the current coefficients, re-read the velocities, repeat.
+        # A power-law coefficient is a contraction and converges in two or three
+        # passes. The yield term varies as 1/|v| and is not, so the pass budget
+        # is set for it; the tolerance ends the loop early in the common case.
+        # The linear solution is the starting guess.
+        # Warm start from the previous solve. The body moves slowly against a
+        # physics step, so these coefficients are nearly right already and the
+        # loop usually exits after one or two passes instead of running its
+        # budget. The fixed point is the same either way; only its cost changes.
+        rates = self._solve_with_limits(jac, self._drag_tensors(self._last_velocities), forces)
+        velocities = np.einsum("naj,j->na", jac, rates)
+        for _ in range(_NONLINEAR_PASSES):
+            previous = rates
+            rates = self._solve_with_limits(jac, self._drag_tensors(velocities), forces)
+            velocities = np.einsum("naj,j->na", jac, rates)
+            if np.max(np.abs(rates - previous)) <= _NONLINEAR_TOL * max(
+                float(np.max(np.abs(rates))), 1e-30
+            ):
+                break
+        self._last_velocities = velocities
+        return rates
+
+    def _solve_with_limits(
+        self, jac: np.ndarray, drag: np.ndarray, forces: np.ndarray
+    ) -> np.ndarray:
+        """One force balance, with joints at their limits locked out of it."""
+        joints = self.plan.n_joints
+        # J^T D J, summed over segments.
+        matrix = np.einsum("nai,nab,nbj->ij", jac, drag, jac)
+        # The joints' own internal damping, which is not part of the medium.
+        matrix[3:, 3:] += np.eye(joints) * self.muscle.joint_damping
 
         # Active-set iteration. Each pass solves over the free joints, then locks
         # any that the solution drives further into a limit they already sit on.
@@ -278,6 +369,29 @@ class QuasiStaticBody:
         neighbours = np.abs(index[:, None] - index[None, :]) <= 1
         return float(gap[~neighbours].min())
 
+    def residual_fraction(self, joint_torques: np.ndarray) -> float:
+        """Net unbalanced force as a fraction of the total drag force.
+
+        The absolute residual is the right test for the linear law, where a
+        single direct solve balances to machine precision. It is the wrong test
+        for a nonlinear one: the coefficients depend on the velocities they
+        produce, so the balance is closed by a fixed point and carries that
+        iteration's convergence error. Asserting an absolute bound against it
+        just encodes the drag magnitude.
+
+        This normalises by the summed magnitude of the per-segment forces, which
+        is scale-free and says what it means -- how much of the force in the
+        system fails to cancel. See model_assumptions 5AH.4.
+        """
+        rates = self._solve_rates(joint_torques)
+        jac = self._jacobian()
+        velocities = np.einsum("naj,j->na", jac, rates)
+        forces = -np.einsum("nab,nb->na", self._drag_tensors(velocities), velocities)
+        total = float(np.abs(forces).sum())
+        if total == 0.0:
+            return 0.0
+        return float(np.linalg.norm(forces.sum(axis=0))) / total
+
     def residual_force_and_torque(self, joint_torques: np.ndarray) -> tuple[float, float]:
         """How well the solved motion balances, for tests to assert on.
 
@@ -287,8 +401,8 @@ class QuasiStaticBody:
         """
         rates = self._solve_rates(joint_torques)
         jac = self._jacobian()
-        drag = self._drag_tensors()
         velocities = np.einsum("naj,j->na", jac, rates)
+        drag = self._drag_tensors(velocities)
         forces = -np.einsum("nab,nb->na", drag, velocities)
         arms = self.segment_centres() - self.origin
         net_force = float(np.linalg.norm(forces.sum(axis=0)))

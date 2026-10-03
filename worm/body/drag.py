@@ -80,15 +80,111 @@ DEFAULT_DRAG_RATIO = 20.0
 #: constraint between them. See the module docstring.
 DEFAULT_TANGENTIAL_DRAG = 2.0e-3
 
+#: Exponent of the force-velocity law: ``F ~ |v|**exponent``. 1.0 is the linear
+#: resistive force theory everything in this project was measured with, and is
+#: the default so that nothing changes silently.
+#:
+#: Values below 1 make the medium **stiffer at low speed**, which is the
+#: qualitative behaviour Rabets et al. 2014 measured on agar and linear theory
+#: cannot express: they found the force-velocity relation nonlinear with
+#: *nonconstant* coefficients, the major contributing factor being the shallow
+#: groove the animal forms in the surface. A groove is lateral confinement, so
+#: its signature is resistance that rises steeply as lateral speed approaches
+#: zero -- exactly what a sublinear exponent gives.
+#:
+#: ASSUMED, and this is the weakest number in the model: Rabets established that
+#: the relation is nonlinear and that the groove dominates, but **not** a power
+#: law, and **not** an exponent. A power law is the simplest function with the
+#: right limiting behaviour, not a fit to their data. See model_assumptions 5AH.
+DEFAULT_DRAG_EXPONENT = 1.0
+
+#: Speed at which the nonlinear law matches the linear one, m/s. Chosen as the
+#: body's own characteristic lateral speed during crawling -- a 100 mm animal
+#: undulating at 0.5 Hz with 16 degrees of joint amplitude moves its midbody
+#: sideways at a few mm/s -- so that the exponent rescales the law around the
+#: regime the animal actually occupies rather than around 1 m/s, which it never
+#: reaches. ASSUMED.
+DEFAULT_REFERENCE_SPEED = 3.0e-3
+
+#: Floor on speed inside the nonlinear law, m/s. Without it the effective
+#: coefficient diverges as a segment comes to rest and the force balance becomes
+#: singular. Set well below the reference speed so it does not shape the regime
+#: the animal occupies, and it also bounds the stiffening at
+#: ``(eps / reference)**(exponent - 1)``.
+NONLINEAR_SPEED_FLOOR = 1.0e-5
+
+#: Yield force per segment, N. 0.0 is the frictionless default everything in
+#: this project was measured with.
+#:
+#: This is the threshold the drag model has never had. Viscous drag inverts to
+#: ``v = F / c``, so *any* residual force moves the body, and a nervous system
+#: whose output never settles to exactly zero slides forever -- observed in the
+#: viewport as a body in a stable shape creeping steadily across the ground.
+#: Agar is a viscoelastic solid with a yield stress and a real worm below that
+#: stress does not translate at all.
+#:
+#: ASSUMED, and weakly: Rabets et al. 2014 established that agar's response is
+#: nonlinear and that groove formation dominates it, which is qualitative support
+#: for a threshold existing. They did not publish a yield force for a worm on
+#: agar, and this project has no measurement to set the magnitude from. It is
+#: therefore swept rather than fitted, and the sweep is the result -- see
+#: model_assumptions 5AH.
+DEFAULT_YIELD_FORCE = 0.0
+
+#: Speed scale over which the yield force turns on, m/s. Below it the yield term
+#: acts like a viscous coefficient of ``yield_force / yield_speed``, which is
+#: what makes a body below the threshold effectively stuck rather than exactly
+#: stuck. Smaller is a harder threshold and a worse-conditioned solve.
+DEFAULT_YIELD_SPEED = 1.0e-4
+
 
 @dataclass(frozen=True, slots=True)
 class DragParameters:
     tangential: float = DEFAULT_TANGENTIAL_DRAG
     ratio: float = DEFAULT_DRAG_RATIO
+    exponent: float = DEFAULT_DRAG_EXPONENT
+    reference_speed: float = DEFAULT_REFERENCE_SPEED
+    yield_force: float = DEFAULT_YIELD_FORCE
+    yield_speed: float = DEFAULT_YIELD_SPEED
 
     @property
     def perpendicular(self) -> float:
         return self.tangential * self.ratio
+
+    @property
+    def is_linear(self) -> bool:
+        """Whether the force-velocity law is the linear one.
+
+        Checked exactly rather than with a tolerance: the linear path is the one
+        every committed measurement used, and it should be taken when and only
+        when both departures from it are off.
+        """
+        return self.exponent == 1.0 and self.yield_force == 0.0
+
+    def yield_coefficient(self, speed: np.ndarray) -> np.ndarray:
+        """Extra drag coefficient from the yield force at a given speed.
+
+        ``F_yield / (|v| + v_reg)``, so multiplying it by ``v`` gives a force
+        that saturates at ``F_yield``. Expressed as a coefficient rather than a
+        force so it can be added to the drag tensor and stay inside one linear
+        solve per pass.
+        """
+        if self.yield_force == 0.0:
+            return np.zeros_like(speed)
+        return self.yield_force / (np.asarray(speed, dtype=np.float64) + self.yield_speed)
+
+    def speed_factor(self, speed: np.ndarray) -> np.ndarray:
+        """Multiplier on the drag coefficients at a given speed.
+
+        ``(speed / reference) ** (exponent - 1)``, so it is 1 at the reference
+        speed and, for an exponent below 1, larger below it. Returns ones for
+        the linear law, which keeps the two paths textually identical rather
+        than merely numerically close.
+        """
+        if self.is_linear:
+            return np.ones_like(speed)
+        floored = np.maximum(np.asarray(speed, dtype=np.float64), NONLINEAR_SPEED_FLOOR)
+        return (floored / self.reference_speed) ** (self.exponent - 1.0)
 
 
 class GroundDrag:

@@ -82,6 +82,59 @@ parser.add_argument("--damping", type=float, default=2e-5)
 parser.add_argument("--armature", type=float, default=2.0e-8)
 parser.add_argument("--drag-ratio", type=float, default=None)
 parser.add_argument(
+    "--seed-wavelength",
+    type=float,
+    default=0.65,
+    help="Wavelength of the scripted wave as a fraction of body length. 0.65 is "
+    "what a real animal crawls with, and is also 1.54 waves on the body -- near "
+    "a half-integer, which is close to the worst case for the whole animal "
+    "rocking, since a body carrying a whole number of wavelengths has balanced "
+    "ends. Measured: at 0.65 the body's mean direction swings 26.6 degrees per "
+    "cycle; at 0.55 (1.82 waves) it swings 8.1 degrees for 12 per cent less "
+    "speed, and at 0.35 (2.86 waves) only 1.5 degrees for half the speed. "
+    "Shorter than 0.65 is straighter than the animal and also less like it. "
+    "See 5AI.6.",
+)
+parser.add_argument(
+    "--wave-taper",
+    type=float,
+    default=0.0,
+    help="Taper of the scripted wave's amplitude along the body, as "
+    "sin(pi s)**taper. 0 is flat, which drives the head and tail exactly as "
+    "hard as the mid-body -- not a neutral choice but the simplest thing to "
+    "write, and it maximises the end effect that makes a finite undulating "
+    "body yaw. Real C. elegans undulation tapers at both ends. Measured here, "
+    "a taper of 1 cuts the body axis swing from 25.1 to 16.6 degrees and the "
+    "centroid's lateral wobble from 2.97 to 1.89 mm while going slightly "
+    "faster. ASSUMED: that the real profile tapers is established, this shape "
+    'is not fitted to any published curvature profile. See 5AI.",',
+)
+parser.add_argument(
+    "--drag-exponent",
+    type=float,
+    default=None,
+    help="Exponent of the force-velocity law. 1 is the linear resistive force "
+    "theory every committed number was measured with. Below 1 the medium is "
+    "stiffer at low speed, which is the behaviour Rabets et al. 2014 measured on "
+    "agar and linear theory cannot express -- they found the relation nonlinear "
+    "with nonconstant coefficients, dominated by the shallow groove the animal "
+    "forms. Measured here: 0.6 takes the scripted gait's slip from 0.343 to "
+    "0.273, into the 0.1-0.3 a real animal manages. ASSUMED -- a power law is "
+    "the simplest function with the right limit, not a fit. See 5AH.",
+)
+parser.add_argument(
+    "--drag-yield",
+    type=float,
+    default=None,
+    help="Yield force per segment, N. 0 is the frictionless default. This is the "
+    "threshold the drag model has never had: linear drag inverts to v = F/c, so "
+    "no force is too small to move the body and a nervous system whose output "
+    "never settles slides forever. Measured here: 2e-5 cuts the idle creep 58-fold, "
+    "from 0.216 to 0.004 mm/s, without touching the gait. Above 1e-4 it starts "
+    "eating the gait and by 5e-4 the animal cannot crawl at all. ASSUMED, and no "
+    "published value exists for a worm on agar. See 5AH.",
+)
+parser.add_argument(
     "--quasistatic",
     action="store_true",
     help="Solve the body's force balance instead of integrating its momentum, "
@@ -345,6 +398,8 @@ from isaacsim import SimulationApp  # noqa: E402
 simulation_app = SimulationApp({"headless": args.headless})
 
 # --- 2. Everything else -------------------------------------------------------
+
+from typing import Any  # noqa: E402
 
 import numpy as np  # noqa: E402
 import omni.timeline  # noqa: E402
@@ -615,6 +670,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         DragParameters(
             **({"ratio": args.drag_ratio} if args.drag_ratio is not None else {}),
             **({"tangential": args.drag_tangential} if args.drag_tangential is not None else {}),
+            **({"exponent": args.drag_exponent} if args.drag_exponent is not None else {}),
+            **({"yield_force": args.drag_yield} if args.drag_yield is not None else {}),
         ),
     )
 
@@ -646,6 +703,12 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         if args.quasistatic
         else None
     )
+    if not drag.params.is_linear:
+        print(
+            f"  drag: NONLINEAR -- exponent {drag.params.exponent:g}, yield "
+            f"{drag.params.yield_force:g} N. Not the law any committed number in "
+            f"model_assumptions was measured with; see 5AH before comparing."
+        )
     if quasistatic is not None:
         print(
             "  body: quasi-static force balance, articulation driven "
@@ -657,13 +720,42 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     simulation_app.update()
 
     dofs = dof_order(articulation, joint_paths)
-    articulation.set_dof_gains(
-        stiffnesses=muscle_model.params.joint_stiffness,
-        dampings=muscle_model.params.joint_damping,
+    if quasistatic is None:
+        # PhysX integrates the body, so it needs the passive joint stiffness and
+        # damping, and a zero position target for them to act against.
+        articulation.set_dof_gains(
+            stiffnesses=muscle_model.params.joint_stiffness,
+            dampings=muscle_model.params.joint_damping,
+        )
+        articulation.set_dof_position_targets(np.zeros((1, plan.n_joints)), dof_indices=dofs)
+        if args.armature:
+            articulation.set_dof_armatures(args.armature)
+    else:
+        # The solver owns the configuration and writes it every step, so a PhysX
+        # position controller is not a second opinion -- it is a competitor.
+        # Left enabled it pulls each joint back towards straight between writes,
+        # the rendered shape stops matching the solved one, and since the root
+        # orientation is written exactly while `heading` swings some 57 degrees
+        # either way per cycle, the body stops cancelling that swing. The animal
+        # then appears to rotate bodily at tens of degrees a second. Reported
+        # from the viewport as rotating "fairly fastly"; see 5AJ.
+        articulation.set_dof_gains(
+            stiffnesses=np.zeros((1, plan.n_joints)),
+            dampings=np.zeros((1, plan.n_joints)),
+        )
+
+    # Which link PhysX treats as the articulation root. Needs dofs and a running
+    # timeline, so it cannot be done when the solver is constructed.
+    root_link = (
+        _articulation_root_link(articulation, links, plan, dofs, simulation_app.update)
+        if quasistatic is not None
+        else 0
     )
-    articulation.set_dof_position_targets(np.zeros((1, plan.n_joints)), dof_indices=dofs)
-    if args.armature:
-        articulation.set_dof_armatures(args.armature)
+    if quasistatic is not None:
+        print(
+            f"  articulation root link: segment {root_link} of {plan.n_segments} -- "
+            f"the kinematic drive writes THAT segment's pose, not the head's"
+        )
 
     switch = None
     if args.hysteresis_mv:
@@ -704,20 +796,16 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         # Written straight into the articulation: the force balance has already
         # determined the configuration, so PhysX is being told where the body is
         # rather than asked to work it out.
-        heading = quasistatic.heading
-        # The solver's origin is node 0, the nose tip; the root prim is built at
-        # segment 0's *centre*, half a segment ahead of it. Writing the nose
-        # position straight into the root pose shifts the whole rendered body
-        # 2.08 mm back along its own heading -- 2 per cent of a body length, and
-        # it reaches the sensory loop, because touch and the nose position are
-        # read back out of the articulation rather than from the solver.
-        root = quasistatic.origin + 0.5 * quasistatic.segment_length_m * np.array(
-            [np.cos(heading), np.sin(heading)]
-        )
+        # The pose of the link PhysX treats as the root -- segment 11 of 24, not
+        # the head. Both its position and its direction, because the two differ
+        # from the head's by the joint angles in between, and those swing some 47
+        # degrees each way per gait cycle. See _articulation_root_link.
+        root = quasistatic.segment_centres()[root_link]
+        angle = quasistatic.segment_angles()[root_link]
         articulation.set_world_poses(
             positions=np.array([[*root, 0.0]], dtype=np.float32),
             orientations=np.array(
-                [[np.cos(heading / 2.0), 0.0, 0.0, np.sin(heading / 2.0)]],
+                [[np.cos(angle / 2.0), 0.0, 0.0, np.sin(angle / 2.0)]],
                 dtype=np.float32,
             ),
         )
@@ -894,7 +982,13 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             seed_gain = DEFAULT_PEAK_TORQUE_SCALE / max(torque_scale, 1e-12)
             muscle_model.step(
                 seed_gain
-                * sine_wave_drive(plan, t * 1000.0, frequency_hz=0.5, wavelength_fraction=0.65),
+                * sine_wave_drive(
+                    plan,
+                    t * 1000.0,
+                    frequency_hz=0.5,
+                    wavelength_fraction=args.seed_wavelength,
+                    taper=args.wave_taper,
+                ),
                 dt_ms=dt * 1000.0,
             )
             drive_body(muscle_model.joint_torques())
@@ -1222,6 +1316,48 @@ def _motor_phase(trace: list[np.ndarray]) -> tuple[float, float]:
     singular = np.linalg.svd(normalised, compute_uv=False)
     shared = float(singular[0] ** 2 / np.sum(singular**2))
     return float(np.mean(adjacent)), shared
+
+
+def _articulation_root_link(
+    articulation: Articulation,
+    links: RigidPrim,
+    plan: BodyPlan,
+    dofs: Any,
+    update: Any,
+) -> int:
+    """Which segment does ``set_world_poses`` actually move?
+
+    ``ArticulationRootAPI`` is applied to the parent Xform in
+    :func:`~worm.isaac.stage.build_scene`, so PhysX chooses the root link, and it
+    chooses the middle of the chain rather than the head. Writing the head's pose
+    onto it put the body 47.9 mm out of place and -- far worse -- rotated it by
+    the joint angles between the head and the middle, which swing some 47 degrees
+    each way over a gait cycle. The rendered body's chord swung 92 degrees per
+    cycle where the solver's swings 12.6, and that is what a user watching the
+    viewport reported as the animal rotating.
+
+    Calibrated rather than hardcoded: straighten the joints, write a known pose,
+    and see which segment lands on it. Hardcoding 11 would work until PhysX chose
+    differently and then fail silently, which is how this got shipped in the
+    first place.
+    """
+    articulation.set_dof_positions(np.zeros((1, plan.n_joints), dtype=np.float32), dof_indices=dofs)
+    articulation.set_world_poses(
+        positions=np.zeros((1, 3), dtype=np.float32),
+        orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
+    )
+    update()
+    xy = np.asarray(links.get_world_poses()[0])[:, :2]
+    distance = np.linalg.norm(xy, axis=1)
+    index = int(np.argmin(distance))
+    if distance[index] > 0.25 * plan.segment_length_m:
+        raise SystemExit(
+            f"cannot identify the articulation root: the closest segment to a "
+            f"written origin is {index} at {distance[index] * 1e3:.2f} mm, which "
+            f"is more than a quarter of a {plan.segment_length_m * 1e3:.2f} mm "
+            f"segment away. The kinematic drive would place the body wrongly."
+        )
+    return index
 
 
 def _min_self_distance(xy: np.ndarray, plan: BodyPlan) -> float:
