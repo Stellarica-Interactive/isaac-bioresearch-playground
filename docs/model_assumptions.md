@@ -3436,6 +3436,108 @@ and is the obvious next validation.
 Nor does it bear on §5AC: VB6 resting where the paper says it rests does not make
 it oscillate, and it does not.
 
+## 5AE. `head` does not measure rotation, and the body does not spin
+
+Found by watching rather than measuring. The user, looking at a windowed run,
+reported the animal "frozen in a tangent shape, stationary rotating
+counter-clockwise". Three claims were then made about it in sequence, and the
+first two were wrong.
+
+### 5AE.1 The observation, and what the numbers showed
+
+Constant muscle drive, proprioception off, so the drive carries no rhythm and
+nothing can feed back. Sixty seconds:
+
+| t | bend | extent | amp | head | moved |
+|---|---|---|---|---|---|
+| 10 s | 5.1° | 0.94 | 3.27° | +7.7° | 0.194 BL |
+| 20 s | 5.1° | 0.94 | 2.52° | +27.7° | 0.345 BL |
+| 40 s | 5.1° | 0.94 | 1.85° | +67.5° | 0.612 BL |
+| 60 s | 5.1° | 0.94 | 1.53° | +107.1° | 0.806 BL |
+
+The shape is fixed to two decimals, `head` advances at a dead-linear 1.99°/s, and
+the body covers 0.8 body lengths. The baseline connectome run covers 0.994 BL —
+so a run with no undulation worth the name was producing 80% of the distance that
+had been reported as locomotion.
+
+### 5AE.2 Two wrong diagnoses
+
+**First:** that the rotation must be decaying, and a long time constant made it
+look constant. Measured: the rotational time constant of this body under
+anisotropic drag is milliseconds at every shape and every drag ratio. Nothing
+coasts for a minute. Withdrawn.
+
+**Second:** that it was therefore *driven* — that some external torque was being
+injected, with the world-anchored planar D6 joint as the suspect, and that this
+was a bug contaminating every distance in §5Q–§5U. Supporting arguments: rotation
+rate scaled with muscle torque (0.67, 2.0, 5.4 °/s at torque 1.5e-3, 3e-3, 6e-3),
+and held constant while `amp` halved, where undulation-driven thrust should scale
+as amplitude squared.
+
+Both arguments were sound. The conclusion was wrong, because the premise — that
+the body was rotating — was never checked.
+
+### 5AE.3 What `tools/diagnose_rotation.py` showed
+
+A nervous-system-free mechanical test: constant dorsal bias, reporting net drag
+force, net drag torque about the centroid, angular velocity and angular momentum
+each second.
+
+| | |
+|---|---|
+| net drag torque | ~1e-11, **fluctuating sign** |
+| angular momentum | −9.87e-10, **constant** |
+| heading rate | −1.884°/s, constant |
+
+Net torque fluctuating about zero with angular momentum conserved is the
+conservative signature. There is no torque source, and the drag model is behaving
+exactly as its tests assert.
+
+And the magnitude settles it. For this body, `I` about the centroid is
+1.283e-06 kg m², so a rigid spin at 1.884°/s would carry an angular momentum of
+4.218e-08. The measured value is 9.87e-10 — **2.3%** of that.
+
+**The body is not rotating.** `head` is the angle of the vector from the first
+segment to the last, and that vector swings when the *shape* changes even if the
+body itself barely turns. What the animal is doing is carrying a small bend that
+precesses slowly along it, at about 1.9°/s — a 190-second cycle — and the
+translation is genuine thrust from that precession through anisotropic drag.
+
+So the third claim, that 80% of every reported distance was a mechanical
+artefact, is also withdrawn. The distances are real drag-mediated movement. They
+are produced by a 1.5–3° bend creeping around a 190 s cycle, against a real
+animal's 20° at 2 s, which is why they amount to so little.
+
+### 5AE.4 The metric was the problem
+
+`head` was added to `_report` specifically to catch rotation-without-locomotion,
+and its comment says so: *"A body held in a fixed bend can still travel a long
+way by rotating against anisotropic drag, and the distance moved alone cannot
+distinguish that from locomotion."* The intent was right. The quantity is wrong:
+an end-to-end vector conflates body rotation with shape change, and cannot
+separate the two.
+
+It has been quoted throughout this document as evidence of rotation — §5Q.4's
+"the heading swings from +149° to −128° to +179°" among others. Those readings are
+real but do not mean what they were taken to mean. Rotation, if it needs
+measuring, requires angular momentum or angular velocity, which
+`diagnose_rotation.py` computes and the runner does not.
+
+This is the sixth instance in this document of a statistic that does not measure
+what its name suggests, after `travel` at a fixed lag, `amp` on a one-second
+window, cross-correlation lag on near-identical signals, phase on a frozen body,
+and the whole-recording window of §5AC.2. The general form has not changed:
+**a statistic is only meaningful if the signal has the structure the statistic
+assumes** — and here the structure assumed was that a swinging end-to-end vector
+implies a turning body.
+
+### 5AE.5 What is still open
+
+Why a *constant* drive produces a precessing bend at all. With no feedback the
+joints should reach static equilibrium, and `amp` decaying from 3.27° to 1.53°
+suggests they are slowly doing so — the precession may be nothing but that
+transient, two hundred seconds long. Being measured.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED
