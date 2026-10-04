@@ -194,6 +194,26 @@ sixth of a body length apart, and tumbles rather than travelling. That is the
 open problem, written up in
 [`negative_result.md`](docs/negative_result.md), not a broken install.
 
+### The connectome crawling forward -- under three assumed changes
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --torque-scale 3e-3 --quasistatic --proprio-rate 1.0 --proprioceptive-mv 400 --param g_gap_ps=5
+```
+
+The same loop, with proprioception that senses the *rate* of bending rather than
+the bend, a much higher proprioceptive gain, and gap junctions twenty times
+weaker than committed. It produces a forward-travelling wave at 1.9 s -- the
+real animal's frequency -- with neighbouring B-type motor neurons alternating
+(adjacent correlation −0.37), and carries the body 6.4 body lengths in two
+minutes in a nearly straight line. Nothing scripts the rhythm, the phase
+gradient or the direction.
+
+All three changes are assumptions, none measured, and the gait is not the real
+one in detail: its wavelength is long and it is a quarter as fast as the
+positive control below. How it was found -- eigenvalues, a phase argument, and a
+search that is reported as one -- is
+[`model_assumptions.md`](docs/model_assumptions.md) §5AN.13–5AN.20.
+
 ### The positive control -- what a gait looks like in the same body
 
 ```powershell

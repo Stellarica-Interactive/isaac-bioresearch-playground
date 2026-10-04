@@ -84,10 +84,19 @@ def measure(
     gait_hz: float,
     seconds: float,
     rate_hz: float,
+    groove: bool = False,
+    self_contact: bool = False,
 ) -> dict[str, float]:
-    """Run the runner's own drive chain and report the shape of the motion."""
+    """Run the runner's own drive chain and report the shape of the motion.
+
+    ``groove`` and ``self_contact`` are passed to the constructor rather than set
+    on the class: they are dataclass fields, so their defaults are baked into
+    ``__init__`` when the class is created and assigning to the class attribute
+    afterwards changes nothing. A sweep that did that reported four identical
+    rows and looked like a null result.
+    """
     plan = BodyPlan()
-    body = QuasiStaticBody(plan, drag=drag)
+    body = QuasiStaticBody(plan, drag=drag, groove=groove, self_contact=self_contact)
     muscle = MuscleModel(plan, MuscleParameters(peak_torque_scale=3.0e-3))
     dt = 1.0 / rate_hz
     dt_ms = 1000.0 / rate_hz

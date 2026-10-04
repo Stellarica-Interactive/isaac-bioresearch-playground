@@ -188,3 +188,24 @@ def test_resting_potential_matches_the_paper(cell: str) -> None:
 def test_aval_does_not_match_the_paper() -> None:
     observed = float(_model("aval").resting_state()[0][0])
     assert observed == pytest.approx(PUBLISHED_RESTING_MV["aval"], abs=2.0)
+
+
+@pytest.mark.parametrize(
+    "model_id",
+    [f"{c}_nicoletti2024" for c in CELLS_2024] + ["rmd_nicoletti2019", "awc_nicoletti2019"],
+)
+def test_derivatives_is_the_field_step_integrates(model_id: str) -> None:
+    """``derivatives`` exists to linearise a cell, so it must be the same model.
+
+    Off equilibrium -- 8 mV above rest, under 3 pA and 0.5 nS of external
+    input -- so every term is non-zero. As the step shrinks, ``step`` becomes
+    one Euler step of the true field (the gates' exact exponential update
+    differs from Euler by ``h / 2 tau``), so the two must agree.
+    """
+    model = ConductanceModel.load(model_id)
+    state = model.resting_state(1).copy()
+    state[0] += 8.0
+    h = 1.0e-6
+    stepped = (model.step(state, h, 3.0, 0.5) - state) / h
+    field = model.derivatives(state, 3.0, 0.5)
+    assert np.allclose(field, stepped, rtol=1e-3, atol=1e-7)

@@ -45,7 +45,21 @@ import numpy as np
 #: drift. A "period" as long as the recording is not a measurement of anything --
 #: the FFT simply puts its peak in the lowest bin. ASSUMED; it only guards the
 #: degenerate case.
-MIN_CYCLES_IN_WINDOW = 2.0
+MIN_CYCLES_IN_WINDOW = 2.5
+
+#: Why 2.5 rather than 2.0, which is the arithmetic floor: a period of exactly
+#: half the window is the longest the floor admits, so it is also where a
+#: spectrum with nothing to offer puts its peak. Measured, with the prominence
+#: guard below already in place, a decaying signal reported `period 7.0 s` at
+#: t=14, `8.0 s` at t=16, `9.0 s` at t=18 and `10.0 s` at t=20 -- the window's
+#: half at every sample -- with `travel` up to +0.38 derived from it. A smooth
+#: decay has a concentrated low-frequency peak, so it is prominent without being
+#: periodic, and prominence alone cannot catch this.
+#:
+#: The margin costs a genuine slow rhythm only a delay: a real period stays put
+#: as the window grows, so it moves off the boundary and is then accepted, while
+#: an artifact tracks the boundary forever and is never accepted.
+
 
 #: How far the spectral peak must stand above the median of the spectrum for a
 #: period to count as resolved.

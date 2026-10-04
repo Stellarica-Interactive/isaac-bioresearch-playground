@@ -82,16 +82,6 @@ parser.add_argument("--damping", type=float, default=2e-5)
 parser.add_argument("--armature", type=float, default=2.0e-8)
 parser.add_argument("--drag-ratio", type=float, default=None)
 parser.add_argument(
-    "--proprio-gain",
-    type=float,
-    default=None,
-    metavar="PA_PER_RAD",
-    help="Current injected per radian of sensed curvature, pA. The default is "
-    "400 and worm/body/neural_bridge.py calls it the single parameter that "
-    "decides whether the loop oscillates at all, which is a reason to be able to "
-    "sweep it rather than a reason to trust it. ASSUMED: no measurement sets it.",
-)
-parser.add_argument(
     "--proprio-rate",
     type=float,
     default=None,
@@ -105,6 +95,25 @@ parser.add_argument(
     "body that has stopped moving produces no drive. 5C.5 lists this as option 3 "
     "and it had not been tried. ASSUMED -- real mechanoreceptors have phasic and "
     "tonic components, but nothing measures the balance. See 5AK.",
+)
+parser.add_argument(
+    "--muscle-tau-ms",
+    type=float,
+    default=None,
+    help="Muscle activation time constant, ms. ASSUMED, 60 by default "
+    "(worm/body/muscles.py). One of the lags that decide which frequency the loop "
+    "oscillates at and so which way its wave travels: model_assumptions 5AN.17.",
+)
+parser.add_argument(
+    "--proprio-exclude",
+    default="",
+    metavar="CELLS",
+    help="Comma-separated B-type neurons to remove proprioceptive input from, "
+    "leaving everything else about them -- their synapses, their motor output -- "
+    "intact. A sensory lesion, not a cell lesion. Applied after the gain is "
+    "calibrated, so the remaining cells keep exactly the gain they had. "
+    "model_assumptions 5AN.15 traces the backward instability under phasic "
+    "proprioception to VB8-VB11.",
 )
 parser.add_argument(
     "--seed-wavelength",
@@ -541,13 +550,29 @@ def main() -> int:
         ),
         asymmetric=args.asymmetric_proprioception,
         **({"rate_fraction": args.proprio_rate} if args.proprio_rate is not None else {}),
-        **({"gain_pa_per_rad": args.proprio_gain} if args.proprio_gain is not None else {}),
     )
     b_type = [c for c in proprio.targets if c in runtime.network.cell_ids]
+    # `gain_pa_per_rad` is overwritten here unconditionally, so there is
+    # deliberately no --proprio-gain flag: the proprioceptive strength is set in
+    # mV by --proprioceptive-mv and converted against this network's own
+    # conductances. A pA flag was added once and silently did nothing, which is
+    # the same defect as the camera of 5AF.8 and --self-collision before 5AF.7.
     proprio = replace(
         proprio,
         gain_pa_per_rad=scale_for_depolarisation(runtime, b_type, args.proprioceptive_mv),
     )
+    if args.proprio_exclude:
+        dropped = {c.strip() for c in args.proprio_exclude.split(",") if c.strip()}
+        unknown = dropped - set(proprio.targets)
+        if unknown:
+            raise SystemExit(f"--proprio-exclude: not proprioceptive targets: {sorted(unknown)}")
+        keep = [i for i, c in enumerate(proprio.targets) if c not in dropped]
+        proprio = replace(
+            proprio,
+            targets=tuple(proprio.targets[i] for i in keep),
+            sensed_segment=proprio.sensed_segment[keep],
+        )
+        print(f"\nPROBE: proprioception removed from {', '.join(sorted(dropped))}")
     # Every input is a target depolarisation, converted to a current against this
     # network's own conductances. Done once here rather than per step: each solve
     # settles the network several times. See common/neural/stimulus.py for why the
@@ -694,6 +719,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             peak_torque_scale=torque_scale,
             joint_stiffness=args.stiffness,
             joint_damping=args.damping,
+            **({"activation_tau_ms": args.muscle_tau_ms} if args.muscle_tau_ms is not None else {}),
         ),
     )
     drag = GroundDrag(

@@ -212,18 +212,43 @@ def test_a_signal_with_no_rhythm_resolves_no_period(name: str) -> None:
     assert gait.travel == 0.0, f"{name} reported travel {gait.travel}"
 
 
-def test_the_guard_is_about_prominence_and_not_the_bin() -> None:
-    """A genuine two-cycles-in-window oscillation lands on the same bin a flat
-    spectrum does, so rejecting that bin would throw away real slow rhythms.
+def test_a_slow_rhythm_just_inside_the_margin_still_resolves() -> None:
+    """The case both guards had to keep: a real but slow oscillation.
 
-    This is the case the fix had to keep: exactly two cycles of a clean sine,
-    which is the shortest the minimum-cycles rule allows.
+    Written first as *two* cycles in the window, which was the floor at the time.
+    MIN_CYCLES_IN_WINDOW was then raised to 2.5 precisely because a period of
+    exactly half the window is where a spectrum with nothing to offer puts its
+    peak, so two cycles is now rejected by design and that version of this test
+    contradicted the fix. The guard is still about prominence rather than about
+    which bin the peak lands in -- it simply needs a margin above the floor.
     """
     hz = 240.0
     samples = int(20.0 * hz)
     t = np.arange(samples) / hz
-    # Two cycles in twenty seconds: period 10 s, exactly at the limit.
-    slow = np.radians(10.0) * np.sin(2.0 * np.pi * 0.1 * t)[:, None] * np.ones(23)
+    # Four cycles in twenty seconds: period 5 s, comfortably inside the margin
+    # and still far slower than the 2 s gait the metric was built for.
+    slow = np.radians(10.0) * np.sin(2.0 * np.pi * t / 5.0)[:, None] * np.ones(23)
     period = dominant_period_samples(slow - slow.mean(axis=0, keepdims=True))
-    assert np.isfinite(period), "a clean two-cycle oscillation must still resolve"
+    assert np.isfinite(period), "a clean four-cycle oscillation must resolve"
+    assert period / hz == pytest.approx(5.0, abs=0.3)
+
+
+def test_exactly_two_cycles_is_rejected_on_purpose() -> None:
+    """The cost of the margin, asserted so it is a decision and not a surprise.
+
+    A period of exactly half the window is indistinguishable from the artifact
+    of §5AK.3, so it is refused. A real rhythm loses nothing permanently: its
+    period stays put as the window grows, so it moves off the boundary and is
+    then accepted, while an artifact tracks the boundary forever.
+    """
+    hz = 240.0
+    samples = int(20.0 * hz)
+    t = np.arange(samples) / hz
+    boundary = np.radians(10.0) * np.sin(2.0 * np.pi * t / 10.0)[:, None] * np.ones(23)
+    assert not np.isfinite(dominant_period_samples(boundary - boundary.mean(axis=0, keepdims=True)))
+    # The same rhythm in a longer window clears the margin and resolves.
+    longer = np.arange(int(40.0 * hz)) / hz
+    same = np.radians(10.0) * np.sin(2.0 * np.pi * longer / 10.0)[:, None] * np.ones(23)
+    period = dominant_period_samples(same - same.mean(axis=0, keepdims=True))
+    assert np.isfinite(period), "four cycles of the same rhythm must resolve"
     assert period / hz == pytest.approx(10.0, abs=0.5)

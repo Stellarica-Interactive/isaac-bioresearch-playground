@@ -4732,6 +4732,7 @@ new drag law against a tonic run at the old one, which is two changes at once.
 | tonic, `rate_fraction` 0 | 0.737 BL | 20.8° | 5.97° | 0.14 | **+0.83** | **89%** |
 | blended, `rate_fraction` 0.5 | 0.483 BL | 5.1° | 1.05° | 0.95 | **+0.29** | **100%** |
 | pure phasic, `rate_fraction` 1 | 0.480 BL | 5.2° | 1.27° | 0.95 | — | — |
+| blended, at **114 mV/rad** | 0.536 BL | **18.9°** | 1.78° | 0.75 | **+0.29** | **100%** |
 
 **The latch is genuinely removed.** Extent holds at 0.95 instead of folding to
 0.14, and the body never curls. That part of the prediction holds.
@@ -4750,10 +4751,33 @@ and the useful form of the rejection is: the latch and the activity come from th
 same monotone feedback, so removing one removes the other. Option 3 is not a
 partial fix awaiting a parameter sweep; it trades one failure for another.
 
-`--proprio-gain` is now exposed — `neural_bridge` calls it "the single parameter
-that decides whether the loop oscillates at all" and it had never been reachable
-from the command line. Whether more gain recovers the amplitude without restoring
-the latch is **untested**.
+### 5AK.2a The gain control, done
+
+The obvious objection is that the drive was simply too weak. It was tested, and
+the last row above answers it.
+
+`--proprioceptive-mv` sets the proprioceptive strength as a target
+depolarisation, and raising it 5.7-fold to 114 mV/rad — matching the measured
+amplitude loss — brings the **bend back to 18.9°** against the tonic law's 20.8°,
+with the latch still absent: extent holds at 0.75 instead of folding to 0.14. So
+the law runs at a drive that genuinely reaches the body.
+
+`travel` is still **+0.00**, shared variance still **100%**. The rejection is
+therefore not "underpowered": removing the latch does not produce a wave, because
+the latch was never what prevented one.
+
+And the adjacent correlation is **+0.29 at both 20 and 114 mV**, which settles
+what that number belongs to. It is a property of the law rather than of the gain
+— the one genuinely new effect here, and not a useful one, since the population
+becomes more one-dimensional at the same time.
+
+**A flag that was added for this and removed again.** `--proprio-gain` was wired
+first, in pA, and silently did nothing: `gain_pa_per_rad` is overwritten
+immediately after `Proprioception.build` by `scale_for_depolarisation`, because
+this project specifies inputs as voltages and converts them against the network's
+own conductances. It was byte-identical to the default across a 5.7-fold change,
+which is the tell described in §5AL.3. Removed, with a comment at the override so
+it is not added again.
 
 ### 5AK.3 A metric artifact, and `travel −0.21` withdrawn
 
@@ -4797,6 +4821,1411 @@ Its adjacent correlation is **+0.83** with 89% shared variance under this drag
 law, against +1.00 and 100% under the old one. Not a meaningful improvement, and
 worth stating only so that the +0.83 is not later read as a different result from
 the +1.00 quoted elsewhere: the mechanics changed, not the circuit.
+
+## 5AL. A groove with memory — unnecessary, because the body already conforms
+
+§5AH's yield force is instantaneous: it resists motion in any direction once the
+force exceeds a threshold. That is why it fixed the idle creep and provably could
+not fix the rotation — a threshold is not a channel. What Rabets et al. 2014
+measured dominating agar is **the shallow groove the animal forms**, and a groove
+is history-dependent: it permits motion along the path the body has taken and
+resists motion across it. Nothing in this model had any memory of where the body
+had been, and the roadmap named a track-memory term as the principled replacement
+for three fitted parameters.
+
+`QuasiStaticBody(groove=True)` implements it. The head cuts a track, the track is
+remembered for 1.5 body lengths, and segments lying in it are confined to it.
+Off by default.
+
+### 5AL.1 Five formulations, and what each one ruled out
+
+The sequence is the useful part, because each failure eliminated a different
+candidate explanation rather than repeating the last.
+
+| formulation | speed | what it ruled out |
+|---|---|---|
+| no groove | **0.241 BL/s** | — |
+| drag across the track, every segment | 0.045 BL/s | — |
+| drag across the track, gated on proximity | 0.066 BL/s | distance was not the problem |
+| drag across the track, path tangent not heading | 0.054 BL/s | direction was not the problem |
+| hard constraint `v·n = 0`, Lagrange multiplier | **0.000 BL/s** | **stiffness** was not the problem |
+| restoring force along the **body's** normal, outside the channel only | **0.241 BL/s** | nothing left to rule out |
+
+**The drag forms leak into the tangent.** The track's tangent sits 25 to 34
+degrees off the body's own (cos 0.83 to 0.91, worst 0.36), so a tensor built on
+the track's normal has a `sin^2(theta)` component along the *body's* tangent: at
+40x the parallel drag that is 7 to 12 times the body's own tangential resistance,
+applied against the direction it is travelling. That this is not merely "more
+grip" is settled independently — the anisotropy sweep raises perpendicular drag
+eightfold, ratio 20 to 160, and speed goes 0.237, 0.241, 0.240, 0.239.
+
+**The hard constraint demands a conformance the body never has.** A multiplier has
+no stiffness to choose, which removes the leak — and it stopped the animal dead
+anyway, at 0.000 BL/s with only 10 to 12 active rows and 15 degrees of freedom
+still free, so it is not over-constraint in the rank sense. Each row carries the
+translation columns, so a dozen rows with differing normals leave translation
+nowhere to go; the condition requires the body to lie exactly along its remembered
+track, and the 0.74 mm by which it never does is enough for the rows to conflict
+and the least-squares solution to collapse. A dead zone of one body radius did not
+help: 0.001 BL/s.
+
+**So the two failures are opposite, and each rules out the other's fix.** The
+penalty needs a direction that cannot leak; the constraint needs compliance. Both
+corrections are forced by the measurements and they are compatible: a restoring force
+along the **body's own normal** — a direction resistive force theory already
+resists, so forward motion is untouched — scaled by how far outside its channel
+the segment actually is, and zero inside.
+
+### 5AL.2 The fifth form is correct and has nothing to do
+
+It engages exactly when it should and costs nothing when it should not:
+
+| | scripted gait | curling body |
+|---|---|---|
+| samples where the force engaged | **0 of 72** | **59 of 60** |
+| effect on the motion | none, identical to off | negligible: extent 0.113 to 0.114 |
+
+And the reason it never engages during the gait is the result worth keeping:
+
+| | |
+|---|---|
+| largest lateral offset from the track centreline | **0.701 mm** |
+| channel half-width, one body radius | 1.09 to 3.25 mm |
+| furthest any segment gets outside its channel | **−0.391 mm** |
+
+**The body already stays inside its own groove, with 0.39 mm to spare at the
+tightest point.** The scripted gait's lateral deviation is smaller than the body's
+own radius everywhere along it, so there is no groove-leaving for a groove to
+prevent. The three fitted parameters of §5AH are already producing
+track-conforming motion, and the mechanism proposed to replace them has nothing
+left to correct.
+
+The curling body is the other half of the answer. It is outside its channel
+almost constantly and the groove still changes nothing material, because a body
+that is not travelling has no meaningful track: its remembered path is a few
+millimetres long and confining a segment to it is not confinement to anything.
+
+So the honest statement is **not** that the groove is rejected. It is implemented,
+it is correct in its final form, and **there is no regime in this model where it
+matters**: the gait does not need it and the curl cannot use it. It stays behind
+`groove=False` with these measurements, so that a future body which does leave its
+track has the mechanism waiting rather than needing to rediscover four dead ends.
+
+### 5AL.3 Three dead knobs, and the tell that caught them
+
+The first groove sweep reported four identical rows and looked like a clean null
+result. It was not: `groove` is a dataclass field, so its default is captured in
+``__init__`` when the class is created, and the sweep had been assigning to the
+**class attribute** afterwards, which changes nothing.
+
+What caught it was arithmetic rather than suspicion. At a stiffness of 16 the
+groove adds sixteen times the perpendicular drag; output identical to four decimal
+places under that is physically impossible, so the knob could not have been
+connected. **A null result that is too clean is evidence the knob is not wired,
+not evidence about the mechanism.**
+
+Three in one session, all with the same signature — output identical to the digit
+across a change that could not possibly be neutral:
+
+* `--proprio-gain`, overwritten downstream by `scale_for_depolarisation`; removed,
+  with a comment at the override (§5AK).
+* PhysX's joint drive, whose byte-identical output *was* the answer and was read
+  as a puzzle (§5AJ.2).
+* the groove, above.
+
+Note that §5AL.2's identical rows are the same signature with a different cause,
+which is why they had to be checked rather than assumed either way: there the
+mechanism was wired and correctly inactive. Distinguishing the two took one
+measurement — whether the force ever engaged.
+
+## 5AM. Why the output is one signal: gap-junction diffusion
+
+Twelve hypotheses have been tested against the model's inability to produce a
+travelling wave, and every one left the B-type adjacent correlation at or near
++1.00 with 100% of the population's variance in one component. Each changed a
+parameter or added a mechanism. **None asked whether the structure permits
+anything else.** `tools/analyse_modes.py` asks, and the answer is specific.
+
+The steady linear response of the network to an injected current pattern is
+`dV = (A - F)^-1 dI`, with
+
+    A = diag(G_leak + gap_row_sum + s* Gsyn_row_sum) - Ggap
+    F[i,j] = Gsyn[i,j] (E[i,j] - V_i) ds_j/dV_j
+
+`A` is the matrix `neuron_models` already solves the resting potentials with, and
+`F` is the chemical feedback. Proprioception injects into the B-type motor
+neurons and the body reads their activations back, so the block of
+`(A - F)^-1` from B-type inputs to B-type voltages **is** the linear transfer
+function of the sensorimotor loop. Its singular values say how many independent
+things that loop can do; the spatial shape of its modes says whether any of them
+is a wave.
+
+### 5AM.1 The gap junctions are the cause
+
+Scaling `Ggap` and leaving everything else alone:
+
+| gap-junction scale | first mode carries | condition number | sign changes in mode 1 |
+|---|---|---|---|
+| **1.00 — committed** | **99.38%** | 137.2 | **0** |
+| 0.50 | 97.99% | 75.4 | 0 |
+| 0.10 | 79.47% | 20.2 | 0 |
+| 0.01 | 21.52% | 4.1 | 0 |
+| **0.00** | **7.38%** | **1.3** | **12** |
+
+At the committed conductance the loop has **one** mode, it carries 99.4% of the
+response, and it has **zero sign changes** — every entry between −0.94 and −1.00,
+a whole-body contraction, which cannot propagate however hard it is driven.
+Remove the gap junctions and there is no dominant mode at all: the spectrum goes
+flat (condition number 1.3) and the leading mode becomes a **spatial wave with
+twelve sign changes**.
+
+The reason is elementary once stated. `Ggap` is symmetric and non-negative, so
+`diag(gap_row_sum) - Ggap` is a **graph Laplacian**, and a Laplacian's lowest
+mode is the constant vector. Gap junctions make the network a diffusive medium,
+and **diffusion smooths — it cannot support a travelling wave.** At 100 pS per
+junction across 2883 junctions, that diffusion dominates everything the chemistry
+does.
+
+`g_gap_ps = 100.0` is one of the seven **assumed** parameters this model reports
+at startup. It is not measured, and §6 already records gap-junction conductance
+and rectification as open.
+
+### 5AM.2 The wiring is not the problem; the loop is
+
+| | first mode carries | condition number |
+|---|---|---|
+| open loop — activations held at rest | 87.55% | 28.7 |
+| closed loop — chemical feedback included | **99.38%** | 137.2 |
+
+Open-loop the connectivity admits several modes, the second singular value being
+a sixth of the first rather than a thousandth. Closing the loop takes the first
+mode to 99.4%. So the collapse is dynamic rather than anatomical: **the measured
+connectome does not forbid a wave.**
+
+There is a further twist that explains why this was invisible from the simulation.
+The proprioceptive input is *antisymmetric* — DB is excited by a dorsal bend and
+VB by a ventral one — while mode 1 is symmetric. The input barely touches it:
+
+| input pattern | share landing in mode 1 |
+|---|---|
+| uniform bend, what a latch gives | 4.81% |
+| one wavelength on the body | 1.53% |
+| 1.5 wavelengths, the real gait | **0.01%** |
+
+The input is nearly orthogonal to the mode that dominates the output, and the
+loop amplifies that mode 137-fold, so weak excitation of it still overwhelms the
+input's own structure. Read from the simulation alone this looks like the
+proprioceptive law failing to differentiate the cells. **It does not: the law
+differentiates them and the loop undoes it.**
+
+### 5AM.3 Three parameter explanations tested and refuted
+
+Each was plausible, each was recorded before testing, and none survives.
+
+**Homogeneous sigmoid gain.** `ds*/dV` at rest is 5.5611e-04 per mV with a spread
+of *exactly zero*: the sigmoid sits `v_threshold_offset_mv` above each cell's own
+resting potential, so every cell sits at the identical point on its own curve
+(§5L, `s_at_rest`). Jittering the offsets does not help — at 5 mV of spread mode 1
+rises to 99.69%, and even at 10 mV it still has zero sign changes.
+
+**Synaptic sign policy.** All four policies give mode 1 at 98.3 to 99.6% with zero
+sign changes. Which explains why §5Q's sign sweep found nothing.
+
+**Inhibitory reversal potential.** Inhibition in this model class is a
+hyperpolarising reversal potential on a *positive* conductance, so it adds to the
+diagonal load and to the drive and never produces negative coupling. Measured at
+the committed values, excitation gets `0 − (−61.4) = +61.4 mV` of driving force
+and inhibition `−70 − (−61.4) = −8.6 mV`: **inhibition is seven times weaker per
+unit conductance, by construction.** Driving `e_inh_mv` to −150 mV — eighty
+millivolts below rest, physically absurd — reduces mode 1 only to 88.3%, and it
+still has zero sign changes.
+
+`(A − F)^-1` has **zero negative entries out of 190,969** at the committed
+parameters, so by Perron–Frobenius its dominant singular vector is non-negative:
+mode 1 is a whole-body contraction as a *theorem*, not as a tuning outcome. That
+is why no parameter rescued it.
+
+### 5AM.4 Tested against hypothesis one, and consistent
+
+Ablating the gap junctions was the **first** hypothesis tested and it was rejected
+in simulation: the model still did not crawl. The mode analysis says the gap
+junctions are what makes the loop rank-one. §5AM.4 predicted, before testing,
+that removal would be *necessary but not sufficient* — that the population's
+structure would change while the body still failed — and that measuring the
+**variance** rather than the distance would settle it.
+
+Run with `--param g_gap_ps=0.001`, which is removal in all but name:
+
+| | committed | gap junctions removed |
+|---|---|---|
+| B-type adjacent correlation | **+0.83** | **−0.41** |
+| variance in one component | 100% | 100% |
+| mode 1 sign changes *(predicted)* | 0 | 12 |
+| bend | 20.8° | **0.7°** |
+| amplitude | 5.97° | **0.05°** |
+| `travel` | +0.00 | +0.00 |
+
+**The prediction holds.** Adjacent correlation flips from +0.83 to −0.41 —
+essentially the −0.40 the population shows when an *external* wave drives the
+body — which is the alternating mode the analysis said would take over. And the
+body does nothing at all: amplitude 0.05°, because the gap junctions were
+supplying most of the coupling that made anything happen.
+
+So the two results are consistent, and hypothesis one's rejection stands: removal
+restores the loop's capacity to carry a spatial pattern and supplies nothing that
+generates or sustains one.
+
+### 5AM.4a What "one signal" actually means, corrected
+
+This result exposes a loose reading that has run through §5O and everything after
+it, including earlier drafts of this section.
+
+A population of the form `x_i = a_i s(t)` — one time course, one spatial weight
+per cell — has **100% of its variance in a single component whatever the spatial
+weights are.** If the weights alternate in sign, its adjacent correlation is −1.
+So the gap-junction-free case above, with correlation −0.41 and 100% shared
+variance, is not a contradiction: it is one temporal mode carrying a structured
+spatial pattern.
+
+That is a **standing** wave, and it is the most the model has ever produced.
+
+A **travelling** wave is `sin(kx − wt)`, which expands to
+`sin(kx)cos(wt) − cos(kx)sin(wt)`: **two** temporal components, in quadrature,
+with spatial patterns a quarter wavelength apart. So propagation requires at
+least two significant components and a fixed phase relation between them.
+
+The model has one, always. That is why `travel` is +0.00 in every configuration
+including this one, and it is a sharper statement of the failure than "the output
+is one signal": **the loop has a single temporal degree of freedom, so the best
+it can do is stand and oscillate.** Adjacent correlation and shared variance were
+measuring different things all along — the first is spatial, the second temporal
+— and only the second bears on propagation.
+
+Which redirects the search again, more usefully than before. The question is not
+how to decorrelate neighbouring cells; removing gap junctions already does that.
+It is **what would give the loop a second temporal mode**, since a single
+first-order relaxation toward one fixed point cannot have one. That points at the
+things §5C.9 and §5C.5 already identified — an intrinsic oscillator, or a delayed
+branch — rather than at anything in the connectivity.
+
+### 5AM.5 What this does not establish
+
+**Linear response only.** The model is nonlinear and the sigmoid can gate cells
+off. What the analysis bounds is what the *linearisation* can carry, which is
+where every measured failure so far has lived — but a nonlinear mechanism could
+in principle do what the linearisation forbids.
+
+**One operating point.** `ds*/dV` is evaluated at rest; a driven network sits
+elsewhere, though it would sit elsewhere *uniformly* for the reason in §5AM.3.
+
+**It is not a claim about the animal.** Real gap junctions rectify, their
+conductances are not 100 pS by measurement, and a real worm crawls. What this
+establishes is that *this model*, at *these* assumed conductances, has a
+sensorimotor loop whose linear response is one whole-body contraction — and that
+the assumption responsible is identified and swept rather than buried.
+
+## 5AN. Eigenvalues of the closed loop
+
+> **Correction — read §5AN.8 first.** §5AN.2 to §5AN.7 linearised the loop
+> wherever it was after twenty seconds of running, on the assumption that it had
+> settled. It had not. The committed loop never settles: it runs a 22-second
+> coiling cycle, and twenty seconds is the top of a burst. Eigenvalues taken on a
+> moving trajectory are not stability exponents, so the conclusions those
+> sections drew — that the loop *cannot* oscillate, is provably overdamped, has
+> no Hopf bifurcation at any gain, and contains a latent gait at ζ 0.87 — are
+> **withdrawn**. The tables are kept as the record of what was computed. §5AN.1
+> (the network alone, at rest) and the −90 mV prediction of §5AN.6 stand.
+>
+> **Second correction — read §5AN.18.** Every `tools/analyse_loop.py` result in
+> §5AN.8 to §5AN.17 was computed on a 437-cell network, every neuron and all 135
+> muscle cells, where the runner uses every neuron and only the 95 body-wall
+> muscles: 397 cells. §5AN.18 says what changed and what has been recomputed.
+
+§5AM.4a reduced the failure to a precise requirement. A travelling wave is
+`sin(kx)cos(wt) - cos(kx)sin(wt)` — two temporal components in quadrature — and
+this model only ever produces one. Whether a second is *possible* is a question a
+steady-state transfer function cannot answer, because it contains no time. The
+eigenvalues of the linearised dynamics can: **oscillation of any kind needs
+complex-conjugate eigenvalues**, and a self-sustained oscillation needs one pair
+whose damping has crossed zero — a Hopf bifurcation.
+
+### 5AN.1 The network on its own is a relaxation system
+
+`tools/analyse_dynamics.py` takes the Jacobian of `GradedLeakyIntegrator
+.derivatives` by central finite differences — so it matches the code by
+construction rather than by a hand derivation — over the full `[V; s]` state of
+437 cells:
+
+| | |
+|---|---|
+| eigenvalues | 874 |
+| complex pairs | 78 |
+| unstable | 0 |
+| least-damped complex pair | 0.065 Hz, **damping ratio 0.9997** |
+| cycles to decay to 1/e | **0.004** |
+
+Every complex pair is critically damped to four decimal places. That is
+relaxation with complex arithmetic, not an oscillator, and it is the eigenvalue
+form of what §5C.9 established by simulation: the graded leaky integrator cannot
+produce a limit cycle.
+
+### 5AN.2 The closed loop, linearised exactly as it runs
+
+A chain of non-oscillating elements *can* oscillate once closed on itself, if the
+feedback has the right sign and the lags add to enough phase — and the body
+supplies lag the network alone does not have. So `tools/analyse_loop.py`
+linearises the loop in the runner's own order (read joint angles, inject the
+command and proprioceptive currents, step the network, step the muscles, step the
+quasi-static body) over its full state of 993 variables — voltages, activations,
+96 muscle activations and 23 joint angles — at the operating point the driven
+loop actually settles to rather than at rest.
+
+| | complex pairs | least-damped mode | damping ratio | settled bend |
+|---|---|---|---|---|
+| network alone | 78 | 0.065 Hz | 0.9997 | — |
+| loop, proprioception cut | 91 | 0.079 Hz | 0.9957 | 5.8° |
+| **loop, closed** | **147** | **0.304 Hz** | **0.8707** | 33.8° |
+
+**Closing the loop does something real.** It adds 56 oscillatory modes and pulls
+one up to 0.304 Hz with a damping ratio of 0.87 — the first oscillatory mode in
+this project anywhere near the 0.5 Hz gait, produced from inside the loop. The
+open-loop control has nothing faster than 0.079 Hz, so that mode is
+proprioception's doing.
+
+It is still heavily damped. At 0.87 the oscillation is gone within about a cycle,
+which is exactly what §5P.3's hand-over showed when a clean handed-over wave died
+in two seconds.
+
+### 5AN.3 No proprioceptive gain produces a Hopf bifurcation
+
+Self-oscillation would need that damping driven to zero. Swept over a 24-fold
+range of proprioceptive strength:
+
+| proprioceptive gain | least-damped mode | damping ratio | settled bend |
+|---|---|---|---|
+| 20 mV/rad, committed | 0.304 Hz | **0.871** | 33.8° |
+| 60 | 0.485 Hz | 0.933 | 21.9° |
+| 120 | 0.568 Hz | 0.927 | 25.6° |
+| 240 | 0.528 Hz | 0.936 | 35.9° |
+| 480 | 0.219 Hz | 0.902 | 44.8° |
+
+**The damping never falls below 0.87.** No Hopf bifurcation exists in this range,
+and the committed gain is already the least-damped point in it.
+
+The table shows why, and it is the most useful thing in this section.
+Proprioception supplies the right **frequency**: from 60 to 240 mV/rad the
+least-damped mode sits at 0.49 to 0.57 Hz, essentially on the gait. What it never
+supplies is **negative damping**. More gain deepens the latch instead — the
+settled bend climbs from 5.8° to 44.8° — because proprioception here is positive
+feedback: a dorsal bend excites DB and DB deepens the dorsal bend. Positive
+feedback injects energy at zero frequency, which is a latch, not at the frequency
+of an oscillation.
+
+### 5AN.4 What this converts the negative result into
+
+Twelve rejected hypotheses are an accumulation; a failure to find something is
+not evidence it is absent. This is different in kind. **Linearised at its own
+operating point, the closed sensorimotor loop has no oscillatory instability at
+any proprioceptive gain from 20 to 480 mV/rad.** A travelling wave requires one.
+So the negative result is no longer "nothing we tried made it crawl" but "the loop
+as built is provably overdamped, and here is the specific property — positive
+feedback with no source of negative damping at the gait frequency — that makes it
+so."
+
+That also says what to stop doing. Proprioceptive gain, law and receptive field,
+sign policy, drag, delay and the body mechanics were the twelve hypotheses'
+territory. None of them supplies negative damping at the gait frequency, so none
+of them could have worked.
+
+And it says what to try. Negative damping at 0.5 Hz needs either **negative
+feedback with enough phase lag** — the D-class cross-inhibition is the circuit's
+own candidate, and §5AM.3 showed inhibition is seven times weaker than excitation
+by construction, which is a reason it may have been tested crippled — or an
+**intrinsic oscillator** that injects energy at the right frequency, which §5C.9
+and §5F identified and which the conductance-based cells have so far failed to
+provide inside the network.
+
+### 5AN.6 The loop already contains a forward gait — damped
+
+Eigenvalues say whether a mode oscillates; the **eigenvector** says what shape it
+has. A complex eigenvector's joint-angle block is the body's shape in that mode,
+and its phase along the joints distinguishes a travelling wave (a steady phase
+step from joint to joint) from a standing one (constant phase, or a 180° jump
+across a node).
+
+The sign convention was calibrated rather than assumed, because two convention
+errors had already cost time this session. A time course with `e^{+iwt}`
+dependence peaks later wherever its phase is *smaller*, so a wave reaching each
+successive joint later has its phase *decreasing* along the body. Measured on the
+scripted gait, which is known to move head-first:
+
+| | phase step per joint, eigenvector convention | direction |
+|---|---|---|
+| **scripted gait** — `sine_wave_drive`, body moves head-first | **−23.09°** | forward |
+| **committed loop**, least-damped mode | **−24.62°** | **forward** |
+| loop at `e_inh_mv` −90, unstable mode | +2.11° | standing |
+
+**The committed closed loop's least-damped oscillatory mode is a forward-crawling
+wave.** Same sign as the real gait, phase step within 6% of it, spread over 403°
+from head to tail, amplitude peaking in the posterior half. It sits at 0.30 Hz
+against the gait's 0.5 Hz, and §5AN.3 showed that raising the proprioceptive gain
+moves the least-damped mode to 0.49 to 0.57 Hz — onto the gait frequency.
+
+**It is damped: ζ = 0.87.** It decays within a cycle, which is precisely what
+§5P.3's hand-over showed when a clean handed-over forward wave died in two
+seconds.
+
+This changes what the negative result *is*. Every account of it so far — twelve
+rejected hypotheses, `negative_result.md`, the roadmap — has been a variant of
+"the connectome does not produce a gait." That is not the right statement. **The
+gait is already a mode of the connectome-driven loop, with the right direction
+and nearly the right wavelength and frequency. It is overdamped.** The loop does
+not lack the pattern; it lacks the gain to sustain it.
+
+The question is therefore much narrower than it was, and well posed: **what
+reduces the damping of that specific mode to zero?** A Hopf bifurcation of the
+forward-travelling mode is the target, and two things are now known about it.
+Proprioceptive gain moves its frequency onto the gait without lowering its
+damping below 0.93, because proprioception is positive feedback (§5AN.3). And
+stronger inhibition *can* drive a mode unstable, but at −90 mV it destabilises a
+different one — a standing wave at 0.072 Hz — leaving the forward mode at 0.84.
+The instability arrived on the wrong mode.
+
+**A caveat on the −90 mV result**, so it is not mistaken for progress toward
+locomotion: a standing oscillation with a node mid-body is a body flexing in
+place. It is the first negative damping found anywhere in this project, and it is
+not a gait.
+
+### 5AN.7 Weakening the gap junctions makes the gait worse — a prediction refuted
+
+The natural reading of §5AM was that gap junctions, being a diffusion operator,
+are what damps the forward mode: diffusion damps spatial patterns and a travelling
+wave is one. That predicted that weakening them would lower the gait mode's
+damping, possibly through zero. It was written down before testing, and
+`tools/track_gait_mode.py`, which classifies every oscillatory mode by shape and
+follows the forward-travelling ones, says the opposite:
+
+| `g_gap_ps` | settled bend | gait-mode frequency | **gait-mode damping** | phase step |
+|---|---|---|---|---|
+| **100, committed** | 33.6° | 0.304 Hz | **0.871** | −24.62° |
+| 50 | 14.7° | 0.178 Hz | 0.949 | −25.76° |
+| 20 | **60.0°, pinned** | 0.169 Hz | 0.956 | −14.22° |
+| 5 | **60.0°, pinned** | 0.051 Hz | 0.998 | −13.13° |
+
+Weaker gap junctions make the gait mode **more** damped and slower, its phase step
+drifts away from the gait's, and below 20 pS the body latches hard against the
+joint limit. **The committed conductance is the least-damped point in the sweep.**
+
+The reasoning saw half of what gap junctions do. Diffusion does damp spatial
+patterns — and the same coupling is what *carries* a pattern from one segment to
+the next. A travelling wave needs neighbouring segments coupled; remove the
+coupling and there is no coherent wave left to be damped. So the gap junctions
+both enable the gait mode and limit it, and here the enabling side dominates.
+They are also, it turns out, what holds off the latch: weaken them and the body
+pins at 60°.
+
+That leaves §5AM's result intact — the gap junctions do make the steady response
+rank-one — and narrows what it means: they are not the obstacle to the gait, they
+are part of what makes the gait a mode at all.
+
+### 5AN.8 The loop does not settle: an unstable equilibrium and a coiling cycle
+
+**How it was found.** The pathway-sensitivity analysis of §5AN.9 needs the
+equilibrium's shift, `(I − J)⁻¹ ∂M/∂ε`, which only means something at an
+equilibrium, so it checked the residual `|M(x) − x|` first. After forty seconds
+of running it was 4.6 × 10⁻² per step, and the forward mode it found was not the
+one at twenty seconds (0.177 Hz at ζ 0.957, against 0.304 Hz at 0.871). Running
+the loop for four minutes and printing the state every ten seconds showed why:
+
+| t (s) | 20 | 30 | 40 | … | 220 | 230 | 240 |
+|---|---|---|---|---|---|---|---|
+| bend | 33.8° | 6.0° | 23.5° | … | 33.8° | 6.0° | 23.5° |
+| largest dV/dt, mV/s | 43.56 | 3.13 | 6.96 | … | 43.59 | 3.13 | 6.94 |
+
+The state recurs. Sampled at 10 Hz the cycle is a **burst every 22.2 s**: the
+bend climbs from about 3° to 30–56° in four seconds, starting at the tail and
+sweeping forward, then relaxes over the next eighteen. Burst heights rise and fall
+over nine bursts (44, 53, 56, 52, 46, 40, 35, 30, 34°), and after exactly
+**200.0 s** — nine bursts — the joint angles return to within 0.087°. Twenty
+seconds, where every §5AN Jacobian was taken, falls on a burst.
+
+**What a burst does.** Every burst bends the same way — dorsally, by the sign
+convention of `worm/body/muscles.py` — so every burst turns the body the same
+way, about 117°. Over one 200-second cycle the body turns three full times,
+covers 397 mm of path, and ends **6.6 mm** from where it started. It coils and
+spins in place.
+
+**Isaac agrees.** A windowed 120-second run of the committed loop, unchanged:
+
+| coil | peak bend | extent at its tightest | heading change |
+|---|---|---|---|
+| t ≈ 21 s | 52.6° | 0.11 | +108° |
+| t ≈ 45 s | 52.9° | 0.18 | +127° |
+| t ≈ 69 s | 34.5° | 0.23 | +113° |
+| t ≈ 92 s | 35.2° | 0.18 | +118° |
+
+Every 23–24 s, the same direction each time, against 22.2 s and ~117° from the
+standalone loop. The runner's own gait metric resolves it as **period 24.0 s**,
+`travel` −0.17: a rhythm, and not a travelling one. Isaac's first coil is delayed by the seed wave and hand-over.
+
+**The equilibrium, found properly.** `fixed_point` in `tools/analyse_loop.py`
+runs damped Newton iteration on `M(x) = x` from the cycle's time average and
+refuses to return anything that is not an equilibrium. It converges in six steps
+to a residual of 9 × 10⁻¹²:
+
+| | |
+|---|---|
+| equilibrium | a gentle dorsal C, bend **7.18°** |
+| multipliers outside the unit circle | **2** |
+| unstable pair | growth **+0.347 /s** at **0.065 Hz**, ζ **−0.65** |
+| its shape | tail-dominated (amplitude 0.2 at the head, 1.0 at the tail), nearly standing: +3.8° per joint, tail leading |
+| next eigenvalue | −0.727 /s, real |
+| forward-travelling mode | 0.170 Hz, ζ **+0.941**, −20.9° per joint |
+
+**The committed loop is already past a Hopf bifurcation.** Its equilibrium is
+unstable to a slow, tail-led, standing oscillation, and that instability grows
+into the coiling cycle — nonlinearly, which is why the cycle's 22 s is longer
+than the linear 15.5 s. The −90 mV result of §5AN.6 was therefore not "the first
+negative damping found anywhere in this project"; it is a variant of the same
+instability, measured at a point that happened to be near its equilibrium, which
+is why its prediction held (§5AN.8a).
+
+So the corrected statement of the negative result is almost the reverse of §5AN.4.
+**The loop is not short of instability. It is unstable on the wrong mode.** A
+slow dorsal coil grows; the forward-travelling mode, which is the gait, is
+damped at ζ 0.94.
+
+#### 5AN.8a The −90 mV prediction, checked in Isaac
+
+§5AN.6 predicted that `e_inh_mv = −90` would self-oscillate at 0.072 Hz, a period
+of 13.9 s, as a standing wave. A windowed 90-second Isaac run: curls at
+t ≈ 11, 27, 41.5 and 55.5 s, intervals 16, 14.5 and 14 s, the gait metric's
+period 15.0 s, travel −0.28, each curl turning the body about 20°, no net
+progress. The period is within 8% of the prediction and the shape is the
+predicted standing flex. It is the first time in this project that an eigenvalue
+prediction has been confirmed by the rendered simulation.
+
+### 5AN.9 Which connections drive the coil, and which damp the gait
+
+A global knob scales hundreds of pathways at once. `tools/gait_mode_sensitivity.py`
+asks the connectome pathway by pathway instead: a *pathway* is every chemical
+synapse from one cell class onto another (`DB>VD`), or every gap junction between
+two classes (`AVB~VB`); body-wall muscles are grouped by side, `BWM-D` and
+`BWM-V`. That makes 1573 pathways. For each, first-order eigenvalue perturbation
+theory gives how a mode's eigenvalue moves when the pathway's conductance is
+scaled,
+
+    dμ/dε = wᵀ (dJ/dε) v / (wᵀ v)
+
+with `v`, `w` the mode's right and left eigenvectors and `ε` the fractional
+change, so every number is a derivative with respect to log conductance. `dJ/dε`
+is the total derivative, including the equilibrium's own shift. Thresholds are
+held fixed, so this is not the same derivative as a `--param` sweep.
+
+**Validated before use.** The per-pathway sums equal the all-chemical plus
+all-gap totals to four decimals for both modes, so the finite differences are
+self-consistent. And actually rescaling four pathways by ±10%, re-solving the
+equilibrium and re-linearising, against the first-order prediction:
+
+| mode | pathway | 0.9× measured / predicted | 1.1× measured / predicted |
+|---|---|---|---|
+| coil | DA>BWM-D | −0.6885 / −0.6932 | −0.6012 / −0.6053 |
+| coil | VA>BWM-V | −0.6185 / −0.6195 | −0.6779 / −0.6790 |
+| gait | SAB>BWM-D | +0.9526 / +0.9499 | +0.9345 / +0.9327 |
+| gait | BWM-D~BWM-D | +0.9344 / +0.9350 | +0.9472 / +0.9476 |
+
+All eight within 0.005. (A first version of the check started Newton afresh and
+at DA>BWM-D 0.9× landed on a different equilibrium, an S-shaped saddle; the check
+now continues the committed one.)
+
+**The coil is a dorsal–ventral balance mode.** Every pathway that strongly
+affects it is a neuromuscular junction, and they sort by side:
+
+| strengthening this … | changes the coil's damping by (per unit log conductance) |
+|---|---|
+| DA>BWM-D, 80 synapses | **+0.44** (stabilises) |
+| DB>BWM-D, 63 | +0.37 |
+| BWM-D~BWM-D, 96 | +0.22 |
+| AS>BWM-D, 46 / SMB>BWM-D, 35 | +0.15 / +0.15 |
+| VA>BWM-V, 75 | **−0.30** (destabilises) |
+| VB>BWM-V, 69 | −0.27 |
+| SMD>BWM-V, 34 | −0.14 |
+| BWM-V~BWM-V, 96 | −0.13 |
+
+More dorsal drive damps the dorsal coil; more ventral drive feeds it. The
+smallest coordinated change of all 1573 pathways that extrapolates to zero
+damping is **0.77** in log conductance, with no single pathway changing by more
+than ×1.49. The coil is close to the edge, and on the side the connectome's
+neuromuscular junctions decide.
+
+**The gait mode is insensitive to the connectome.** The largest single effect
+on its damping is −0.086, from SAB>BWM-D — eight synapses — and the linear
+extrapolation to zero needs that pathway scaled twelve-fold. Proprioceptive gain
+would need 41-fold. The smallest coordinated change reaching zero is **4.98** in
+log conductance, with one pathway changed by ×9.6 or ×0.10. Linear extrapolation
+that far is not a prediction; as a ranking it says plainly that **no reweighting
+of the connectome within reason makes the gait self-sustaining in this model.**
+
+**What that leaves.** This is the result §5AN.4 claimed and had not earned,
+now earned at the equilibrium: the gait mode's damping is not a property of any
+connection weight. The loop needs a source of negative damping *at the gait
+frequency*, and the candidates are the ones §5C.9 and §5F identified and §5AN.4
+named: an intrinsic oscillation in the motor neurons, which the graded leaky
+integrator cannot produce, or negative feedback with enough phase lag at 0.5 Hz.
+Separately, the coil is a real and nearby instability whose drive is a
+dorsal–ventral imbalance at the neuromuscular junctions; a model in which the
+gait does go unstable would also need the coil kept below threshold.
+
+**Not established.** The pathway grouping by class is a choice: a pathway that
+matters through one cell pair is diluted by its siblings. Thresholds are fixed.
+First order. One equilibrium of several. The sweeps of §5AN.3 and §5AN.7, and
+three further global sweeps (inhibitory reversal, synaptic decay, sigmoid width)
+run the same flawed way, have not been repeated at equilibria; the last three
+are not reported because they were never valid.
+
+### 5AN.10 No measured cell amplifies at the gait frequency
+
+§5AN.9 left one route: something that injects energy *at the gait frequency*,
+which no connection weight does. §5AC asked whether the measured conductance-based
+VB6 oscillates on its own and found it does not — but a cell does not have to
+oscillate on its own to destabilise a loop. It only has to stop being a resistor
+at the right frequency, and that is a property of the cell alone.
+
+`tools/cell_admittance.py` holds each imported cell at a voltage `V0` with the
+steady current that takes, linearises every channel, gate and calcium pool there
+(through `ConductanceModel.derivatives`, the continuous field `step` integrates,
+held to agreement with it by a test on all nine models), and reports the real part
+of the admittance `Y(i·2πf)`: the conductance, in nS, the cell presents to a small
+sinusoidal current at frequency `f`.
+
+* `Re Y > 0` at every frequency: the cell only dissipates; in any loop it can only
+  add damping. The graded leaky integrator is this, `Re Y = G_leak` everywhere.
+* `Re Y < 0` at 0 Hz: negative slope conductance — regenerative, a latch.
+* `Re Y < 0` in a band away from 0 Hz: the cell **amplifies** there. That is the
+  one that could destabilise the gait mode.
+
+Scanned from −80 to −5 mV in 5 mV steps, at 0, 0.05, 0.17, 0.5, 2 and 10 Hz:
+
+| cell | negative conductance | where |
+|---|---|---|
+| **VB6** (B-type motor) | **none** | minimum +0.084 nS, near −50 mV |
+| **VA5** (A-type motor) | **none** | minimum +0.019 nS, near −50 mV |
+| AVAL, AVAR, AIY | none | |
+| VD5 | at 0 Hz only, at −5 mV (−0.19 nS) | regenerative, far above any loop voltage |
+| **RMD** (2019) | at 0 Hz, −60 and −55 mV (−1.67, −1.17 nS); above 2 Hz at −15 mV | its plateau bistability; a 6.9 Hz instability |
+| AWC (2019) | at 0 Hz, −60 mV (−0.045 nS) | regenerative |
+| RIM | at 0 Hz, −60 and −55 mV | regenerative, and tiny: RIM's whole conductance is below 1 pS |
+
+**No measured cell has negative conductance anywhere in 0.05 to 2 Hz, at any
+holding voltage.** Every negative conductance found is at 0 Hz — a latch — or
+fast, RMD's 6.9 Hz. Between those, every cell is a resistor; its admittance is
+flat across the gait band to the third decimal.
+
+**RMD is the positive control.** Its model was imported for its plateau
+bistability, which `test_plateau_is_bistable` asserts by simulation. The
+admittance scan finds it independently, as negative slope conductance exactly
+where the plateau switches. So the instrument sees regenerative channels when
+they are there.
+
+**The scale it would have to beat.** At the loop's equilibrium the B-type cells sit
+at −58 to −45 mV and are loaded by **1.2 to 4.5 nS**, almost all of it gap
+junctions (median 2.2 nS); the graded membrane is 0.01 nS and chemical input
+under 0.005 nS. VB6's measured membrane at those voltages is +0.084 nS — positive,
+and some twenty-five times smaller than what the gap junctions attach to it. A
+B-type cell's own channels, as measured, could not destabilise the gait mode even
+with the sign reversed.
+
+So the experiment §5AC.4 wanted and could not honestly run — every B-type cell
+promoted to a conductance-based model — has its answer without being run, at
+least in the linear regime: VB6's channels are dissipative across the gait band,
+so copying them to seventeen other cells would add damping, not remove it.
+
+**Not established.** Linear: a cell can be a resistor to small signals and still
+switch under large ones, which is what RMD's plateau is. The 2024 models' calcium
+pool — borrowed from a Purkinje cell, §5AB.5 — sits on its 100 nM floor over most
+of the scan (VB6 below −15 mV). That floor is not what hides a resonance: with it
+removed the pool settles at 0.3 to 66 nM between −70 and −20 mV and VB6's
+admittance is unchanged to four decimals. The pool's calcium is simply far below
+where its calcium-activated channels respond, so slow calcium-dependent feedback —
+the usual source of resonance in real cells — is effectively absent from this
+model at subthreshold voltages either way. Whether VB6 resonates *in the animal*
+is therefore a question about its calcium handling, which is not measured.
+
+### 5AN.11 The chemical connectome is barely on at the operating point
+
+The load figures above have a second reading. At the committed equilibrium every
+cell sits a median **20.3 mV below its sigmoid midpoint** — the 30 mV committed
+offset (§5N) less about 10 mV of command and proprioceptive depolarisation. Hence:
+
+| | |
+|---|---|
+| largest synaptic activation, any cell | **0.031** (a body-wall muscle) |
+| cells above 0.1 | **0 of 437** |
+| chemical conductance open | **2.85 of 198.7 nS, 1.43%** |
+
+The chemical connectome runs entirely in the foot of its sigmoid, where the
+slope `β φ (1 − φ)` is about a quarter of its maximum. The B-type cells are coupled
+to each other and to AVB almost only through gap junctions. That is why §5AN.9
+found the chemical pathways other than the neuromuscular junctions barely move
+either mode: at this operating point there is little chemical transmission for
+them to move. It also makes the threshold offset — assumed, and set in §5N for
+reasons that had nothing to do with loop dynamics — a candidate lever of a
+different kind from a weight: it sets the gain of every chemical synapse at once.
+
+**And §5N.3 saw the coil.** "The largest oscillation the model has produced …
+irregular but never stops … does not propagate", measured when the offset was
+moved to 30 mV, is very probably the coiling cycle of §5AN.8 seen through a
+40-second window. It was recorded honestly and never characterised; a period
+could not have been resolved from it.
+
+#### 5AN.11a The threshold offset, at equilibria
+
+The offset sets the gain of every chemical synapse at once, so it is a lever of a
+different kind from a weight. Swept with `tools/track_gait_mode.py`, which now
+linearises at each setting's equilibrium:
+
+| offset | equilibrium bend | gait mode | gait damping | least-damped mode overall |
+|---|---|---|---|---|
+| 40 mV | 37.1° | 0.131 Hz | 0.970 | 0.223 Hz, ζ +0.786 |
+| **30, committed** | 7.2° | 0.170 Hz | **0.941** | 0.065 Hz, ζ **−0.649** (the coil) |
+| 25 | 6.8° | 0.158 Hz | 0.950 | 0.064 Hz, ζ −0.645 |
+| 20 | 10.1° | 0.154 Hz | 0.956 | 0.089 Hz, ζ −0.536 |
+| 15 | 4.2° | 0.181 Hz | 0.945 | 0.483 Hz, ζ +0.845 |
+| 10 | 16.7° | 0.008 Hz | 1.000 | 0.347 Hz, ζ +0.918 |
+
+The committed row reproduces §5AN.8 to four decimals. The gait mode stays between
+ζ 0.94 and 1.00 across the whole range, least damped at the committed value; the
+coil is unstable only between 20 and 30 mV. Chemical gain does not reach the gait.
+
+### 5AN.12 The gait mode lives in the muscles, and every source of energy feeds the coil
+
+**Where the modes live.** A mode's participation factors, `|v_k w_k|` normalised —
+right eigenvector times left — say which state variables its eigenvalue actually
+depends on. At the equilibrium:
+
+| | gait mode | coil |
+|---|---|---|
+| body-wall muscle cells, their `V` and `s` | **66.5%** | **54.5%** |
+| the muscle model's activation | 9.9% | 13.9% |
+| joint angles | 8.0% | 10.3% |
+| B-type motor neurons (VB, DB) | **2.9%** | 2.1% |
+
+The forward-travelling mode is mostly a relaxation wave in the sheet of body-wall
+muscle cells, which the network carries as cells with gap junctions between them.
+The B-type motor neurons — the cells the gait is supposed to come from — carry
+under 3% of it. That is the most direct explanation yet of why nothing neural
+moves it.
+
+**How much energy it would take, and where.** `tools/gait_mode_requirement.py`
+adds a conductance `dG` to every cell of a group, reversing at that cell's own
+equilibrium voltage, so the equilibrium does not move (residual 4.5 × 10⁻¹³) and
+only the dynamics change. Negative `dG` is a source. First-order threshold, per
+cell, for the gait mode's growth rate to reach zero:
+
+| group | cells | threshold per cell |
+|---|---|---|
+| B-type | 18 | **−2.73 nS** |
+| all VNC motor neurons | 75 | −2.12 nS |
+| AS | 11 | −4.29 nS |
+| AVB | 2 | −54.6 nS |
+| dorsal body-wall muscle | 48 | **−0.027 nS** |
+| A-type, D-type, head motor, ventral muscle | | wrong sign: a source there *damps* the gait |
+
+**B-type cells: not by any cell like VB6.** At half the threshold the gait mode moves
+as predicted — growth −1.54 /s against −1.49 — but each B-type cell's own total
+conductance has gone negative by then, and a real mode runs away at +461 /s: the
+cells latch one by one long before the gait gets close. At the full threshold the
+gait mode has turned back (−4.1 /s); the first-order line does not extend that
+far. And the threshold itself, 2.7 nS of negative conductance per cell, is some
+thirty times VB6's entire measured membrane conductance at those voltages.
+
+**Muscles: tiny, and it feeds the coil.** The muscle cells are where small
+conductances matter — −112 /s per nS on the dorsal side — but what goes unstable
+is not the gait:
+
+| dorsal muscle `dG` | unstable oscillatory mode | its phase step | gait damping |
+|---|---|---|---|
+| −0.005 nS | 0.117 Hz, +0.47 /s | +1.0° | 0.920 |
+| −0.010 | 0.163 Hz, +0.67 /s | +0.4° | 0.910 |
+| −0.015 | 0.202 Hz, +1.01 /s | +0.2° | 0.984 |
+| −0.020 | 0.217 Hz, +1.50 /s, and one real | +0.3° | 0.999 |
+
+Every unstable oscillation is standing — within ±2.4° per joint, against the
+gait's −23° — the coil getting faster and stronger. All 95 muscle cells behave
+the same; the ventral side alone latches instead.
+
+**So:** every source of energy tried feeds the standing coil or latches before it
+brings the gait mode near zero damping — 1573 connection weights (§5AN.9), the
+threshold offset (§5AN.11a), negative conductance in any group of motor neurons,
+and in the muscles. "The loop needs negative damping at the gait frequency" was
+the right reading of §5AN.9 and is not enough: energy put into this loop goes to
+the standing mode.
+
+**A hypothesis for why, not yet a result.** A travelling wave needs coupling that
+is *non-reciprocal* along the body: segment *i* driving *i*+1 more than *i*+1
+drives *i*. Gap junctions, neuronal and muscular, are reciprocal by construction,
+and at this operating point they dominate the loop (§5AN.10, §5AN.11). The
+directional elements — proprioception sensing two segments anterior, and the
+chemical synapses — reach the muscle-sheet mode only weakly: through B-type cells
+that carry under 3% of it, and through chemical synapses that are 1.4% open. A
+medium dominated by reciprocal coupling favours standing modes, and a standing
+mode is what every added source of energy destabilised. The test is to measure
+the non-reciprocal share of the segment-to-segment coupling, and what changes the
+gait mode when it is raised.
+
+**Not established.** The muscle cells are graded leaky integrators with the
+neurons' assumed `C`, leak and kinetics; body-wall muscle has not been given
+measured parameters, and real body-wall muscle fires calcium action potentials,
+which this model does not have. A constant conductance is regenerative at 0 Hz
+too, which is why the latches appear; a source tuned to the gait band would avoid
+them, and to first order would shift the gait mode by the same amount — which for
+B-type cells is still thirty times what VB6 has.
+
+### 5AN.13 Proprioception is the only directional element, and only near 0 Hz
+
+§5AN.12 proposed that the loop is dominated by reciprocal coupling at the gait
+frequency. `tools/loop_reciprocity.py` measures it. At the equilibrium, the
+joint-angle block of the resolvent of the one-step map, `(zI − J)⁻¹` at
+`z = exp(i2πf·dt)`, is the bend that appears at each joint when one joint is
+nudged at frequency `f`. Posterior response over anterior response, averaged
+along the body, at each distance:
+
+| | 0 Hz | 0.17 Hz | 0.5 Hz |
+|---|---|---|---|
+| proprioception cut, 1 joint | **1.000** | **1.000** | **1.000** |
+| proprioception cut, 6 joints | 1.000 | 1.000 | 1.000 |
+| committed, 1 joint | 1.571 | 1.179 | **1.019** |
+| committed, 3 joints | 3.235 | 1.613 | 1.115 |
+| committed, 6 joints | 3.268 | 2.039 | 1.335 |
+
+**The control is exact.** With proprioception cut, the loop is reciprocal to four
+decimals at every distance and frequency: nothing else in it — neurons, gap
+junctions, chemical synapses at this operating point, muscles, body — tells head
+from tail.
+
+**Proprioception is directional where it does harm.** It passes bends tailward
+three times more strongly than headward at 0 Hz, which is a static,
+posterior-heavy bias — the coil of §5AN.8 is tail-dominated — and that bias has
+almost gone by the gait frequency, 1.02 between neighbours at 0.5 Hz. It reaches
+the muscles through low-pass stages (synaptic activation, muscle activation),
+and by 0.5 Hz they have filtered its directionality away. §5AN.12's hypothesis,
+in its specific form, holds.
+
+### 5AN.14 Phasic proprioception moves the directionality to the gait frequency
+
+That diagnosis names its remedy: a proprioceptive signal with phase *advance*,
+which is what a receptor sensing the rate of bending provides. §5AK implemented
+one (`rate_fraction`) and rejected it on an Isaac run with no travel — a
+measurement taken on a trajectory, the same kind §5AN.8 withdrew. Linearised
+properly here: `Loop` now carries the 50 ms of past postures the rate term
+compares against, as state, exactly as the runner holds them.
+
+**Reciprocity, at the same settings:**
+
+| | 0 Hz | 0.5 Hz, 1 joint | 0.5 Hz, 6 joints |
+|---|---|---|---|
+| tonic, committed | **3.27** | 1.02 | 1.34 |
+| purely phasic, 80 mV/rad | **1.000** | 1.57 | **5.89** |
+| purely phasic, 200 mV/rad | 1.000 | 1.67 | **8.08** |
+
+Phasic proprioception is exactly reciprocal at rest — there is no static feedback
+left to build a latch or a coil — and strongly tailward at the gait frequency.
+
+**The gait mode responds, for the first time.** Rate fraction at the committed
+20 mV/rad, then gain with purely phasic proprioception; each linearised at its
+equilibrium (which phasic proprioception does not move — it is the same 5.75°
+posture at every phasic gain):
+
+| proprioception | gait mode | gait damping | first unstable mode |
+|---|---|---|---|
+| tonic, committed | 0.170 Hz | 0.941 | the coil, 0.065 Hz |
+| rate fraction 0.25 | 0.155 Hz | 0.962 | the coil, 0.061 Hz |
+| rate fraction 0.75 | 0.301 Hz | 0.930 | none — coil gone |
+| phasic, 20 mV/rad | 0.351 Hz | 0.907 | none |
+| phasic, 40 | 0.436 Hz | 0.856 | none |
+| phasic, 80 | **0.530 Hz** | **0.785** | none |
+| phasic, 120 | 0.589 Hz | 0.732 | none |
+| phasic, 140 | 0.611 Hz | 0.710 | 0.175 Hz, +0.03 /s, **+10.5° per joint** |
+| phasic, 200 | 0.663 Hz | 0.655 | 0.130 Hz, +0.43 /s, +8.4° |
+| phasic, 320 | 0.728 Hz | 0.573 | 0.221 Hz, plus two latches |
+
+The gait mode's damping falls monotonically with phasic gain and its frequency
+crosses the 0.5 Hz gait — the first lever in this project that moves it steadily
+toward zero. Rate fraction 0.5 and tonic 10 mV/rad did not converge to an
+equilibrium and are left out rather than guessed at.
+
+**And a different mode wins again.** From about 140 mV/rad a slow, tail-dominated
+mode goes unstable first, travelling **backward** (+6.5 to +13° per joint, against
+the gait's −23°). It lives in the body and the rate sensor, not the nervous
+system: joints 30%, the posture history 36%, every neuron together 30%. Linearly
+extrapolated, the gait mode alone would need about 950 mV/rad.
+
+**Isaac, at phasic 200 mV/rad** (windowed, 90 s): the loop goes straight into a
+large, sustained, very regular oscillation — amplitude 21.6°, period 2.6 s,
+`travel` −0.18 every second from t = 8 s, the body circling about 360° in
+40 s. The B-type population decorrelates: adjacent correlation +0.39 with 64% of
+variance shared, against +0.89 and 93% for the committed loop. It is the largest
+regular rhythm the connectome has driven in this project, and it travels the
+wrong way. The direction is the one predicted. **The period is not**: 2.6 s against
+the linear backward mode's 7.7 s. The bend reaches the 60° limit every cycle, far
+outside the regime a linearisation describes, so this is a qualitative
+confirmation and not the clean one §5AN.8a was.
+
+**What sets the competition.** `tools/gait_mode_sensitivity.py` at phasic
+200 mV/rad, both modes:
+
+| | gait mode (0.663 Hz, ζ 0.655) | backward mode (0.130 Hz, ζ −0.462) |
+|---|---|---|
+| proprioceptive gain, per log unit | −0.16 | **−1.45** |
+| all chemical synapses | +0.39 | +1.42 |
+| all gap junctions | +0.12 | +1.35 |
+| smallest coordinated change to zero damping | **1.29** (one pathway ×1.98) | 0.26 (×1.16) |
+
+Against the tonic loop's 4.98 and ×9.6, the gait mode is now within reach of
+modest changes. But the backward mode is **nine times more sensitive to
+proprioceptive gain** than the gait mode, so turning the gain up always hands the
+instability to it first. The dorsal muscle-to-muscle gap junctions push both
+toward instability; the ventral ones, VA onto ventral muscle, and AVB–DB gap
+junctions damp the backward mode.
+
+**Not established.** Purely phasic proprioception is a modelling choice
+(`rate_fraction` is ASSUMED; real mechanoreceptors usually have tonic and phasic
+parts, §5AK), and the gains that matter here, 80 to 320 mV/rad, are four to
+sixteen times the committed tonic value with nothing measured to fix them. The
+rate is a 50 ms finite difference whose gain rises with frequency and creates
+fast loop modes (57 and 110 Hz), excluded from every gait-mode search here as
+not candidates for a gait. The backward mode's tail dominance may be an end
+effect of how the posterior B-type receptive fields cover the body; untested.
+
+### 5AN.15 The backward mode is posterior VB sensing; the gait is a five-stage ring
+
+**Where the backward mode comes from.** Each B-type neuron's proprioceptive gain,
+perturbed one at a time at phasic 200 mV/rad (the per-neuron sums reproduce the
+global gain derivatives of §5AN.14 exactly, −0.1634 and −1.4455):
+
+| neuron | at segment | senses joint | gait damping, per log gain | backward damping, per log gain |
+|---|---|---|---|---|
+| VB1 | 6.3 | 4 | −0.066 | +0.028 |
+| VB3–VB6 | 10.6–14.2 | 9–12 | −0.022 to +0.003 | **+0.09 to +0.16** |
+| VB7, DB6 | 16.0, 17.5 | 14, 16 | +0.017, −0.010 | −0.12, −0.18 |
+| **VB8, VB9, VB10, VB11** | **18.0–20.5** | **16–18** | **−0.001 to +0.015** | **−0.37 to −0.46 each** |
+| DB7 | 20.5 | 18 | −0.022 | +0.006 |
+
+Four posterior ventral B-type neurons carry more than the whole net effect, and
+they barely touch the gait mode. Two things single them out. **Nobody senses the
+tail:** B-type neurons sit between segments 6 and 20.5 and sense two segments
+anterior, so joints 19 to 22 — and 0 to 3 — have no proprioceptor at all, and the
+backward mode's amplitude rises exactly across those joints. And **the tail's
+sensing is lopsided**: four VB neurons sense joints 16–18 against two DB.
+
+**Without them, the gait mode approaches a Hopf bifurcation.** The same phasic gain
+scan with VB8–VB11's proprioception removed — their synapses and motor output
+untouched — linearised at the shared equilibrium:
+
+| phasic gain | gait mode | gait damping | phase step | other unstable modes |
+|---|---|---|---|---|
+| 200 mV/rad | 0.722 Hz | 0.691 | −11.9° | **none** |
+| 400 | 0.619 Hz | 0.538 | **−23.0°** | a slow backward one, +0.15 /s |
+| 800 | 0.712 Hz | 0.315 | −24.9° | 0.41 Hz near-standing; two latches |
+| 1600 | 0.802 Hz | **0.020** | −27.8° | several |
+
+At 400 mV/rad the gait mode's phase step is the scripted gait's to the tenth of a
+degree, and at 1600 its damping is 0.02 — the closest any configuration in this
+project has come. But removing one competitor exposes the next: from 800 mV/rad a
+0.41 Hz near-standing mode and two latches are unstable first.
+
+**Why the gait mode is so much harder to destabilise than its competitors.** With
+left and right eigenvectors normalised, `wᵀv = 1`, the eigenvalue splits exactly
+into a sum over blocks of the state and the paths between them, each term
+independent of units. For the gait mode of the committed loop:
+
+| stage | dissipates (its own term) | passes on to the next |
+|---|---|---|
+| neuron synaptic activation | −1.10 /s | +0.32 to muscle-cell voltage |
+| muscle-cell voltage | −0.84 | +0.41 to muscle-cell activation |
+| muscle-cell activation | −1.27 | +0.42 to the muscle model |
+| muscle model activation | −0.55 | +0.42 to the body |
+| body | −1.10 | +0.35 back to the neurons, by proprioception |
+| **total** | **−4.96** | **+2.00** |
+
+The gait mode is a **ring of five dissipative stages in series**, each a
+first-order lag that loses about 1 /s and passes on about 0.4 /s. A ring sustains
+an oscillation only if the gain all the way round beats the summed losses, and
+with five stages that is expensive. Its competitors are short loops: the tonic
+coil is voltage ↔ synaptic activation *inside* the neurons (recurrent excitation,
++2.31 /s), and the phasic backward mode is the rate sensor feeding the neurons
+directly (the posture history alone contributes +5.2 /s against −4.7 /s from the
+present posture). Short loops are cheap to destabilise and the long one is not,
+which is the general form of every "a different mode wins" in §5AN.12–5AN.15.
+
+Two of the five stages are muscle activation: the muscle cell's own activation
+`s`, which uses the neurons' synaptic kinetics (§5C.1: "the only step we add is
+reading a muscle cell's synaptic activation as its contraction"), and then the
+muscle model's 60 ms activation. Both are assumed; neither is measured for
+body-wall muscle.
+
+**Prediction for Isaac, written before the run.** Phasic 200 mV/rad with
+VB8–VB11's proprioception removed (`--proprio-exclude VB8,VB9,VB10,VB11`, a new
+sensory-lesion flag applied after the gain is calibrated): no mode is unstable,
+so the 21.6° backward oscillation of §5AN.14 should be **gone**, and the body
+should settle near its 5.8° equilibrium, with any forward ringing damped at
+ζ 0.69.
+
+#### 5AN.15a The prediction failed, and the loop crawled — backward
+
+The run (`--proprio-rate 1 --proprioceptive-mv 200 --proprio-exclude
+VB8,VB9,VB10,VB11`, windowed, 90 s) was not quiet. A slow oscillation grew from
+3° to 14.6° of amplitude and held: **period 9.0 s, `travel` −0.20, 3.6 body
+lengths covered**, and the B-type population **anti-correlated** between
+neighbours — adjacent correlation **−0.42**, 54% of variance shared, against
++0.89 and 93% for the committed loop and +1.00 for most of this project. It is the
+most spatially structured motor pattern the connectome has produced.
+
+**Why the prediction was wrong.** The linearisation is right about what it
+describes: at that equilibrium the spectral radius is 0.9992 and a 0.05° nudge
+decays to nothing in thirty seconds. But the standalone loop started from rest —
+not kicked — runs to the same large oscillation, and so does one kicked with a
+30° posture. The stable equilibrium **coexists with a large-amplitude attractor**
+whose basin contains the ordinary start. Its period sits near the least-damped
+linear mode at that setting, 0.085 Hz with damping only about 0.33, so the most
+likely reading is that the nonlinearity sustains what the linearisation shows as
+a lightly damped ring. This is §5AN.5's "linear" caveat as a real case rather
+than a footnote: a linearisation ranks modes and finds instabilities, and cannot
+rule out an attractor far from the equilibrium.
+
+**Which way it goes.** The wave travels tail-to-head, and the body follows it:
+over 70 s of the standalone loop, the centroid's displacement along the body axis
+is **−63%** of its path with all B-type sensing (phasic 200 mV/rad) and **−90%**
+with VB8–VB11's sensing removed — 541 mm, about 0.08 body lengths per second,
+tail first. **Under phasic proprioception the connectome-driven loop crawls
+backward**, consistently, while the command drive goes to AVB, the forward
+command interneurons.
+
+**A mechanism, as a hypothesis.** Each B-type neuron senses the body two segments
+anterior to itself. Under tonic sensing it copies the bend ahead with a lag, so
+bends are handed tailward: a forward wave, if the gain can sustain it. A rate
+signal *leads* the bend by 90°. If that lead exceeds the lags of the stages
+between sensing and muscle, each segment anticipates the one ahead, the wave runs
+tail-to-head, and the body backs up. Direction would then be set by the net phase
+from sensing site to driven site — too much lag gives standing waves (tonic),
+too much lead gives backward ones (phasic) — and a blend between them would have
+a window for the forward gait. That is testable with the transmission *phase*
+along the body, which the reciprocity measurement has but did not report.
+
+### 5AN.16 Direction is set by phase, and it depends on frequency
+
+`tools/loop_reciprocity.py` now also reports the transmission *phase*: for a
+joint nudged at frequency `f`, the phase of the response `d` joints behind it
+minus the phase `d` joints ahead, each relative to the nudged joint's own
+response. Zero is a standing response; negative means a bend reaches the joints
+behind later than those ahead, so bends move tailward — a forward-crawling wave;
+positive means they move headward — a backward one.
+
+| | frequency | 1 joint | 3 joints | 6 joints |
+|---|---|---|---|---|
+| proprioception cut | 0.17, 0.5 Hz | 0.0° | 0.0° | ≤ 0.1° |
+| tonic, committed | 0.17 Hz | −3.2° | −5.3° | +6.0° |
+| tonic, committed | 0.5 Hz | −4.0° | −13.6° | −22.9° |
+| **phasic, 200 mV/rad** | **0.11 Hz** | **+22.3°** | **+65.1°** | **+157.7°** |
+| **phasic, 200 mV/rad** | **0.5 Hz** | **−13.4°** | **−84.5°** | −156.1° |
+
+The control is again exact. Tonic proprioception gives a weak tailward phase at
+the gait frequency and almost none at 0.17 Hz. Phasic proprioception gives a
+strong phase gradient **in opposite directions at the two frequencies**: headward
+at 0.11 Hz, the frequency of the attractor of §5AN.15a, which is why that
+oscillation crawls backward; tailward at 0.5 Hz, where it is also eight times
+stronger behind than ahead (§5AN.14).
+
+This is the mechanism of §5AN.15a made quantitative. The rate signal leads the
+bend by 90° at every frequency, and the stages between sensing and muscle lag by
+an amount that grows with frequency. At low frequency the lead wins and each
+segment anticipates the one ahead — backward. At the gait frequency the lags win
+and each segment follows the one ahead — forward. **Under phasic proprioception
+the loop already propagates forward at 0.5 Hz, in both amplitude and phase.** It
+oscillates at 0.11 Hz instead, where it propagates the other way.
+
+So the problem is narrower again: not direction at the gait frequency, which is
+right, but which frequency the loop chooses. A blend of tonic and phasic sensing
+moves the sensed signal's lead between 0° and 90°, which should pull the
+low-frequency phase back toward standing while leaving the gait band tailward.
+
+### 5AN.17 Every attractor found crawls backward
+
+§5AN.15a showed the loop's behaviour under phasic proprioception is set by an
+attractor the linearisation cannot see, so `tools/loop_attractor.py` measures
+attractors directly: the runner's chain without Isaac, from rest, 80 s with the
+first 20 discarded, reporting the dominant period, the phase step per joint at
+that frequency (negative = tailward = forward crawling), and the centroid's
+velocity along the body's own tail-to-head axis (positive = head first), also as
+a share of the path so that spinning in place reads near zero.
+
+**It reproduces Isaac.** At phasic 200 mV/rad the standalone loop runs at a
+2.61 s period and crawls backward; the windowed Isaac run of §5AN.14 measured
+2.6 s and `travel` −0.18.
+
+**The search.** A grid over the two assumed parameters that matter — rate
+fraction and phasic gain — with and without VB8–VB11's sensing. A search over
+assumed values, reported as one:
+
+| sensing | rate fraction | gain, mV/rad | period | step per joint | axial speed | share of path |
+|---|---|---|---|---|---|---|
+| all B-type | 1.0 | 100 | 2.73 s | +6.2° | **−0.102 BL/s** | −0.67 |
+| all B-type | 1.0 | 200 | 2.61 s | +5.9° | −0.090 | −0.62 |
+| all B-type | 1.0 | 400 / 800 | 2.61 / 2.50 s | +5.8 / +4.9° | −0.048 / −0.035 | −0.42 / −0.27 |
+| all B-type | 0.9 | 100–400 | 3.2–3.3 s | +6.0° | −0.063 to −0.080 | −0.55 to −0.62 |
+| all B-type | 0.9 | 800 | 3.53 s | +5.7° | −0.009 | −0.31 |
+| no VB8–VB11 | 1.0 | 200 / 400 / 800 | 8.6 / 8.6 / 15 s | +5° to +6° | −0.078 / −0.094 / −0.064 | −0.69 to −0.91 |
+| all B-type | 0.75 | 100 | 20 s | +4.6° | −0.014 | −0.61 |
+| the rest | 0.75–1.0 | | | | ≈ 0 | quiet, or under 7° |
+
+**Every attractor that moves the body moves it tail first**, with a headward phase
+step of +5° to +11° per joint. There is no forward-crawling attractor anywhere in
+the grid.
+
+**Why, in the terms of §5AN.16.** Each B-type neuron senses two joints ahead, so
+a forward wave of −23° per joint needs each driven segment to lag what it senses
+by about 46°. A tonic sensor supplies no lead, so the stages between sensing and
+muscle must add 46° of lag; a rate sensor leads by 90°, so they must add about
+136°. Their lag grows with frequency, which puts the self-consistent forward
+wave near 0.2 Hz for tonic sensing and near 0.6–0.8 Hz for rate sensing — and
+those are exactly where the linear gait modes sit (0.17 Hz tonic, 0.66–0.80 Hz
+phasic). The attractors run instead at about 0.38 Hz, where the loop's gain
+peaks and the rate sensor's lead still exceeds the lag: headward, so backward.
+
+**Where that leaves the central problem.** For the first time the connectome loop
+produces a sustained, regular, travelling undulation that propels the body —
+anti-correlated B-type neighbours, 0.1 body lengths per second — and it is
+running in reverse because the frequency the loop chooses sits below the
+frequency at which its propagation turns forward. What decides the forward wave
+against the backward one is frequency selection, set by the lags of five assumed
+stages (§5AN.15) against the lead of an assumed sensor. Nothing in the
+connectome itself is implicated, which is the opposite of where this project
+started looking.
+
+**Not established.** Two assumed parameters searched on a coarse grid, one
+command drive, linear drag, no noise; 80 s runs. A forward attractor in a corner
+of the space not searched is not excluded.
+
+### 5AN.18 A harness bug, and the first forward crawl
+
+**The bug.** `Loop` in `tools/analyse_loop.py` built its network from every
+neuron and every muscle cell in the connectome — 135, including the pharyngeal,
+vulval and anal muscles. The runner takes every neuron and the 95 body-wall
+muscles. Forty extra cells, gap-coupled and synaptically wired into the network,
+in every standalone result from §5AN.8 on. It was found because the standalone
+loop crawled forward at `g_gap_ps` 10 and 200 mV/rad of phasic gain while Isaac,
+at the same settings, coiled with a 5-second period and `travel` −0.5.
+Fixed: `Loop` now takes `body_wall_muscle_ids()`, exactly as the runner does, and
+reproduces the runner's own printed numbers — 397 cells, a proprioceptive gain of
+46.1 pA/rad, a command of 3.6 pA.
+
+**What it changed.** Where Isaac had been used as a check, the 437-cell loop had
+agreed qualitatively, and the corrected loop agrees better:
+
+| | 437 cells (old) | 397 cells (corrected) | Isaac |
+|---|---|---|---|
+| committed, tonic: coil period | 22.2 s | 25 s | 23–24 s |
+| phasic 200 mV/rad: attractor | 2.61 s, backward | 2.61 s, backward | 2.6 s, `travel` −0.18 |
+| phasic 200, `g_gap_ps` 10 | 2.00 s, **forward** | 5.0 s, backward coil | ~5 s, backward coil |
+
+The last row is the one that mattered: that forward crawl was the extra cells'.
+The re-computation of §5AN.8 to §5AN.17 on the corrected network is recorded in
+§5AN.19; until then their numbers carry this caveat.
+
+**The forward crawl, on the corrected network.** The search of §5AN.17 extended
+along `g_gap_ps`, motivated by §5AM — gap junctions are a diffusion operator, and
+diffusion favours the longest wavelength, which is what the +6°-per-joint
+backward attractor is. Predicted before the runs: weaker gap junctions would
+shorten the attractor's wavelength. They do, and below about 15 pS the wave
+turns round:
+
+| phasic gain | `g_gap_ps` | period | step per joint | axial speed | share of path |
+|---|---|---|---|---|---|
+| 200 mV/rad | 100, committed | 2.61 s | +5.9° | −0.087 BL/s | −0.60 |
+| 200 | 20 / 10 | 3.75 / 5.00 s | +11.3 / +15.8° | backward | |
+| 200 | 5 | 2.00 s | **−13.4°** | **+0.076** | +0.71 |
+| 400 | 20 | 3.16 s | +1.0° | −0.059 | −0.48 |
+| 400 | 15 | 1.94 s | −11.9° | **+0.118** | +0.92 |
+| **400** | **10** | **1.92 s** | **−14.5°** | **+0.110** | **+0.88** |
+| 400 | 7 | 1.88 s | −16.5° | +0.110 | +0.86 |
+| 300 / 600 | 10 | 1.94 / 1.88 s | −13.5 / −16.0° | +0.107 / +0.123 | +0.87 / +0.91 |
+| 400, rate fraction 0.9 | 10 | 2.07 s | −15.0° | +0.100 | +0.89 |
+
+At 400 mV/rad and 10 pS the attractor holds for 180 s, and a 2° random starting
+posture lands on it too. **The controls do not crawl**: with proprioception cut,
+nothing moves; with tonic proprioception at the same gap strength, nothing moves
+(+0.001 BL/s).
+
+**Isaac, predicted before the run** (period about 1.94 s, a forward wave, head
+first at about 0.11 BL/s): windowed, 120 s, `--proprio-rate 1
+--proprioceptive-mv 400 --param g_gap_ps=10`:
+
+| | standalone prediction | Isaac |
+|---|---|---|
+| period | 1.94 s | **1.9 s** |
+| wave | forward, −14.6° per joint | **`travel` +0.45**, phase +12.9° |
+| amplitude | 32° (std of the largest joint) | 18.6°, no joint pinned |
+| B-type neighbours | — | adjacent correlation **−0.33**, 56% shared |
+| turning | +26.6° per second | about +26° per second |
+
+**It is the first forward-travelling undulation the connectome has driven in this
+project**, at the real animal's gait frequency, confirmed in the rendered
+simulation from a prediction made beforehand.
+
+**It goes round in circles.** The heading turns steadily at about 26° a second —
+one revolution every 14 s — so in Isaac the body circles about half a body length
+across and ends 0.82 body lengths from where it started. The standalone loop
+gives the reason: a time-averaged bend of **−2.7° per joint, ventral**. Twenty-
+three joints of it is a gentle ventral arc, and a body crawling forward along an
+arc goes round. Speed along the circle, about 0.11 BL/s, is at the low end of the
+real animal's 0.1 to 0.3.
+
+**What it took, all assumed.** Purely or nearly purely phasic proprioception
+(`rate_fraction` 0.9–1.0), a phasic gain of 300 to 600 mV/rad, and gap junctions
+at 7 to 15 pS against the committed 100. None of the three is measured, and the
+third is a tenfold change to a parameter every result before §5AN was taken
+with. The wavelength is also long: −14.5° per joint is about 1.1 body lengths,
+against the scripted gait's −23° and the real animal's roughly 0.65.
+
+**Why weak gap junctions turn it round**, in the terms of §5AN.16–5AN.17: at
+100 pS the loop's attractor is a long-wavelength, nearly whole-body bend that
+diffusion favours, and it runs at about 0.38 Hz, where the rate sensor's lead
+still beats the chain's lag — headward. With the diffusion weakened the
+attractor's wavelength shortens and its frequency rises to about 0.52 Hz, past
+the frequency at which propagation turns tailward.
+
+### 5AN.19 §5AN.8 to §5AN.17 recomputed on the runner's network
+
+Everything standalone in §5AN.8–5AN.17 was re-run on the 397-cell network
+(§5AN.18). The headline numbers, old against corrected:
+
+| | 437 cells | 397 cells |
+|---|---|---|
+| equilibrium bend (§5AN.8) | 7.18° | 7.4° |
+| the coil (§5AN.8) | 0.065 Hz, ζ −0.649 | 0.062 Hz, ζ −0.689 |
+| gait mode (§5AN.8) | 0.170 Hz, ζ 0.9413, −20.9° | 0.170 Hz, ζ 0.9408, −21.0° |
+| pathways (§5AN.9) | 1573 | 1521 |
+| gait: smallest coordinated change to zero | 4.98, one pathway ×9.6 | 4.96, ×10.4 |
+| coil: smallest coordinated change to zero | 0.77, ×1.49 | 0.93, ×1.60 |
+| DA>BWM-D / VA>BWM-V on the coil | +0.44 / −0.30 | +0.38 / −0.26 |
+| offset sweep, gait damping range (§5AN.11a) | 0.94–1.00 | 0.94–1.00 |
+| reciprocity, tonic, 0.5 Hz, 1 / 6 joints (§5AN.13) | 1.019 / 1.335 | 1.020 / 1.341 |
+| reciprocity, phasic 200, 0.5 Hz, 6 joints (§5AN.14) | 8.08 | 8.06 |
+| phase, phasic 200, 1 joint, 0.11 / 0.5 Hz (§5AN.16) | +22.3° / −13.4° | +22.3° / −13.5° |
+| phasic gain scan, gait damping at 80 / 320 mV/rad (§5AN.14) | 0.785 / 0.573 | 0.785 / 0.573 |
+| backward mode first unstable (§5AN.14) | 140 mV/rad, 0.175 Hz | 140 mV/rad, 0.181 Hz |
+| VB8–VB11 each, on the backward mode (§5AN.15) | −0.37 to −0.46 | −0.36 to −0.46 |
+| no VB8–VB11, gait damping at 1600 mV/rad (§5AN.15) | 0.020 | 0.029 |
+| attractor grid, every moving case (§5AN.17) | backward | backward |
+| phasic 200, attractor (§5AN.17) | 2.61 s, −0.090 BL/s | 2.61 s, −0.087 BL/s |
+
+Every conclusion of §5AN.8–5AN.17 survives; the numbers move in the second or
+third figure. The forty extra cells mattered only where the loop is nearly
+balanced between two attractors, which is exactly where §5AN.18 found the
+forward crawl — and they had moved its boundary. `cell_admittance.py` (§5AN.10)
+works on single cells and was never affected. The §5AN.12 requirement table and
+§5AN.11's operating-point figures have not been re-run; the equilibrium they
+rest on moved by 0.2°.
+
+**The corrected gap sweep adds turning.** `tools/loop_attractor.py` now also
+reports how fast the body axis rotates and the time-averaged bend:
+
+| phasic gain | `g_gap_ps` | step | axial speed | turning | mean bend |
+|---|---|---|---|---|---|
+| 400 | 15 | −11.9° | +0.118 BL/s | +30.3°/s | −3.5° |
+| 400 | 10 | −14.6° | +0.110 | +26.6°/s | −2.7° |
+| 200 / 400 | 7 | −14.6 / −16.5° | +0.107 / +0.110 | +11.6 / +15.5°/s | −3.5 / −2.1° |
+| 200 | 5 | −13.4° | +0.076 | −2.8°/s | −1.1° |
+| **400** | **5** | **−16.8°** | **+0.070** | **−0.5°/s** | −1.6° |
+
+Circling is not a fixed property of the forward crawl: at 5 pS the body goes
+nearly straight, more slowly, with less of its path along its own axis
+(share 0.61–0.71 against 0.86–0.92).
+
+### 5AN.20 A straight forward crawl, in Isaac
+
+**Predicted before the run**, from the standalone loop at phasic 400 mV/rad and
+`g_gap_ps` 5: period about 1.94 s, a forward wave, head first at about
+0.07 BL/s, and the heading nearly constant (−0.5° per second). Windowed, 120 s:
+
+    C:/isaacsim/python.bat worm/isaac/run_connectome.py --seconds 120 --physics-hz 240 \
+        --torque-scale 3e-3 --quasistatic --proprio-rate 1.0 --proprioceptive-mv 400 \
+        --param g_gap_ps=5
+
+| | standalone prediction | Isaac |
+|---|---|---|
+| period | 1.94 s | **1.9 s** |
+| wave | forward, −16.8° per joint | **`travel` +0.55**, phase +16.0° |
+| speed | +0.070 BL/s head first | **6.36 body lengths in 120 s**, 0.053 BL/s |
+| heading | −0.5° per second | **−45° over the whole run**, −0.4° per second |
+| B-type neighbours | — | adjacent correlation **−0.37**, 60% shared |
+| joints pinned | — | 0% |
+
+The distance from the start grows steadily from t ≈ 12 s — 11 mm, 237 mm at
+52 s, 558 mm at 107 s — so the body is going somewhere rather than round. For
+comparison, the scripted positive control on the same body runs at 0.211 BL/s
+with `travel` +0.92 (§5AF), and the real animal at 0.1 to 0.3 BL/s.
+
+**This is the project's central result to date, stated with its conditions.** The
+connectome-driven loop — the measured wiring, the committed neuron model, the
+body — produces a sustained forward-crawling gait at the real animal's frequency,
+propagating head to tail and carrying the body six body lengths in a nearly
+straight line, with the B-type motor neurons alternating between neighbours.
+Nothing scripts the rhythm, the phase gradient or the direction; they come out
+of the loop. It needs three things the committed model does not have, all
+assumed:
+
+1. **Proprioception that senses the rate of bending** (`rate_fraction` 1.0), not
+   the bend itself. Real mechanoreceptors usually have a phasic part; how much,
+   in B-type neurons, is not measured.
+2. **A phasic gain of 400 mV/rad**, twenty times the committed tonic value. With
+   a 50 ms finite difference normalised at 0.5 Hz, a bend of 0.1 rad oscillating
+   at the gait frequency drives about 40 mV of depolarisation, which saturates the
+   sigmoid; nothing measured fixes the number.
+3. **Gap junctions at 5 pS**, twenty times weaker than the committed 100, every
+   gap junction in the network alike. §5AM's diffusion argument is the reason it
+   matters: strong coupling selects the longest wavelength, and that wavelength's
+   attractor runs at a frequency where propagation is headward.
+
+And it is not the real gait in detail. The wavelength is long — −16.8° per joint
+in the standalone loop is about 0.9 body lengths against the real 0.65 — the speed
+is a quarter of the positive control's, and with self-contact off the body
+overlapped itself by 1 mm by the end (`clear` −1.00 mm).
+
+**The controls, in Isaac at the same settings** (windowed, 60 s each):
+
+| | distance covered after t = 15 s | amplitude | `travel` |
+|---|---|---|---|
+| the crawl | 6.36 body lengths over the run | 23.8° | +0.55 |
+| `--no-proprioception` | **none** (43.7 → 43.2 mm from the origin) | 3.9° | 0.00 |
+| `--lesion DB,VB` | **none** (47.92 → 47.91 mm) | 0.12° | (+0.79) |
+
+Cut the sensory feedback, or silence the B-type motor neurons, and the body does
+not move. The lesion's `travel` +0.79 is the gait metric applied to a 0.12°
+flutter of a body standing still and means nothing; it is reported because it
+was printed. On the standalone loop at 10 pS and 400 mV/rad (§5AN.18), tonic
+proprioception at the same gap strength does not crawl either.
+
+### 5AN.5 What this does not establish
+
+**Linear.** A nonlinear system can have limit cycles the linearisation does not
+show. This paragraph used to say the simulation had never found one. It had: the
+committed loop has been running one all along, a 22-second coiling cycle that no
+measurement window in this project was long enough or looked in the right way to
+see (§5AN.8).
+
+**One equilibrium.** §5AN.8 linearises at the loop's equilibrium, found by
+Newton's method. The loop has more than one: scaling a single pathway by 10% can
+land Newton on an S-shaped saddle instead of the committed C-shape, which is why
+`--check` continues the previous equilibrium rather than starting afresh.
+
+**Linear drag only.** The nonlinear law of §5AH has an iteration inside every step
+that would make finite differences measure its tolerance as much as the dynamics.
+The positive control crawls under both laws, so this is not expected to matter.
+
+**A Nyquist mode.** The closed-loop table excludes a mode at exactly 120 Hz — half
+the 240 Hz physics rate — which is the discrete integrator's alternating mode and
+not dynamics of the model.
 
 ## 6. Decisions taken, and what remains open
 

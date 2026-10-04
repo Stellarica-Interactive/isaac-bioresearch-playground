@@ -950,6 +950,58 @@ class ConductanceModel:
         nxt[0] = state[0] + dt_ms * (drive - i_tot) / p["c"]
         return nxt
 
+    def derivatives(
+        self,
+        state: np.ndarray,
+        i_ext_pa: np.ndarray | float = 0.0,
+        g_ext_ns: np.ndarray | float = 0.0,
+    ) -> np.ndarray:
+        """The continuous-time vector field :meth:`step` integrates, per ms.
+
+        For linearising a cell -- its small-signal admittance, or its eigenvalues
+        at a holding potential -- rather than for simulating it; :meth:`step`
+        stays the integrator. Term for term the same model: gates relax as
+        ``(x_inf - x)/tau``, calcium follows whichever pool the model declares,
+        and the membrane sees ``i_ext - g_ext V`` minus its own currents.
+        ``tests`` hold the two to agreement.
+
+        The 2024 calcium pool's floor at 100 nM is a clamp, not a derivative; it
+        is applied as one -- a pool at the floor and still falling does not move.
+        """
+        p = self.p
+        inf, tau = self._gates(state)
+        currents = self.currents(state)
+        out = np.zeros_like(state, dtype=np.float64)
+        for name in self._gate_names:
+            row = self._row[name]
+            out[row] = (inf[name] - state[row]) / tau[name]
+
+        i_ca = sum(
+            (currents[name] for name in _CALCIUM_CHANNELS if name in currents),
+            start=np.zeros_like(state[0]),
+        )
+        if self._uses_2024_calcium_pool:
+            ica = i_ca * 1e-9 / p["surface_cm2"]
+            ca = state[self.index("ca_intra1")]
+            d_ca = 10000.0 * (
+                -ica / (2.0 * p["F_cadiff"] * p["depth_cadiff"]) - 1e-4 * p["beta_cadiff"] * ca
+            )
+            out[self.index("ca_intra1")] = np.where((ca <= 1e-4) & (d_ca < 0.0), 0.0, d_ca)
+        elif self._reads_bulk_calcium:
+            alpha_ca = 1.0 / (2.0 * p["vol"] * p["fd"])
+            ca = state[self.index("ca_intra1")]
+            d_ca = np.where(
+                i_ca < 0.0,
+                -p["fca"] * alpha_ca * i_ca - (ca - p["backgr2"]) / p["t_ca"],
+                (p["backgr2"] - ca) / p["t_ca"],
+            )
+            out[self.index("ca_intra1")] = np.where((ca <= 0.0) & (d_ca < 0.0), 0.0, d_ca)
+
+        i_tot = sum(currents.values())
+        drive = np.asarray(i_ext_pa) - np.asarray(g_ext_ns) * state[0]
+        out[0] = (drive - i_tot) / p["c"]
+        return out
+
     def run(
         self,
         state: np.ndarray,

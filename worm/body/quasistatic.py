@@ -133,6 +133,60 @@ CONTACT_BAND_M = 1.0e-3
 #: degrees per joint. That is a fact about the joint limit, not about contact.
 CONTACT_STIFFNESS = 2.0e4
 
+#: How much of the body's length of track to remember, in body lengths. The
+#: groove only matters where the body still lies in it, so remembering much more
+#: than one body length is wasted work; remembering less leaves the tail without
+#: a groove to sit in.
+#:
+#: ARBITRARY ENGINEERING, bounded by geometry on both sides.
+GROOVE_MEMORY_BODY_LENGTHS = 1.5
+
+#: Extra drag across the groove, as a multiple of the perpendicular body drag.
+#:
+#: ASSUMED. Rabets et al. 2014 established that groove formation dominates agar's
+#: response; they published no stiffness for it, and this project has no
+#: measurement to set one from. It is swept rather than fitted and the sweep is
+#: the result -- see model_assumptions 5AL.
+GROOVE_STIFFNESS = 4.0
+
+#: Spacing of remembered track points, in segment lengths. Finer costs more
+#: distance computations for a track that is already smooth at this scale.
+GROOVE_SAMPLE_SEGMENTS = 0.5
+
+#: How near a remembered track point a segment must be to be *in* the groove, as
+#: a multiple of its own radius.
+#:
+#: Not a tuning parameter but a missing condition. The first version applied the
+#: groove to every segment regardless of distance, and measured, the nearest
+#: track point was **25 to 45 mm away** on a 100 mm body, with the groove's
+#: direction 25 to 34 degrees off the segment's own (worst case 69). So every
+#: segment was being resisted along a direction taken from somewhere it had never
+#: been. The body stopped -- 0.002 BL/s at the stiffest setting -- and that
+#: deadlocked the mechanism: the groove forms where the body has been, the body
+#: only gets anywhere if the groove does not resist it, and a groove applied
+#: before a track exists resists everything forever.
+#:
+#: A groove only confines a body that is lying in it. Two radii is "touching the
+#: wall of its own channel".
+GROOVE_REACH_RADII = 2.0
+
+#: Half-width of the channel, as a multiple of the segment's radius. Inside it
+#: the segment is free; beyond it, and only while moving further out, the groove
+#: constrains.
+#:
+#: A knife-edge groove does not work and the reason is instructive. Requiring
+#: ``v . n = 0`` exactly, at every segment lying near the track, pins the body
+#: completely -- measured 0.000 BL/s with only 10 or 11 active rows and 15 DOF
+#: still free, because each row carries the translation columns and ten rows with
+#: differing normals leave translation nowhere to go. It demands the body conform
+#: exactly to the remembered track, and any mismatch between the body's shape and
+#: the channel's kills all motion.
+#:
+#: A real groove is a shallow depression of finite width that the animal rides
+#: within. So the constraint is unilateral with a dead zone -- the same structure
+#: as the joint limits, which work (§5AF.6).
+GROOVE_CHANNEL_RADII = 1.0
+
 
 def _perp(v: np.ndarray) -> np.ndarray:
     """Rotate planar vectors 90 degrees: ``(x, y) -> (-y, x)``."""
@@ -147,6 +201,30 @@ class QuasiStaticBody:
     drag: DragParameters = field(default_factory=DragParameters)
     muscle: MuscleParameters = field(default_factory=MuscleParameters)
 
+    #: How the groove is enforced, when :attr:`groove` is on. Three forms, and
+    #: the first two are rejected in model_assumptions 5AL:
+    #:
+    #: ``"penalty"`` -- stiff drag across the *track*. Immobilises the animal,
+    #: because the track's normal sits 25-34 degrees off the body's, so the term
+    #: leaks 7 to 12 times the body's own tangential drag into the direction it
+    #: is travelling.
+    #:
+    #: ``"constraint"`` -- forbid motion across the track exactly, by Lagrange
+    #: multiplier. Also immobilises it, for the opposite reason: a hard condition
+    #: at a dozen points demands the body conform exactly to its remembered
+    #: track, and the 0.74 mm it never conforms by is enough for the rows to
+    #: conflict and the solution to collapse.
+    #:
+    #: ``"restoring"`` -- a force toward the channel centreline along the
+    #: **body's own normal**, which resistive force theory already resists, so it
+    #: cannot leak into the tangent. Zero inside the channel. This is the form the
+    #: other two diagnose rather than a new guess.
+    groove_mode: str = "restoring"
+
+    #: Whether the medium remembers the track the body has cut, and resists
+    #: motion across it. Off by default. See :data:`GROOVE_STIFFNESS`.
+    groove: bool = False
+
     #: Whether the body resists passing through itself. Off by default: every
     #: number in model_assumptions was measured without it, and the connectome
     #: run is the only configuration that ever reaches contact (`clear` -1.39 mm,
@@ -160,6 +238,16 @@ class QuasiStaticBody:
 
     #: Segment radii, cached: the contact test needs them every step.
     _radii: np.ndarray = field(init=False, repr=False)
+
+    #: Remembered track: positions the head has occupied, oldest first, and the
+    #: unit direction it was travelling at each. The groove's geometry.
+    _track: np.ndarray = field(init=False, repr=False)
+    _track_dirs: np.ndarray = field(init=False, repr=False)
+
+    #: Groove drag tensors, recomputed once per step rather than once per pass of
+    #: the nonlinear fixed point: they depend on positions, which do not change
+    #: within a step.
+    _groove_tensors: np.ndarray | None = field(init=False, default=None, repr=False)
 
     #: Last solved segment velocities, used to warm-start the nonlinear fixed
     #: point. Not part of the configuration -- a quasi-static body has no
@@ -176,6 +264,8 @@ class QuasiStaticBody:
             [self.plan.radius_at(i) for i in range(self.plan.n_segments)],
             dtype=np.float64,
         )
+        self._track = np.zeros((0, 2), dtype=np.float64)
+        self._track_dirs = np.zeros((0, 2), dtype=np.float64)
 
     # -- kinematics --------------------------------------------------------
 
@@ -274,7 +364,104 @@ class QuasiStaticBody:
             extra = self._contact_drag(velocities)
             if extra is not None:
                 tensors = tensors + extra
+        if self.groove and self._groove_tensors is not None:
+            tensors = tensors + self._groove_tensors
         return tensors
+
+    def _remember_track(self) -> None:
+        """Record where the head is, if it has moved far enough to be new.
+
+        The head cuts the groove, so the head's path *is* the track. Recorded by
+        distance rather than by time, so a body that has stopped does not fill the
+        buffer with one repeated point and does not forget the track it is in.
+        """
+        nose = self.nodes()[0]
+        spacing = GROOVE_SAMPLE_SEGMENTS * self.segment_length_m
+        if len(self._track) and np.linalg.norm(nose - self._track[-1]) < spacing:
+            return
+
+        # The direction the head *travelled*, not the direction it was pointing.
+        # Those differ by up to 48 degrees, because the head's own tangent sweeps
+        # that far every cycle while its path does not: a groove is cut along the
+        # path. Using the heading instead gave the groove the head's undulation,
+        # so every segment was resisted across a direction oscillating wildly
+        # about the one it was actually moving along, and the body stopped.
+        # Same confusion as 5AE -- the head is not the body.
+        if len(self._track):
+            step = nose - self._track[-1]
+            norm = float(np.linalg.norm(step))
+            direction = step / norm if norm > 1e-12 else self._directions()[0]
+        else:
+            direction = self._directions()[0]
+        self._track = np.vstack([self._track, nose])
+        self._track_dirs = np.vstack([self._track_dirs, direction])
+        keep = int(GROOVE_MEMORY_BODY_LENGTHS * self.plan.total_length_m / spacing)
+        if len(self._track) > keep:
+            self._track = self._track[-keep:]
+            self._track_dirs = self._track_dirs[-keep:]
+
+    def _groove_drag(self) -> np.ndarray | None:
+        """Extra drag across the track, per segment, or ``None`` if there is none.
+
+        For each segment the nearest remembered track point gives the groove's
+        local direction, and the drag is added along the normal to it. Where the
+        body lies in its own track that normal is the body's own normal and this
+        duplicates the existing anisotropy; where the body has swept sideways the
+        two differ, and the difference is what resists.
+        """
+        if len(self._track) < 2:
+            return None
+        centres = self.segment_centres()
+        # Nearest remembered point for each segment: one 24-by-N distance matrix.
+        offsets = centres[:, None, :] - self._track[None, :, :]
+        square = np.einsum("nmi,nmi->nm", offsets, offsets)
+        nearest = np.argmin(square, axis=1)
+        distance = np.sqrt(square[np.arange(len(centres)), nearest])
+
+        # A groove only confines a body lying in it. Without this the groove's
+        # direction is taken from wherever the track happens to be nearest, which
+        # measured 25 to 45 mm away, and the body is resisted along a direction
+        # it has never travelled. See GROOVE_REACH_RADII.
+        inside = distance < GROOVE_REACH_RADII * self._radii
+        if not inside.any():
+            return None
+
+        normals = _perp(self._track_dirs[nearest])
+        scale = GROOVE_STIFFNESS * self.drag.perpendicular * inside
+        return scale[:, None, None] * np.einsum("ij,ik->ijk", normals, normals)
+
+    def _restoring_drag(self) -> np.ndarray | None:
+        """Lateral drag along the body's own normal, for segments outside their
+        channel.
+
+        The two rejected forms fail in opposite directions: a penalty across the
+        *track* leaks into the body's tangent because the two normals disagree by
+        25 to 34 degrees, and a hard constraint demands a conformance the body
+        never has. This keeps the penalty's compliance and the constraint's
+        honesty about direction: the force acts along the body's own normal --
+        a direction the medium already resists, so forward motion is untouched --
+        and its size grows with how far outside the channel the segment is.
+        """
+        if len(self._track) < 2:
+            return None
+        centres = self.segment_centres()
+        offsets = centres[:, None, :] - self._track[None, :, :]
+        square = np.einsum("nmi,nmi->nm", offsets, offsets)
+        nearest = np.argmin(square, axis=1)
+        distance = np.sqrt(square[np.arange(len(centres)), nearest])
+
+        track_normals = _perp(self._track_dirs[nearest])
+        across = np.abs(np.einsum("na,na->n", centres - self._track[nearest], track_normals))
+        width = GROOVE_CHANNEL_RADII * self._radii
+        # How far outside the channel, in radii. Zero inside it.
+        excess = np.maximum(0.0, across - width) / self._radii
+        engaged = (distance < GROOVE_REACH_RADII * self._radii) & (excess > 0.0)
+        if not engaged.any():
+            return None
+
+        body_normals = _perp(self._directions())
+        scale = GROOVE_STIFFNESS * self.drag.perpendicular * excess * engaged
+        return scale[:, None, None] * np.einsum("ij,ik->ijk", body_normals, body_normals)
 
     def _contact_drag(self, velocities: np.ndarray | None) -> np.ndarray | None:
         """Extra per-segment drag resisting self-approach, or ``None`` if clear.
@@ -318,6 +505,37 @@ class QuasiStaticBody:
             extra[j] += outer
         return extra
 
+    def _groove_constraints(self, jac: np.ndarray) -> np.ndarray | None:
+        """Rows forbidding motion across the track, for segments lying in it.
+
+        One row per in-groove segment: ``n^T J_i u = 0``, where ``n`` is the
+        normal to the track at that segment's nearest remembered point. The force
+        that enforces it is a Lagrange multiplier and comes out of the solve, so
+        there is no stiffness to choose -- which is the difference from the
+        penalty of §5AL, where the force was a constant somebody picked and ended
+        up resisting the direction the body was travelling.
+        """
+        if len(self._track) < 2:
+            return None
+        centres = self.segment_centres()
+        offsets = centres[:, None, :] - self._track[None, :, :]
+        square = np.einsum("nmi,nmi->nm", offsets, offsets)
+        nearest = np.argmin(square, axis=1)
+        distance = np.sqrt(square[np.arange(len(centres)), nearest])
+        near = distance < GROOVE_REACH_RADII * self._radii
+        normals = _perp(self._track_dirs[nearest])
+        # Signed offset across the channel, and the channel's half-width.
+        offset = np.einsum("na,na->n", centres - self._track[nearest], normals)
+        beyond = np.abs(offset) > GROOVE_CHANNEL_RADII * self._radii
+        which = np.flatnonzero(near & beyond)
+        if which.size == 0:
+            return None
+        # Constrain only the direction that would take the segment further out,
+        # so a segment riding back toward its channel is free -- unilateral, with
+        # the channel as the dead zone, exactly like a joint limit.
+        signed = normals[which] * np.sign(offset[which])[:, None]
+        return np.einsum("ka,kaj->kj", signed, jac[which])
+
     def _solve_rates(self, joint_torques: np.ndarray) -> np.ndarray:
         """``(vx, vy, omega, qdot)`` from one generalised force balance.
 
@@ -348,8 +566,14 @@ class QuasiStaticBody:
             self.muscle.joint_stiffness * self.joint_angles
         )
 
+        rows = (
+            self._groove_constraints(jac)
+            if self.groove and self.groove_mode == "constraint"
+            else None
+        )
+
         if self.drag.is_linear:
-            return self._solve_with_limits(jac, self._drag_tensors(), forces)
+            return self._solve_with_limits(jac, self._drag_tensors(), forces, rows)
 
         # A sublinear law makes the coefficients depend on the velocities they
         # determine, so the balance is nonlinear and is closed by a fixed point:
@@ -362,11 +586,13 @@ class QuasiStaticBody:
         # physics step, so these coefficients are nearly right already and the
         # loop usually exits after one or two passes instead of running its
         # budget. The fixed point is the same either way; only its cost changes.
-        rates = self._solve_with_limits(jac, self._drag_tensors(self._last_velocities), forces)
+        rates = self._solve_with_limits(
+            jac, self._drag_tensors(self._last_velocities), forces, rows
+        )
         velocities = np.einsum("naj,j->na", jac, rates)
         for _ in range(_NONLINEAR_PASSES):
             previous = rates
-            rates = self._solve_with_limits(jac, self._drag_tensors(velocities), forces)
+            rates = self._solve_with_limits(jac, self._drag_tensors(velocities), forces, rows)
             velocities = np.einsum("naj,j->na", jac, rates)
             if np.max(np.abs(rates - previous)) <= _NONLINEAR_TOL * max(
                 float(np.max(np.abs(rates))), 1e-30
@@ -376,9 +602,21 @@ class QuasiStaticBody:
         return rates
 
     def _solve_with_limits(
-        self, jac: np.ndarray, drag: np.ndarray, forces: np.ndarray
+        self,
+        jac: np.ndarray,
+        drag: np.ndarray,
+        forces: np.ndarray,
+        constraints: np.ndarray | None = None,
     ) -> np.ndarray:
-        """One force balance, with joints at their limits locked out of it."""
+        """One force balance, with joints at their limits locked out of it.
+
+        ``constraints`` are rows ``C`` requiring ``C u = 0`` -- a channel the body
+        may move along and not out of. They enter as Lagrange multipliers rather
+        than as forces, so the medium's reaction comes out of the solve instead of
+        being a stiffness somebody chose. Solved by least squares, because up to
+        24 such rows on 26 degrees of freedom can be redundant or momentarily
+        inconsistent and a direct solve would raise rather than degrade.
+        """
         joints = self.plan.n_joints
         # J^T D J, summed over segments.
         matrix = np.einsum("nai,nab,nbj->ij", jac, drag, jac)
@@ -396,7 +634,19 @@ class QuasiStaticBody:
         for _ in range(joints + 1):
             free = np.flatnonzero(~locked)
             index = np.concatenate([[0, 1, 2], 3 + free])
-            solved = np.linalg.solve(matrix[np.ix_(index, index)], forces[index])
+            sub = matrix[np.ix_(index, index)]
+            if constraints is None or constraints.shape[0] == 0:
+                solved = np.linalg.solve(sub, forces[index])
+            else:
+                rows = constraints[:, index]
+                width = len(index)
+                kkt = np.zeros((width + rows.shape[0], width + rows.shape[0]))
+                kkt[:width, :width] = sub
+                kkt[:width, width:] = rows.T
+                kkt[width:, :width] = rows
+                rhs = np.zeros(width + rows.shape[0])
+                rhs[:width] = forces[index]
+                solved = np.linalg.lstsq(kkt, rhs, rcond=None)[0][:width]
             rates = np.zeros(3 + joints, dtype=np.float64)
             rates[:3] = solved[:3]
             rates[3 + free] = solved[3:]
@@ -413,6 +663,18 @@ class QuasiStaticBody:
         No inertial stability limit: the only thing the step has to resolve is
         the change in shape, so 60 Hz against a two-second gait is ample.
         """
+        if self.groove:
+            # Once per step: the groove depends on positions, which do not change
+            # within a step, so recomputing it inside the fixed point would cost
+            # 26 distance matrices for one answer.
+            self._remember_track()
+            if self.groove_mode == "penalty":
+                self._groove_tensors = self._groove_drag()
+            elif self.groove_mode == "restoring":
+                self._groove_tensors = self._restoring_drag()
+            else:
+                self._groove_tensors = None
+
         rates = self._solve_rates(joint_torques)
         if not np.all(np.isfinite(rates)):
             raise FloatingPointError("force balance has no finite solution")

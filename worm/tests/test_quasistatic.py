@@ -550,3 +550,121 @@ def test_self_contact_does_not_disturb_the_gait() -> None:
     assert distances[0] == pytest.approx(distances[1], rel=1e-9), (
         f"contact changed the gait: {distances[0]:.6f} vs {distances[1]:.6f} BL"
     )
+
+
+# -- the groove with memory -------------------------------------------------
+#
+# Rejected as implemented (model_assumptions 5AL): a drag tensor built on the
+# track's normal injects 7 to 12 times the body's own tangential drag, because
+# the track's tangent sits 25-34 degrees off the body's. It stays in the code,
+# off by default, so the next attempt starts from the constraint formulation
+# rather than rediscovering that a drag term is not one.
+
+
+def test_the_groove_is_off_by_default() -> None:
+    """Every number in model_assumptions was measured without it."""
+    assert QuasiStaticBody(PLAN).groove is False
+
+
+def test_the_groove_remembers_the_path_and_not_the_heading() -> None:
+    """The head's tangent sweeps 48 degrees per cycle while its path does not.
+
+    Storing the heading gave the groove the head's undulation, which is the §5AE
+    confusion again. The stored direction must be the direction the head
+    travelled between samples.
+    """
+    body = QuasiStaticBody(PLAN, groove=True)
+    # Drive it far enough to lay down several track points.
+    for step in range(int(6.0 * 120)):
+        body.step(_wave_torques(body, step / 120.0, amplitude=5.0e-5), dt_s=1.0 / 120.0)
+    assert len(body._track) >= 3, "no track was laid down"
+    steps = np.diff(body._track, axis=0)
+    lengths = np.linalg.norm(steps, axis=1)
+    assert np.all(lengths > 0.0)
+    # Each stored direction is the unit step that led to its point.
+    expected = steps / lengths[:, None]
+    assert np.allclose(body._track_dirs[1:], expected, atol=1e-9)
+
+
+def test_the_groove_only_acts_on_segments_lying_in_it() -> None:
+    """A groove confines a body inside it and nothing else.
+
+    Without this the groove's direction comes from wherever the track happens to
+    be nearest -- measured 25 to 45 mm away on a 100 mm body -- and every segment
+    is resisted across a direction it has never travelled.
+    """
+    body = QuasiStaticBody(PLAN, groove=True)
+    for step in range(int(4.0 * 120)):
+        body.step(_wave_torques(body, step / 120.0, amplitude=5.0e-5), dt_s=1.0 / 120.0)
+    # Teleport the body far from its own track: nothing can be in the groove.
+    body.origin = body.origin + np.array([10.0, 10.0])
+    assert body._groove_drag() is None
+
+
+def _groove_speed(mode: str | None) -> float:
+    """Distance covered by the scripted gait, with the groove in a given mode."""
+    start = QuasiStaticBody(PLAN).segment_centres().mean(axis=0)
+    kwargs = {} if mode is None else {"groove": True, "groove_mode": mode}
+    body = QuasiStaticBody(PLAN, drag=DragParameters(ratio=40.0), **kwargs)
+    for step in range(int(8.0 * 120)):
+        body.step(_wave_torques(body, step / 120.0, amplitude=5.0e-5), dt_s=1.0 / 120.0)
+    return _distance_bl(body, start)
+
+
+def test_the_penalty_groove_costs_speed() -> None:
+    """Why the drag formulation is rejected (5AL.1).
+
+    The track's normal sits 25-34 degrees off the body's, so a tensor built on it
+    leaks 7 to 12 times the body's own tangential drag into the direction it is
+    travelling. Under this test's drive that is 1.91 BL over eight seconds
+    against 0.33 -- a sixth. The runner's gait loses rather more, 0.241 BL/s to
+    0.054, because its wave is deeper.
+    """
+    assert _groove_speed("penalty") < 0.3 * _groove_speed(None)
+
+
+def test_the_constraint_groove_stops_the_animal() -> None:
+    """And why the hard formulation is rejected too, for the opposite reason.
+
+    A multiplier has no stiffness to leak, and it stops the body anyway: the
+    condition demands the body lie exactly along its remembered track, and the
+    0.74 mm by which it never does is enough for a dozen rows carrying the
+    translation columns to conflict. Measured here, 0.23 BL against 1.91 -- an
+    eighth, and worse than the penalty it was meant to improve on.
+    """
+    assert _groove_speed("constraint") < 0.3 * _groove_speed(None)
+    assert _groove_speed("constraint") < _groove_speed("penalty")
+
+
+def test_the_restoring_groove_leaves_the_gait_alone() -> None:
+    """The form that is correct, and the reason it changes nothing.
+
+    The force acts along the body's own normal -- which the medium already
+    resists, so it cannot leak into the tangent -- and only outside the channel.
+
+    Not asserted as exactly equal, and the reason is worth keeping: under the
+    *runner's* gait the force never engages at all, 0 of 72 samples, because the
+    lateral offset is 0.70 mm against a channel half-width of one body radius.
+    This test drives a bare sine through a linear medium, which wanders slightly
+    further, so the force engages occasionally and costs 0.02 per cent. Both
+    numbers say the same thing; only the first is a statement about the gait.
+    """
+    assert _groove_speed("restoring") == pytest.approx(_groove_speed(None), rel=1e-2)
+
+
+def test_the_restoring_groove_does_engage_when_the_body_leaves_its_channel() -> None:
+    """The control for the test above: inactive because nothing is outside, not
+    because the mechanism is unwired.
+
+    Three dead knobs this session announced themselves as output identical across
+    a change that could not be neutral (5AL.3), so "identical" has to be
+    distinguished from "disconnected" by measurement rather than assumed.
+    """
+    body = QuasiStaticBody(PLAN, groove=True, groove_mode="restoring")
+    drive = np.full(PLAN.n_joints, 6.0e-5)
+    engaged = 0
+    for step in range(int(12.0 * 120)):
+        body.step(drive, dt_s=1.0 / 120.0)
+        if step % 40 == 0 and body._restoring_drag() is not None:
+            engaged += 1
+    assert engaged > 0, "a curling body leaves its channel; the force must engage"
