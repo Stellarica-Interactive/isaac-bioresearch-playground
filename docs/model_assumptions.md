@@ -6206,6 +6206,330 @@ flutter of a body standing still and means nothing; it is reported because it
 was printed. On the standalone loop at 10 pS and 400 mV/rad (§5AN.18), tonic
 proprioception at the same gap strength does not crawl either.
 
+### 5AN.21 Which gap junctions: muscle coupling, and one measurement
+
+§5AN.20 needed every gap junction twenty times weaker. `g_gap_ps` is a single
+number for three different things — junctions between neurons, between
+body-wall muscle cells, and between the two — and nothing measured says they
+share a conductance. `rescale_gap_junctions` in `worm/neural/config.py` (and
+`--gap-scale CLASS=FACTOR` in the runner and the tools) scales them separately and
+then re-solves every sigmoid midpoint exactly as a `--param` build does; a test
+holds that scaling all three by 0.05 is the same model, to the last bit of the
+conductances, thresholds and starting state, as `g_gap_ps` 5.
+
+**Which class.** Phasic proprioception at 400 mV/rad, each class at ×0.05:
+
+| weakened ×0.05 | attractor |
+|---|---|
+| none | backward |
+| neuron–neuron only | backward |
+| muscle–muscle only | backward |
+| neuron–muscle only | backward |
+| neuron–neuron and neuron–muscle | backward |
+| **muscle–muscle and neuron–neuron** | **forward**, +0.078 BL/s |
+| **muscle–muscle and neuron–muscle** | **forward**, +0.061 BL/s |
+| all three | forward, +0.070 BL/s — identical to `g_gap_ps` 5 |
+
+Weak muscle-to-muscle coupling is **necessary and not sufficient**: every case
+that leaves it at full strength goes backward, and it needs one of the other two
+weakened with it.
+
+**And there is a measurement.** Liu et al. 2006 (*J Biol Chem* 281:7881) recorded
+body-wall muscle cells in pairs, in situ, by dual whole-cell voltage clamp: they
+are coupled in a specific pattern, mainly through UNC-9, with a junctional
+conductance of **350 pS or less**. The model, from the uniform `g_gap_ps` and the
+Cook 2019 junction counts, gives neighbouring body-wall muscle cells **1.5 nS** —
+at least 4.3 times the measured value. Its muscle cells also use the neuron
+defaults, 1 pF and 10 pS of leak, so each is coupled to its neighbours some 300
+times more strongly than to its own membrane, and the 95 of them behave as one
+diffusive sheet. Only the abstract has been read; the paper is not open access,
+and the distribution of pair conductances below 350 pS is not known here.
+
+**How weak, mapped** (axial speed, BL/s, and turning, °/s; neuron–muscle
+junctions at full strength):
+
+| muscle pair | neuron ×0.05 | ×0.2 | ×0.3 | ×0.5 | ×0.75 | ×1 (committed) |
+|---|---|---|---|---|---|---|
+| 75 pS | +0.078 (+13) | +0.076 (+20) | +0.089 (+12) | **+0.093 (+7.5)** | −0.014 | −0.030 |
+| 112 pS | | −0.032 | **+0.114 (+12)** | −0.015 | −0.037 | −0.038 |
+| 150 pS | +0.092 (+23) | **+0.109 (+22)** | −0.051 | −0.060 | | −0.050 |
+| 225 pS | | −0.056 | −0.070 | −0.081 | −0.080 | −0.077 |
+| 300 pS | −0.031 | −0.077 | | −0.071 | | −0.082 |
+| **349 pS, the measured bound** | | −0.080 | −0.084 | −0.112 | −0.098 | −0.083 |
+| 1.5 nS, committed | | | | | | backward (§5AN.17) |
+
+So the requirement narrows from "every gap junction twenty times weaker" to two
+statements: **muscle-to-muscle coupling at 150 pS or less** — inside the measured
+range, in its lower half — and **neuron-to-neuron gap junctions two to five times
+weaker** than the committed 100 pS, which nothing measured constrains. Along the
+neuron–muscle axis, with muscle pairs at 150 pS and neurons at full strength,
+nothing crawls forward. At the measured upper bound nothing crawls forward at any
+neuron setting tried.
+
+The edge is ragged — at 112 pS, neuron ×0.3 crawls forward and ×0.2 and ×0.5 do
+not — which says two attractors compete near it, and a point should not be quoted
+without being checked. The one chosen for Isaac, muscle pairs at 75 pS and
+neurons at half strength, holds in the standalone loop for 180 s and from three
+perturbed starts (2°, 2°, 5°): +0.093 to +0.100 BL/s, turning about 8°/s.
+
+**Isaac, predicted beforehand** (period about 1.94 s, forward, about 0.09 BL/s,
+turning about +7.5°/s): `--proprio-rate 1 --proprioceptive-mv 400 --gap-scale
+muscle=0.05 --gap-scale neuron=0.5`. Period **2.0 s**, `travel` rising to
+**+0.40**, the heading turning steadily at about **7.5° per second** — a forward
+crawl round a circle about 1.4 body lengths across, as predicted. The run stopped
+at 106 s when the machine ran out of memory for reasons outside it, so it has no
+FINAL line.
+
+**And a new defect.** With self-contact off (the default) the body passed
+through itself repeatedly in that run, its clearance reaching **−4.3 mm**. The
+`g_gap_ps` 5 run of §5AN.20 ended at −1.0 mm. A gait that needs the body to cross
+itself is not a gait; whether it survives `--self-collision` is the next check.
+
+### 5AN.22 Self-contact kills the crawl, and the torque was why
+
+**The check.** §5AN.20 and §5AN.21 left the body passing through itself by 1 to
+4.6 mm, with self-contact off as it is by default. `tools/loop_attractor.py` now
+takes `--self-contact` (the runner's `--self-collision`) and reports the closest
+approach. Every forward crawl found so far, run with the body unable to pass
+through itself:
+
+| setting (phasic 400 mV/rad, torque 3e-3) | self-contact off | self-contact on |
+|---|---|---|
+| muscle pairs 75 pS, neurons ×0.5 | +0.093 BL/s, clearance −4.6 mm | **0.000**, coiled, mean bend −8.5° |
+| `g_gap_ps` 5 | +0.070, −4.1 mm | **+0.002**, coiled, −7.0° |
+| muscle 150 pS / neurons ×0.2, muscle 112 pS / ×0.3, `g_gap_ps` 10 | forward | **≈ 0**, coiled, −11° to +11° |
+| phasic 200, committed gap junctions — the backward crawl | −0.087 | −0.021 |
+
+**The forward crawls of §5AN.18–5AN.21 depended on the body passing through
+itself.** With contact enforced, it curls, jams against itself and stays. That
+withdraws them as gaits; what they established about phase, frequency and
+direction stands, because none of that depended on the bend size.
+
+**The cause was the bend size, and the bend size is the torque.** These attractors
+swung the largest joint with a standard deviation near 40°, close to the 60°
+limit; the scripted gait never comes near itself. `--torque-scale` 3e-3 was set in
+§5C.3 to make the latched connectome move at all, and recorded there as "not
+biology". With self-contact on, at the per-class point and at `g_gap_ps` 5:
+
+| torque | muscle 75 pS, neurons ×0.5 | `g_gap_ps` 5 |
+|---|---|---|
+| 3e-3, committed | 0.000, coiled | +0.002, coiled |
+| 2e-3 | +0.119 BL/s, share 0.77, clearance +1.0 mm | |
+| 1.5e-3 | +0.108, share 0.76, +1.4 mm | **+0.179**, share **0.99**, +1.6 mm |
+| 1e-3 | +0.051 (×0.5 neurons), +0.075 (800 mV/rad) | **+0.153**, share **0.99**, turning **+0.7°/s**, +1.77 mm |
+| 7e-4, 5e-4 | +0.01 to +0.03, bends too small to propel | |
+
+At 1e-3 to 1.5e-3 the body never comes within 1.4 mm of itself — self-contact
+never engages, so the result is the same with it off — 99% of its motion is
+straight along its own axis, and it moves at 0.15 to 0.18 body lengths per
+second, inside the real animal's 0.1 to 0.3.
+
+**What lower torque does to the gap-junction requirement** (self-contact on,
+phasic 400 mV/rad):
+
+| muscle pairs / neurons | torque 1.5e-3 | torque 1e-3 |
+|---|---|---|
+| committed, 1.5 nS / ×1 | −0.067, backward | −0.044, backward |
+| 349 pS (measured bound) / ×1 | −0.054 | −0.044 |
+| 349 pS / ×0.5 | −0.052 | −0.042 |
+| 225 pS / ×0.5 | +0.043, nearly standing (−2.9° per joint) | +0.019 |
+| 150 pS / ×1 | −0.015 | +0.025, weak |
+| 150 pS / ×0.5 | +0.080 | +0.030 |
+| **75 pS / ×1 — neurons at committed strength** | **+0.085**, share 0.62 | +0.042 |
+| `g_gap_ps` 5, all classes | **+0.179**, share 0.99 | **+0.153**, share 0.99 |
+
+At torque 1.5e-3 the neuron gap junctions can stay at their committed strength:
+weakening only the muscle-to-muscle coupling, to 75 pS — inside the measured
+range — is enough to crawl forward. But weakening everything still crawls
+roughly twice as fast and far straighter, and the committed and measured-bound
+muscle coupling still go backward.
+
+**Proprioceptive gain, at `g_gap_ps` 5 and torque 1e-3:** 100 mV/rad backward;
+200 forward at +0.114 BL/s; 300 at +0.141; 400 at +0.153. Rate fraction 0.9
+crawls as 1.0 does (+0.150). `g_gap_ps` 10 crawls forward at +0.074; 20 goes
+backward.
+
+**Robust and controlled** (standalone, self-contact on, torque 1e-3, `g_gap_ps` 5,
+400 mV/rad): 180 s, and starts perturbed by 2° and 5°, all give +0.153 BL/s,
+share 0.99, turning under 1°/s. Proprioception cut: nothing moves. Tonic
+proprioception at the same settings: the body curls (mean bend +11°) and stays.
+
+**Isaac, predicted beforehand, with self-collision on:**
+
+    C:/isaacsim/python.bat worm/isaac/run_connectome.py --seconds 120 --physics-hz 240 \
+        --torque-scale 1e-3 --quasistatic --self-collision --proprio-rate 1.0 \
+        --proprioceptive-mv 400 --param g_gap_ps=5
+
+| | standalone prediction | Isaac |
+|---|---|---|
+| speed | 0.153 BL/s | **0.150 BL/s** (721 mm between t = 8 and 56 s) |
+| period | 2.11 s | **2.0–2.2 s** |
+| wave | forward, −13.6° per joint | **`travel` +0.44** |
+| heading | about +0.7° per second | **+3° to +26° over the run** |
+| self-clearance | +1.77 mm | **+1.77 to +1.84 mm**, never touching |
+| whole run | — | **16.17 body lengths in 120 s**, `travel` +0.45, period 2.1 s, 0% pinned |
+| B-type neighbours | — | adjacent correlation **−0.40**, 58% shared |
+
+**This replaces §5AN.20 as the forward-crawl result**: a straight crawl at
+0.15 BL/s with the body unable to pass through itself, confirmed in the rendered
+simulation from a prediction. It rests on four assumed settings — rate-sensing
+proprioception at 400 mV/rad (200 is enough for 0.11 BL/s), gap junctions at
+5 pS, and a torque a third of the committed one — and the torque is the one that
+was never biology in the first place.
+
+### 5AN.23 Muscle coupling at the measured ratio
+
+**The second measurement.** The same paper that gave the junctional conductance
+(Liu et al. 2006, §5AN.21) also measured the muscle cells themselves: "In 80
+randomly picked wild-type body-wall muscle cells, membrane capacitance, membrane
+resistance, and series resistance were 29.6 ± 0.4 pF, 1.51 ± 0.04 GΩ, and
+9.6 ± 0.4 MΩ, respectively" — read from the full text as quoted by a search
+index, the journal's own page refusing automated access. That is a membrane
+conductance of 0.66 nS.
+
+So the measured coupling between neighbouring muscle cells is **at most about
+half of each cell's own membrane conductance** (0.35 / 0.66 nS). The model, whose
+muscle cells carry the neurons' 1 pF and 10 pS, couples them at 1.5 nS against
+0.01 nS — a ratio of 150. Even the weakened settings that crawled in §5AN.21
+(150 pS against 0.01 nS) sit at 15. The measurement points *further* in the
+direction the crawl needed, not less far.
+
+Two ways to honour it. One is to give the muscle cells their measured membrane —
+29.6 pF and 0.66 nS — but that would also change how far each cell depolarises
+under its neuromuscular input, a calibration resting on more assumed numbers
+(the synaptic conductance per synapse, the sigmoid offset), so it is not done
+here. The other, which keeps every other number in the model fixed, is to set
+the muscle-to-muscle coupling at the measured *ratio* to the model's own muscle
+membrane: 0.53 × 0.01 nS ≈ 5 pS per pair, a factor of 0.0035 on the committed
+1.5 nS.
+
+**At the measured ratio it crawls forward, with the neurons' gap junctions
+untouched.** Phasic proprioception at 400 mV/rad, self-contact on:
+
+| muscle coupling | neuron gap junctions | torque | axial speed | share | step per joint | clearance |
+|---|---|---|---|---|---|---|
+| **×0.0035, the measured ratio** | **committed** | 1e-3 | **+0.051 BL/s** | 0.50 | −14.5° | +1.41 mm |
+| ×0.0035 | ×0.5 | 1e-3 | **+0.073** | 0.70 | **−21.0°** | +1.49 mm |
+| ×0.01 | committed / ×0.5 | 1e-3 | +0.047 / +0.072 | 0.49 / 0.69 | −12.5 / −19.2° | ~1.5 mm |
+| ×0.02 | committed / ×0.5 | 1e-3 | +0.047 / +0.068 | 0.51 / 0.66 | −10.3 / −16.5° | ~1.6 mm |
+| ×0.0035–×0.01 | either | 1.5e-3 | under +0.02 | under 0.2 | | ~1.0 mm, thrashing |
+| ×0.02 | ×0.5 | 1.5e-3 | +0.107 | 0.78 | −22.3° | +1.1 mm |
+
+With the muscle coupling at what was measured relative to membrane conductance,
+**the network's own gap junctions can stay at their committed value**. What is
+left of the gap-junction assumption is a measurement. The phase step with the
+neuron junctions halved, −21°, is within 2° of the scripted gait's; its
+wavelength, about 0.74 body lengths, is close to the real 0.65.
+
+It is slower than the `g_gap_ps` 5 crawl of §5AN.22 — 0.05 to 0.07 against
+0.15 BL/s — and less of its motion is along its own axis (0.5–0.7 against 0.99).
+Weakening the neuron and neuron–muscle junctions as well still makes a better
+gait; that part remains an assumption, and now an optional one.
+
+**Robust**, standalone at ×0.0035 with the neurons committed: a 180 s run and
+starts perturbed by 2° and 5° all give +0.049 to +0.050 BL/s, step −14.5°.
+**The proprioceptive assumptions shrink with it**: purely phasic at 200 mV/rad
+crawls as well as at 400 (+0.054 BL/s); 100 mV/rad is quiet; a 75% rate, 25%
+tonic blend crawls at +0.058 BL/s and straighter (share 0.87), at a slower
+2.9 s rhythm; a 50/50 blend barely moves (+0.008).
+
+**Isaac, predicted beforehand** (`--torque-scale 1e-3 --self-collision
+--proprio-rate 1.0 --proprioceptive-mv 400 --gap-scale muscle=0.0035`, every
+other network parameter committed):
+
+| | standalone prediction | Isaac |
+|---|---|---|
+| period | 2.07 s | **2.1 s** |
+| wave | forward, −14.5° per joint | **`travel` +0.43**, steady from t = 15 s |
+| turning | about +1.6° per second | **+14° to +187° over 105 s**, about 1.8° per second |
+| self-clearance | +1.41 mm | **+1.46 to +1.86 mm** |
+| speed | 0.050 BL/s along the body | **3.43 body lengths** from the start in 120 s; along a path that turned 186°, the arc is about 0.61 of the chord's length, so about 0.05 BL/s along it |
+| B-type neighbours | — | adjacent correlation +0.06, 61% shared |
+
+**The controls at these settings**, Isaac, 60 s each, torque 1e-3 and
+self-collision on (run at `g_gap_ps` 5, where the crawl is strongest): with
+`--no-proprioception` the body does not move (amplitude 1.3°, `travel` 0.00);
+with `--lesion DB,VB` it does not move (amplitude 0.04°).
+
+**So the most measurement-grounded version of the result is this.** The
+connectome as measured, the committed neuron model and every committed network
+parameter, with three changes: the muscle cells coupled to each other at the
+ratio that was measured, a third of the committed muscle torque, and
+proprioception that senses the rate of bending at 200 to 400 mV/rad. It crawls
+forward in the rendered simulation at the real animal's frequency, without the
+body touching itself, slowly — 0.05 BL/s against the real 0.1 to 0.3 — along a
+gently curving path. Weakening the neurons' gap junctions as well makes it three
+times faster and straight, and that part is still only an assumption.
+
+
+### 5AN.24 How much of the proprioception can be tonic
+
+**What is measured.** Wen et al. 2012 bent immobilised worms in a microfluidic
+channel and imaged the B-type motor neurons behind the bend: "bending the worm
+towards the dorsal side activated the DB motor neuron over the VB motor neuron",
+and the reverse for ventral bends, in "fixed patterns of activity that reflected
+the curvature imposed by the channel" (their Fig. 7C). A held bend produces a
+held response. **B-type proprioception has a tonic component**, so a purely
+rate-sensing law (`rate_fraction` 1.0, §5AN.14–5AN.23) contradicts a
+measurement. Whether there is a phasic component as well is not settled by
+calcium imaging, which is too slow to resolve one; nothing found in the
+literature reports B-type responses to the rate of bending. The other identified
+proprioceptors — DVA through TRP-4 (Li et al. 2006), SMDD through TRP-1 and
+TRP-2 (Yeon et al. 2018) — are described as sensing stretch and compression, not
+its rate.
+
+So the defensible target is the largest tonic share that still crawls. Muscle
+coupling at its measured ratio (`--gap-scale muscle=0.0035`), every other network
+parameter committed, torque 1e-3, self-contact on:
+
+| rate / tonic share | gain | period | step per joint | axial speed | share of path | from a 2° perturbed start |
+|---|---|---|---|---|---|---|
+| 100% / 0% | 400 mV/rad | 2.07 s | −14.5° | +0.050 BL/s | 0.50 | crawls, +0.050 |
+| 80% / 20% | 400 | 2.50 s | −15.1° | +0.059 | 0.75 | crawls, +0.060 |
+| 80% / 20% | 800 | 2.50 s | −16.0° | +0.055 | 0.74 | crawls, +0.055 |
+| 75% / 25% | 400 | 2.86 s | −14.5° | +0.058 | 0.87 | crawls, +0.058 |
+| **70% / 30%** | **400** | **3.00 s** | **−16.4°** | **+0.061** | **0.91** | **crawls, +0.064** |
+| 70% / 30% | 800 | 3.75 s | −22.9° | +0.073 | 0.93 | falls to a 7° oscillation, +0.009 |
+| 60% / 40% | 800 | 5.45 s | −22.4° | +0.057 | 0.97 | falls to rest |
+| 50% / 50% | 800 | 8.57 s | −20.6° | +0.036 | 0.92 | — |
+
+More tonic sensing makes the crawl straighter and its wavelength closer to the
+real one — at 30 to 40% tonic and 800 mV/rad the phase step is −22 to −23° per
+joint, the scripted gait's −23.1° — but slows the rhythm, from 2.1 s to 8.6 s,
+and from about 30% tonic at 800 mV/rad the crawl coexists with a smaller
+attractor that a perturbed start falls into. **Up to 30% tonic, at 400 mV/rad,
+the crawl is robust.** With every gap junction at 5 pS instead, 20 to 40% tonic
+still crawls fast at 800 mV/rad (+0.076 to +0.156 BL/s, share 0.98–1.00) and
+locks into a coil at 400.
+
+**Isaac at 70% / 30%** (`--proprio-rate 0.7`, muscle coupling at the measured
+ratio, torque 1e-3, self-collision on):
+
+| at 800 mV/rad (the fragile point, from rest) | predicted | Isaac |
+|---|---|---|
+| speed | 0.0735 BL/s | **0.072 BL/s** — 108 mm every 15 s, 7.84 body lengths in 120 s |
+| period | 3.75 s | **3.8 s** |
+| wave | forward, −22.9° per joint | **`travel` +0.56** |
+| heading | −0.3° per second | **−36° over 105 s** |
+| self-clearance | +1.46 mm | **+1.80 mm** |
+
+| at 400 mV/rad (the robust point) | predicted | Isaac |
+|---|---|---|
+| speed | 0.061 BL/s | **0.062 BL/s**, 6.72 body lengths in 120 s |
+| period | 3.00 s | **3.1 s** |
+| wave | forward, −16.4° per joint | **`travel` +0.44** |
+| heading | −0.1° per second | **−8° after two minutes** — straight |
+| self-clearance | +1.61 mm | **+1.85 mm** |
+| B-type neighbours | — | adjacent correlation +0.39, 69% shared |
+
+Both land on the crawl, both within a few percent of the standalone prediction.
+The 400 mV/rad point is the one to quote: it is robust to perturbed starts, and
+in Isaac it goes straight.
+
+So the proprioceptive law can carry a substantial tonic share — what was
+measured — as long as most of the signal also senses the rate of bending, which
+is what nothing has measured either way.
+
 ### 5AN.5 What this does not establish
 
 **Linear.** A nonlinear system can have limit cycles the linearisation does not

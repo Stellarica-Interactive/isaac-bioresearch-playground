@@ -23,6 +23,8 @@ after a transient:
   crawl with a constant bend bias goes round in circles; this catches it.
 * ``bias``: the time-averaged bend, mean over joints, degrees. Positive is
   dorsal (worm/body/muscles.py).
+* ``clear``: the closest the body came to itself, mm. Negative means it passed
+  through itself, which only ``--self-contact`` prevents.
 
 Same body, drag and muscles as the runner's ``--quasistatic`` path, linear drag.
 """
@@ -53,11 +55,13 @@ class _Without:
 def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
     every = max(1, int(round(0.05 / loop.dt)))  # 20 Hz samples
     angles, centroids, axes = [], [], []
+    clear = np.inf
     for k in range(int(seconds / loop.dt)):
         loop.step()
         if k * loop.dt >= transient and k % every == 0:
             c = loop.body.segment_centres()
             angles.append(loop.body.joint_angles.copy())
+            clear = min(clear, loop.body.min_self_distance_m())
             centroids.append(c.mean(axis=0))
             axis = c[0] - c[-1]
             axes.append(axis / np.linalg.norm(axis))
@@ -88,6 +92,7 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
         "amp": float(np.degrees(centred.std(axis=0).max())),
         "turn": turn,
         "bias": float(np.degrees(a.mean())),
+        "clear": 1000.0 * clear,
     }
 
 
@@ -104,12 +109,30 @@ def main() -> int:
     parser.add_argument("--transient", type=float, default=20.0)
     parser.add_argument("--param", action="append", default=[], metavar="NAME=VALUE")
     parser.add_argument(
+        "--gap-scale",
+        action="append",
+        default=[],
+        metavar="CLASS=FACTOR",
+        help="scale one class of gap junction: neuron, muscle or neuron-muscle",
+    )
+    parser.add_argument(
         "--perturb-deg",
         type=float,
         default=0.0,
         help="random initial joint angles of this size, to probe for other attractors",
     )
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--torque-scale",
+        type=float,
+        default=3.0e-3,
+        help="peak muscle torque scale, as the runner's --torque-scale",
+    )
+    parser.add_argument(
+        "--self-contact",
+        action="store_true",
+        help="the body cannot pass through itself, as the runner's --self-collision",
+    )
     args = parser.parse_args()
 
     loop = Loop(
@@ -117,7 +140,7 @@ def main() -> int:
             unknown_sign="exclude",
             physics_hz=240.0,
             neural_dt_ms=1.0,
-            torque_scale=3.0e-3,
+            torque_scale=args.torque_scale,
             proprioceptive_mv=args.proprioceptive_mv,
             proprio_rate=args.proprio_rate,
             muscle_tau_ms=args.muscle_tau_ms,
@@ -125,6 +148,8 @@ def main() -> int:
             settle_s=0.0,
             open_loop=args.open_loop,
             param=args.param,
+            gap_scale=args.gap_scale,
+            self_contact=args.self_contact,
         )
     )
     excluded = [c.strip() for c in args.proprio_exclude.split(",") if c.strip()]
@@ -140,10 +165,13 @@ def main() -> int:
         f"{', no ' + '/'.join(excluded) if excluded else ''}"
         f"{f', muscle tau {args.muscle_tau_ms:g} ms' if args.muscle_tau_ms else ''}"
         f"{', ' + ', '.join(args.param) if args.param else ''}"
+        f"{', gap ' + ', '.join(args.gap_scale) if args.gap_scale else ''}"
+        f"{', self-contact' if args.self_contact else ''}"
+        f"{f', torque {args.torque_scale:g}' if args.torque_scale != 3.0e-3 else ''}"
         f"{f', start {args.perturb_deg:g} deg seed {args.seed}' if args.perturb_deg else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
         f"axial {r['axial']:+.4f} BL/s, share {r['share']:+.2f}, amp {r['amp']:5.1f} deg, "
-        f"turn {r['turn']:+6.1f} deg/s, bias {r['bias']:+5.2f} deg"
+        f"turn {r['turn']:+6.1f} deg/s, bias {r['bias']:+5.2f} deg, clear {r['clear']:+.2f} mm"
     )
     return 0
 

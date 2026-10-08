@@ -12,12 +12,18 @@ from __future__ import annotations
 
 import tomllib
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from importlib.resources import files
 
+import numpy as np
+
 from common.data.schemas import CellCategory, Connectome
-from common.neural.neuron_models import GradedLeakyIntegratorParameters
+from common.neural.neuron_models import (
+    GradedLeakyIntegrator,
+    GradedLeakyIntegratorParameters,
+    prepare,
+)
 from common.neural.runtime import Integrator, NeuralRuntime, StabilityReport
 from common.neural.synapses import UnknownSignPolicy, WeightScaling
 from worm.loader import load
@@ -219,3 +225,46 @@ def build_runtime(
         stability=runtime.stability_report(),
     )
     return runtime, report
+
+
+#: The kinds of gap junction :func:`rescale_gap_junctions` can scale separately,
+#: named by the two cells a junction joins.
+GAP_JUNCTION_CLASSES = ("neuron", "muscle", "neuron-muscle")
+
+
+def rescale_gap_junctions(
+    runtime: NeuralRuntime, connectome: Connectome, factors: Mapping[str, float]
+) -> None:
+    """Scale gap junctions by the kinds of cell they join, then rebuild as a build would.
+
+    ``g_gap_ps`` is one number for every gap junction in the network: between
+    neurons, between body-wall muscle cells, and between the two. Nothing measured
+    says they share a conductance, and model_assumptions 5AN.20 needed all of them
+    twenty times weaker for the loop to crawl forward. This lets the three be set
+    apart, so a result can say which of them it actually needed.
+
+    ``factors`` maps a name in :data:`GAP_JUNCTION_CLASSES` to a multiplier;
+    classes not named are left alone. Every cell's sigmoid midpoint is then
+    re-solved against the new network and the state reset to its resting state --
+    exactly what building the runtime with a different ``g_gap_ps`` does -- so
+    scaling all three classes by one factor is the same model as changing
+    ``g_gap_ps`` by it, which a test holds.
+    """
+    unknown = set(factors) - set(GAP_JUNCTION_CLASSES)
+    if unknown:
+        raise ValueError(
+            f"unknown gap-junction classes {sorted(unknown)}; use {GAP_JUNCTION_CLASSES}"
+        )
+    category = {c.id: c.category for c in connectome.cells}
+    muscle = np.array([category.get(c) is CellCategory.MUSCLE for c in runtime.network.cell_ids])
+    both_muscle = muscle[:, None] & muscle[None, :]
+    neither = ~muscle[:, None] & ~muscle[None, :]
+    masks = {"muscle": both_muscle, "neuron": neither, "neuron-muscle": ~both_muscle & ~neither}
+    g = runtime.network.g_gap.copy()
+    for name, factor in factors.items():
+        g[masks[name]] *= float(factor)
+    network = replace(runtime.network, g_gap=g)
+    model = prepare(GradedLeakyIntegrator(params=runtime.model.params), network)
+    runtime.network = network
+    runtime.model = model
+    runtime.state = model.initial_state(network)

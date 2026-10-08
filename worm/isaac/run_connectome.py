@@ -97,6 +97,17 @@ parser.add_argument(
     "tonic components, but nothing measures the balance. See 5AK.",
 )
 parser.add_argument(
+    "--gap-scale",
+    action="append",
+    default=[],
+    metavar="CLASS=FACTOR",
+    help="Scale one class of gap junction, by the cells it joins: neuron, muscle "
+    "(body-wall muscle to body-wall muscle) or neuron-muscle. Repeatable. "
+    "g_gap_ps sets all three at once; nothing measured says they share a "
+    "conductance. Sigmoid midpoints are re-solved afterwards, exactly as a "
+    "--param build does. See model_assumptions 5AN.21.",
+)
+parser.add_argument(
     "--muscle-tau-ms",
     type=float,
     default=None,
@@ -482,7 +493,11 @@ from worm.isaac.stage import (  # noqa: E402
     dof_order,
 )  # noqa: E402
 from worm.loader import load  # noqa: E402
-from worm.neural.config import RUNTIME_OVERLAYS, build_runtime  # noqa: E402
+from worm.neural.config import (  # noqa: E402
+    RUNTIME_OVERLAYS,
+    build_runtime,
+    rescale_gap_junctions,
+)
 
 
 def _parameter_overrides() -> dict[str, float] | None:
@@ -527,6 +542,20 @@ def main() -> int:
             f"  conduction delay: {runtime.s_pre.quantised_delay_ms:g} ms on "
             f"chemical transmission ({runtime.s_pre.steps} steps), gap junctions "
             f"instantaneous. ASSUMED -- see model_assumptions 5Z."
+        )
+    if args.gap_scale:
+        factors = {}
+        for item in args.gap_scale:
+            name, _, value = item.partition("=")
+            if not value:
+                raise SystemExit(f"--gap-scale expects CLASS=FACTOR, got {item!r}")
+            factors[name.strip()] = float(value)
+        # Before anything is calibrated against the network, as --param is.
+        rescale_gap_junctions(runtime, connectome, factors)
+        print(
+            "  gap junctions rescaled by class: "
+            + ", ".join(f"{k} x{v:g}" for k, v in factors.items())
+            + " -- ASSUMED, see model_assumptions 5AN.21"
         )
     print(report.summary())
 

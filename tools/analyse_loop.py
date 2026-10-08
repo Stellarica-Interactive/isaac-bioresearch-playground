@@ -63,9 +63,20 @@ from worm.body.neural_bridge import (
 from worm.body.quasistatic import QuasiStaticBody
 from worm.importers.naming import body_wall_muscle_ids
 from worm.loader import load
-from worm.neural.config import RUNTIME_OVERLAYS, build_runtime
+from worm.neural.config import RUNTIME_OVERLAYS, build_runtime, rescale_gap_junctions
 
 GAIT_HZ = 0.5
+
+
+def parse_gap_scale(items: list[str]) -> dict[str, float]:
+    """``["muscle=0.05", ...]`` to ``{"muscle": 0.05}``, as ``--gap-scale`` takes them."""
+    out = {}
+    for item in items:
+        name, _, value = item.partition("=")
+        if not value:
+            raise SystemExit(f"--gap-scale expects CLASS=FACTOR, got {item!r}")
+        out[name.strip()] = float(value)
+    return out
 
 
 class Loop:
@@ -96,6 +107,10 @@ class Loop:
             dt_ms=args.neural_dt_ms,
             parameter_overrides=overrides or None,
         )
+        gap_scale = parse_gap_scale(getattr(args, "gap_scale", None) or [])
+        if gap_scale:
+            # Before anything is calibrated against the network, as --param is.
+            rescale_gap_junctions(self.runtime, connectome, gap_scale)
         self.dt = 1.0 / args.physics_hz
         self.substeps = max(1, int(round(self.dt * 1000.0 / args.neural_dt_ms)))
 
@@ -126,7 +141,11 @@ class Loop:
                 **({"activation_tau_ms": tau} if tau is not None else {}),
             ),
         )
-        self.body = QuasiStaticBody(self.plan, muscle=self.muscle.params)
+        self.body = QuasiStaticBody(
+            self.plan,
+            muscle=self.muscle.params,
+            self_contact=bool(getattr(args, "self_contact", False)),
+        )
 
         self.runtime.run(2000.0)
         cells_in = [c for c in ("AVBL", "AVBR") if c in self.runtime.network.cell_ids]

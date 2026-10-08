@@ -271,7 +271,24 @@ B-type motor neurons are themselves stretch sensitive, and that feedback — not
 central pattern generator — propagates the bend posteriorly. The basis for the
 proprioceptive half of `worm/body/neural_bridge.py`; see §5C of
 [model_assumptions.md](model_assumptions.md) for exactly which part of this is
-measurement and which part is our inference.
+measurement and which part is our inference. Its Fig. 7C is also the evidence that
+the B-type response is at least partly **tonic** — a held bend gives a held
+response — which bounds the rate-sensing law of §5AN.14–5AN.24.
+
+**Li W, Feng Z, Sternberg PW, Xu XZS. A *C. elegans* stretch receptor neuron
+revealed by a mechanosensitive TRP channel homologue.** *Nature* 440:684–687
+(2006).
+doi:[10.1038/nature04538](https://doi.org/10.1038/nature04538)
+DVA as a stretch receptor through TRP-4. Cited in §5AN.24 only as one of the
+identified proprioceptors, described as sensing stretch rather than its rate; DVA
+is not a proprioceptive target in this model.
+
+**Yeon J, Kim J, Kim DY, Kim H, Kim J, Du EJ, Kang K, Lim HH, Moon D, Kim K. A
+sensory-motor neuron type mediates proprioceptive coordination of steering in
+*C. elegans* via two TRPC channels.** *PLOS Biology* 16:e2004929 (2018).
+doi:[10.1371/journal.pbio.2004929](https://doi.org/10.1371/journal.pbio.2004929)
+SMDD senses head-muscle stretch through TRP-1 and TRP-2. Cited in §5AN.24 in the
+same capacity as Li et al. 2006.
 
 **Fouad AD, Teng S, Mark JR, Liu A, Alvarez-Illera P, Ji H, Du A, Bhirgoo PD,
 Cornblath E, Guan SA, Fang-Yen C. Distributed rhythm generators underlie
@@ -325,6 +342,26 @@ for treating GABA as **inhibitory** there.
 Unlike the Fenyves predictions these rest on direct electrophysiology and mutant
 analysis, so the `nmj` overlay is tagged `PUBLISHED_ANNOTATION` rather than
 `PREDICTED`. See [model_assumptions.md](model_assumptions.md) §6.1b.
+
+### Body-wall muscle electrical coupling
+
+Liu Q, Chen B, Gaier E, Joshi J, Wang ZW. **Low conductance gap junctions mediate
+specific electrical coupling in body-wall muscle cells of *Caenorhabditis
+elegans*.** *Journal of Biological Chemistry* 281:7881–7889 (2006).
+doi:[10.1074/jbc.M512382200](https://doi.org/10.1074/jbc.M512382200)
+
+Dual whole-cell voltage clamp of body-wall muscle cells in situ: they are
+electrically coupled in a specific pattern, with a junctional conductance of
+**350 pS or less**, mainly through the innexin UNC-9. The one measured number for
+a class of gap junction in this model, taken from the abstract. The same paper
+measured the muscle cells' passive properties in 80 wild-type cells: 29.6 ± 0.4 pF
+and 1.51 ± 0.04 GΩ (0.66 nS), read from a quotation of its full text; the article
+is not open access and refused automated access, so the per-pair distribution of
+junctional conductance has not been read. The model's uniform `g_gap_ps` gives
+neighbouring body-wall muscle cells 1.5 nS — at least 4.3 times the measured
+junction, and 150 times the model's own 0.01 nS muscle membrane where the
+measured ratio is at most about 0.5. See [model_assumptions.md](model_assumptions.md)
+§5AN.21 and §5AN.23.
 
 ---
 

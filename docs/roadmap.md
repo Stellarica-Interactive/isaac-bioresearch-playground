@@ -81,29 +81,50 @@ the lead still wins (headward, +6° per joint). At 0.5 Hz the loop already
 propagates forward (−13° per joint, 8× stronger tailward) — it just does not
 oscillate there.
 
-**And it crawls forward (§5AN.18–5AN.20).** Weakening the gap junctions
-shortens the attractor's wavelength and raises its frequency past the point
-where propagation turns tailward. At phasic 400 mV/rad and `g_gap_ps` 5, Isaac
-crawls forward at 1.9 s, `travel` +0.55, 6.36 body lengths in 120 s, heading
-within 45° the whole run — predicted beforehand from the standalone loop. On
-the way, a harness bug was found and fixed: `Loop` had 40 extra muscle cells
-(§5AN.18); §5AN.19 re-ran everything on the runner's network and every earlier
-conclusion stands.
+**And it crawls forward, without passing through itself (§5AN.18–5AN.23).**
+The first forward crawls (§5AN.20–5AN.21) turned out to need the body to pass
+through itself; with self-contact enforced they coiled and stopped. The cause was
+the committed torque (3e-3, never biology), which bent the body too hard. At a
+third of it, with `--self-collision` on, Isaac crawls **16 body lengths in two
+minutes, nearly straight, at 0.15 BL/s**, `travel` +0.45, period 2.1 s, never
+touching itself — predicted beforehand — and does not move at all with
+proprioception cut or the B-type neurons silenced.
 
-1. **Controls in Isaac at 5 pS — DONE.** With `--no-proprioception` or
-   `--lesion DB,VB` the body does not move at all (§5AN.20).
-2. **The three assumptions it rests on** — rate-sensing proprioception, a
-   400 mV/rad gain, gap junctions at 5 pS — are each a tenfold-or-more departure
-   from committed values with nothing measured behind them. Which of them has
-   biological support, and whether a smaller departure in all three does the
-   same, is the question that decides whether this is a model of the worm or a
-   tuned oscillator. Gap-junction strength per class (rather than one global
-   value) is the obvious refinement: §5AN.9 found the muscle–muscle junctions
-   matter most.
-3. **What is still wrong with the gait**: wavelength about 0.9 body lengths
-   against 0.65, speed a quarter of the positive control's, circling at 7–15 pS
-   (a ventral bend bias of −2 to −3.5°), and the body overlapping itself by 1 mm
-   with self-contact off.
+What it rests on, now:
+
+| | setting | basis |
+|---|---|---|
+| proprioception | 70–100% rate-sensing, 200–400 mV/rad | the tonic part is measured (Wen et al. 2012); the rate part is assumed |
+| muscle torque | 1e-3 to 1.5e-3, a third of committed | assumed (as was the committed value) |
+| muscle-to-muscle coupling | at most ~0.5 of the muscle membrane conductance | **measured**, Liu et al. 2006 |
+| neuron gap junctions | committed — or weaker for a faster, straighter crawl | assumed either way |
+
+With only the muscle coupling set to its measured ratio (`--gap-scale
+muscle=0.0035`) and everything in the network at committed values, it crawls
+forward at 0.05 BL/s; weakening all gap junctions (`g_gap_ps` 5) gives 0.15.
+
+1. **Isaac at the measured ratio — DONE** (§5AN.23): forward, period 2.1 s,
+   `travel` +0.43, about 0.05 BL/s along a gently curving path, never touching
+   itself, every network parameter but the muscle coupling committed.
+2. **Give the muscle cells their measured membrane** (29.6 pF, 0.66 nS) instead
+   of the neurons' 1 pF and 10 pS. That is the physical form of the coupling
+   ratio, but it changes how far each muscle depolarises under its
+   neuromuscular input, which needs the synaptic conductance per synapse
+   revisited too. Scaling every conductance into a muscle cell by the same
+   factor as its leak keeps that input calibrated, and then every steady state
+   is identical to the measured-ratio runs; what changes is only the muscle
+   voltage time constant, from about 50 ms to about 22 ms, on a stage that
+   carries little of the gait mode (§5AN.12). Low priority for that reason.
+3. **The gait in detail.** The wavelength is long except with the neuron
+   junctions halved (−21° per joint, close to the scripted −23°); the speed at
+   the measured ratio is a third of the `g_gap_ps` 5 crawl's.
+4. **Rate-sensing proprioception, bounded (§5AN.24).** Wen et al. 2012 show
+   B-type neurons hold their response while a bend is held, so the law must
+   have a tonic part. Up to 30% tonic crawls robustly at the measured muscle
+   ratio (Isaac: 6.7 body lengths in 120 s, straight, period 3.1 s); 40–50%
+   tonic gives the real wavelength (−22° per joint) but a slow rhythm and a
+   fragile attractor. Whether B-type neurons have a phasic component at all is
+   the measurement that would settle the last assumption.
 
 ### 1.0b The steady response is rank-one (§5AM)
 
