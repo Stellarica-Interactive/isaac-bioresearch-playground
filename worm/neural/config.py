@@ -95,6 +95,17 @@ def model_parameters(
     return GradedLeakyIntegratorParameters(**values)
 
 
+def body_wall_muscle_gap_scale() -> float:
+    """The committed factor on gap junctions between body-wall muscle cells.
+
+    From the measured coupling ratio, not assumed; see the ``[body_wall_muscle]``
+    section of ``parameters.toml``.
+    """
+    section = _raw_config().get("body_wall_muscle", {})
+    assert isinstance(section, dict)
+    return float(section.get("gap_scale", 1.0))
+
+
 def integration_defaults() -> tuple[float, Integrator]:
     section = _raw_config()["integration"]
     assert isinstance(section, dict)
@@ -166,6 +177,7 @@ def build_runtime(
     integrator: Integrator | str | None = None,
     connectome: Connectome | None = None,
     parameter_overrides: Mapping[str, float] | None = None,
+    muscle_gap_scale: float | None = None,
 ) -> tuple[NeuralRuntime, RuntimeReport]:
     """Build a runtime from a named dataset, reporting what it rests on.
 
@@ -179,6 +191,11 @@ def build_runtime(
     ``parameter_overrides`` is a mapping rather than keyword arguments so that
     biophysical parameters cannot be confused with the build options above -- which
     matters when sweeping, since almost every parameter is an assumption.
+
+    When body-wall muscle cells are in the network, the gap junctions between
+    them are scaled by ``muscle_gap_scale`` -- by default the committed,
+    measurement-derived :func:`body_wall_muscle_gap_scale`; pass 1.0 for the
+    uniform coupling every result before model_assumptions 5AO.5 used.
     """
     policy = UnknownSignPolicy(unknown_sign)
     scaling = WeightScaling(weight_scaling)
@@ -214,6 +231,13 @@ def build_runtime(
         dt_ms=default_dt if dt_ms is None else dt_ms,
         integrator=default_integrator if integrator is None else Integrator(integrator),
     )
+    scale = body_wall_muscle_gap_scale() if muscle_gap_scale is None else float(muscle_gap_scale)
+    in_network = set(runtime.network.cell_ids)
+    has_muscle = any(
+        c.category is CellCategory.MUSCLE for c in connectome.cells if c.id in in_network
+    )
+    if has_muscle and scale != 1.0:
+        rescale_gap_junctions(runtime, connectome, {"muscle": scale})
     report = RuntimeReport(
         dataset_id=dataset_id,
         n_cells=runtime.network.n,

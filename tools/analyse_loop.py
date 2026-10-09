@@ -55,6 +55,7 @@ from common.neural.synapses import UnknownSignPolicy
 from worm.body.geometry import BodyPlan
 from worm.body.muscles import MuscleModel, MuscleParameters
 from worm.body.neural_bridge import (
+    DEFAULT_SENSING_OFFSET,
     PROPRIOCEPTIVE_CLASSES,
     RATE_LAG_MS,
     MuscleDrive,
@@ -106,6 +107,10 @@ class Loop:
             connectome=connectome,
             dt_ms=args.neural_dt_ms,
             parameter_overrides=overrides or None,
+            # None is the committed, measurement-derived coupling between
+            # body-wall muscle cells (parameters.toml [body_wall_muscle]); every
+            # result before model_assumptions 5AO.5 was computed with 1.0.
+            muscle_gap_scale=getattr(args, "muscle_gap_scale", None),
         )
         gap_scale = parse_gap_scale(getattr(args, "gap_scale", None) or [])
         if gap_scale:
@@ -130,6 +135,56 @@ class Loop:
         # without it keeps the state it was measured with.
         rate = float(getattr(args, "proprio_rate", 0.0) or 0.0)
         self.proprio = replace(self.proprio, rate_fraction=rate)
+
+        # A probe, off by default: A-type motor neurons sensing the body *behind*
+        # them, the mirror of B-type, as Gao et al. 2018 propose ("proprioception
+        # may ... serve as feedbacks to regulate A-MN oscillation") and nobody has
+        # measured. Same law, same target depolarisation, gain calibrated against
+        # the A-type cells' own conductances. See model_assumptions 5AO.
+        # Further proprioceptive populations, each with the B-type law and its
+        # gain calibrated against its own cells' conductances.
+        self.extra_proprio: list[Proprioception] = []
+
+        def add_population(
+            classes: tuple[str, ...],
+            offset: float,
+            *,
+            mv: float | None = None,
+            law: float | None = None,
+            receptive: float | None = None,
+        ) -> None:
+            pop = Proprioception.build(
+                connectome,
+                self.plan,
+                classes=classes,
+                offset=offset,
+                **({"receptive_fraction": receptive} if receptive is not None else {}),
+            )
+            cells = [c for c in pop.targets if c in self.runtime.network.cell_ids]
+            self.extra_proprio.append(
+                replace(
+                    pop,
+                    gain_pa_per_rad=scale_for_depolarisation(
+                        self.runtime, cells, args.proprioceptive_mv if mv is None else mv
+                    ),
+                    rate_fraction=rate if law is None else law,
+                )
+            )
+
+        if getattr(args, "a_type_proprio", False):
+            add_population(("VA", "DA"), -DEFAULT_SENSING_OFFSET)
+        # The head: SMD neurons are proprioceptive -- SMDD's calcium follows dorsal
+        # head bending, SMDV's ventral, and forced bends excite each even in
+        # paralysed worms (Yeon et al. 2018). Same law and receptive-field rule as
+        # B-type, so the only new claim is the one that was measured. 5AO.7.
+        if getattr(args, "head_proprio", False):
+            add_population(
+                tuple(getattr(args, "head_classes", None) or ("SMD",)),
+                getattr(args, "head_offset", None) or DEFAULT_SENSING_OFFSET,
+                mv=getattr(args, "head_mv", None),
+                law=getattr(args, "head_rate", None),
+                receptive=getattr(args, "head_receptive", None),
+            )
         self.lag_steps = max(1, int(round(RATE_LAG_MS / (self.dt * 1000.0))))
         self.history: list[np.ndarray] = []
 
@@ -148,7 +203,10 @@ class Loop:
         )
 
         self.runtime.run(2000.0)
-        cells_in = [c for c in ("AVBL", "AVBR") if c in self.runtime.network.cell_ids]
+        # The command interneurons the drive goes to, as the runner's --command.
+        named = getattr(args, "command_cells", None) or "AVBL,AVBR"
+        wanted = [c.strip() for c in named.split(",") if c.strip()]
+        cells_in = [c for c in wanted if c in self.runtime.network.cell_ids]
         self.command = solve_for_depolarisation(self.runtime, cells_in, args.command_mv)
 
         n = self.runtime.network.n
@@ -211,6 +269,17 @@ class Loop:
             else:
                 currents = self.proprio.currents(angles)
             self.runtime.inject_many(currents)
+            for pop in self.extra_proprio:
+                if self.history:
+                    self.runtime.inject_many(
+                        pop.currents(
+                            angles,
+                            earlier_angles_rad=self.history[0],
+                            elapsed_ms=self.lag_steps * self.dt * 1000.0,
+                        )
+                    )
+                else:
+                    self.runtime.inject_many(pop.currents(angles))
         if self.history:
             self.history = [*self.history[1:], angles]
         for cell, current in self.extra.items():

@@ -167,7 +167,7 @@ Python, not the project venv.
 ### Watch the worm
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --probe --tint-change
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic
 ```
 
 The connectome drives the body: body curvature into the B-type motor neurons,
@@ -186,18 +186,33 @@ rather than ~3 minutes. **Do not quote numbers from a windowed run** -- pass
 `--physics-hz 240` for anything measured, and see
 [`model_assumptions.md`](docs/model_assumptions.md) §5Y for why.
 
-What to expect, so the run is not misleading: the animal coils and flexes but
-does **not** crawl. Its inter-joint phase is −6.1° against a real gait's +23.0°
--- a weak wave travelling the wrong way -- and it covers 0.785 BL where the
-scripted gait covers 13.0. It curls up tightly, until its nose and tail are a
-sixth of a body length apart, and tumbles rather than travelling. That is the
-open problem, written up in
-[`negative_result.md`](docs/negative_result.md), not a broken install.
+What to expect: **it crawls forward**, about 8.6 body lengths in two minutes on
+a 3.2 s rhythm, along a gently curving path (under a degree a second), the body
+never touching itself. That is the committed model since
+[`model_assumptions.md`](docs/model_assumptions.md) §5AO.5–5AO.6: the muscle cells
+coupled to each other at the ratio Liu et al. 2006 measured, proprioception that
+is 70% rate-sensing and 30% tonic, under half the old muscle torque, and
+self-collision on. On the slow side -- 0.07 to 0.09 BL/s against a real animal's
+0.1--0.3 -- and two of those four changes are assumptions; the section below has
+the faster variants and what each change rests on.
+
+Until §5AO.5 the same command did **not** crawl:
+the animal coiled and tumbled, its wave travelling the wrong way. That model is
+still there, and every result measured on it before §5AO.5 reproduces with
+`--legacy-defaults`:
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --legacy-defaults --torque-scale 3e-3 --quasistatic
+```
+
+Why it failed and how it was fixed is
+[`negative_result.md`](docs/negative_result.md) and §5AN of
+[`model_assumptions.md`](docs/model_assumptions.md).
 
 ### The connectome crawling forward
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --torque-scale 1e-3 --quasistatic --self-collision --proprio-rate 1.0 --proprioceptive-mv 400 --param g_gap_ps=5
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --torque-scale 1e-3 --proprio-rate 1.0 --param g_gap_ps=5
 ```
 
 The same loop, with proprioception that senses the *rate* of bending rather than
@@ -216,11 +231,23 @@ the model's uniform gap-junction strength made them (Liu et al. 2006), and B-typ
 proprioception responds to a held bend, so it cannot be purely rate-sensing (Wen
 et al. 2012). With only the muscle coupling set to its measured ratio, the
 neurons' gap junctions as committed, and 30% of the proprioceptive signal tonic,
-it still crawls forward -- straight, slower (0.06 BL/s), on a 3.1 s rhythm:
+it still crawls forward, more slowly. That version, with the torque refined in
+§5AO.6, is now the committed default: the plain command under *Watch the worm*
+runs it.
+
+The neurons' own gap junctions are a third lever. Their committed strength,
+100 pS, is itself an assumption (Kunert et al. 2014), and at half of it the
+default model crawls at **0.11 BL/s** -- inside the real animal's range -- with a
+wave of −21° per joint against the real −23°, on a 2.6 s rhythm, along a gently
+curving path -- 11.3 body lengths in two minutes in Isaac:
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --torque-scale 1e-3 --quasistatic --self-collision --proprio-rate 0.7 --proprioceptive-mv 400 --gap-scale muscle=0.0035
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --torque-scale 1e-3 --gap-scale neuron=0.5
 ```
+
+It is not the default because that conductance sets every neural result in this
+project, not only the gait, and changing it is a decision rather than a tuning
+step; §5AO.6 has the case for it.
 
 An earlier version of this section used the committed torque without
 `--self-collision`; that crawl relied on the body passing through itself and is
@@ -237,14 +264,14 @@ C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale
 A scripted sinusoidal wave instead of the connectome. It crawls: **13.0 body
 lengths in sixty seconds, 0.217 BL/s**, which is a real animal's speed, with a
 clean head-to-tail wave and a slip of 0.33 against the animal's 0.1--0.3
-(§5AG). The difference between this run and the one above **is** the negative
-result, and it is far clearer to watch than to read.
+(§5AG). The default connectome run above is about a quarter as fast; the
+difference between the two is what is still missing.
 
 Two columns in the output are worth reading as it runs. `clear` is the closest
 approach between two non-neighbouring segments, so a negative value means the
 body is passing through itself -- neither solver prevents that. `extent` is how
 extended the body is, 1.0 straight and 0 a closed loop; the scripted gait holds
-0.73, and the connectome run above drops to 0.17.
+0.73; the legacy connectome model (`--legacy-defaults`) dropped to 0.17.
 
 ### Making it grip
 
@@ -312,13 +339,13 @@ All of it is swept, costed and argued in
 Interactive -- select the red sphere, press `W`, drag it onto the body:
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --torque-scale 3e-3 --quasistatic --probe --tint-change
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 180 --quasistatic --probe --tint-change
 ```
 
 Scripted and reproducible, with the control that matters:
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --quasistatic --poke 20:24:0.15 --sham 40:44
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --quasistatic --poke 20:24:0.15 --sham 40:44
 ```
 
 `--poke START:STOP:FRACTION` is seconds and position along the body (0 head,
@@ -328,9 +355,11 @@ the body's own motion contributes, and a real touch has to beat it. A sham windo
 once produced the same −21 mV as a genuine touch, so the run withholds a verdict
 unless the response clears background by 2×.
 
-Expect the circuit to respond and the animal not to escape -- touch is a
-transient, so it is not blocked by the locomotion failure, but escaping needs
-locomotion that works.
+Expect no escape. On the crawling loop a gentle touch nudges all four command
+interneuron groups up by 1--2 mV together and shifts the gait's phase; the
+worm keeps crawling forward (§5AO.1). The direction the anatomy encodes is lost
+because most of the touch receptors' chemical synapses have no known sign and
+are left out. `--legacy-defaults` reproduces the §5D measurements.
 
 ### Controls worth running
 
@@ -339,10 +368,10 @@ locomotion that works.
 C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 0
 
 # remove VD and the animal locks into a ventral coil, from measured innervation
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --torque-scale 3e-3 --quasistatic --lesion VD
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --legacy-defaults --torque-scale 3e-3 --quasistatic --lesion VD
 
 # randomise which synapses excite and which inhibit, keeping the anatomy
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --torque-scale 3e-3 --quasistatic --shuffle-sign
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --legacy-defaults --torque-scale 3e-3 --quasistatic --shuffle-sign
 ```
 
 `--help` lists all forty flags. Several exist only to keep results honest:

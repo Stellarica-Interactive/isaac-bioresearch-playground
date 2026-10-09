@@ -237,3 +237,21 @@ scaling - a 0.005 ms time constant on a 1 pF cell, which is not physiological so
 much as an artefact of treating a body-spanning syncytium as one isopotential
 compartment. Muscles come back in at W2, with a muscle model of their own rather
 than as honorary neurons."""
+
+[body_wall_muscle]
+gap_scale = 0.0035
+confidence = "measured-ratio"
+source = "Liu Q, Chen B, Gaier E, Joshi J, Wang ZW. J Biol Chem 281:7881-7889 (2006)."
+note = """
+Multiplies the gap junctions between pairs of body-wall muscle cells, applied by
+build_runtime whenever those cells are in the network. g_gap_ps and the Cook 2019
+junction counts give neighbouring muscle cells 1.5 nS against a muscle membrane
+that, with the neurons' parameters, is 10 pS: a coupling-to-membrane ratio of 150.
+Liu et al. measured the junctions at 350 pS or less and the membrane at
+1.51 GOhm (0.66 nS): a ratio of at most about 0.53. This factor sets the model's
+ratio to the measured one (0.53 x 10 pS / 1.5 nS), leaving every other number
+alone. It is the change that, with rate-sensing proprioception and a third of
+the old torque, lets the loop crawl forward (model_assumptions 5AN.21-5AN.24,
+5AO.5). Pass --muscle-gap-scale 1 to recover the uniform coupling every result
+before 5AO.5 was measured with."""
+improvement = "The per-pair distribution of junctional conductance, and muscle cells with their own measured membrane (29.6 pF, 0.66 nS) rather than the neurons'."

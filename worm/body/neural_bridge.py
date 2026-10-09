@@ -48,6 +48,11 @@ PROPRIOCEPTIVE_CLASSES = ("VB", "DB")
 #: region anterior to them; the size of that region in segment units is our choice.
 DEFAULT_SENSING_OFFSET = 2.0
 
+#: The share of a cell's neuromuscular synapses that must go to one side for it
+#: to count as driving that side. Every B-type, A-type and SMD cell is above 0.8;
+#: the lateral RMDL and RMDR, at 0.5 and 0.67, are not.
+SIDED_FRACTION = 0.75
+
 #: How far the receptive field extends, as a fraction of the body. One joint.
 #:
 #: Boyle, Berri & Cohen 2012 use ``N_SR = M/2`` -- a stretch receptor field
@@ -80,8 +85,15 @@ VENTRAL_GAIN = 1.0
 DEFAULT_PROPRIOCEPTIVE_GAIN = 400.0
 
 #: Fraction of the proprioceptive signal that responds to the *rate of change* of
-#: curvature rather than to curvature itself. 0.0 is the pure curvature law every
-#: result in ``docs/model_assumptions.md`` was measured with.
+#: curvature rather than to curvature itself. **0.7 since model_assumptions 5AO.5**:
+#: 70% rate, 30% curvature. 0.0, the pure curvature law, is what every result
+#: before 5AO.5 was measured with (``--legacy-defaults`` in the runner).
+#:
+#: Why 0.7. The rate term is what lets the loop crawl forward at all (5AN.14-
+#: 5AN.24): it makes the loop pass bends tailward at the gait frequency and
+#: removes the static latch. The curvature term is *measured*: Wen et al. 2012
+#: show B-type neurons hold their response while a bend is held. 30% is the
+#: largest curvature share that still crawls robustly to perturbed starts (5AN.24).
 #:
 #: Why it exists: the curvature law is monotone positive feedback, so a static
 #: bend is a stable fixed point of the loop -- which is what §5C.4's latch and
@@ -93,7 +105,7 @@ DEFAULT_PROPRIOCEPTIVE_GAIN = 400.0
 #: usually have both a phasic and a tonic component, so a blend is more
 #: defensible than either pure law -- but **the fraction is ours and nothing
 #: measures it.** See model_assumptions 5AK.
-DEFAULT_RATE_FRACTION = 0.0
+DEFAULT_RATE_FRACTION = 0.7
 
 #: Lag over which curvature rate is measured, ms. A difference between
 #: consecutive physics steps is mostly solver jitter; comparing against the body
@@ -247,6 +259,14 @@ class Proprioception:
     0 is the pure curvature law, which cannot help latching; 1 is purely phasic
     and cannot report a held posture at all. See :data:`DEFAULT_RATE_FRACTION`."""
 
+    dorsal_targets: frozenset[str] | None = None
+    """Targets that drive dorsal muscle, so are excited by dorsal bending.
+
+    :meth:`build` fills this from each cell's own neuromuscular synapses in the
+    connectome -- measured anatomy -- rather than from its name. ``None`` falls
+    back to the name (``DB``, ``DA``, ``SMDD``), which is what a hand-built
+    instance in a test uses."""
+
     @classmethod
     def build(
         cls,
@@ -271,6 +291,26 @@ class Proprioception:
             for cell, position in positions.items()
             if by_class.get(cell) in classes and np.isfinite(position)
         )
+        # Which side each cell drives, from its own synapses onto body-wall
+        # muscle. A cell without a clear side -- RMDL drives 13 dorsal and 13
+        # ventral -- cannot be excited by "bending toward its own side", so it is
+        # left out rather than assigned one. Every B-type, A-type and SMD cell has
+        # a side, and it agrees with its name.
+        dorsal_syn: dict[str, int] = {c: 0 for c in chosen}
+        ventral_syn: dict[str, int] = {c: 0 for c in chosen}
+        for e in connectome.connections:
+            if e.pre in dorsal_syn and e.synapse_type is SynapseType.CHEMICAL:
+                if e.post.startswith("MD"):
+                    dorsal_syn[e.pre] += e.weight
+                elif e.post.startswith("MV"):
+                    ventral_syn[e.pre] += e.weight
+        chosen = [
+            c
+            for c in chosen
+            if max(dorsal_syn[c], ventral_syn[c])
+            >= SIDED_FRACTION * (dorsal_syn[c] + ventral_syn[c])
+        ]
+        dorsal = frozenset(c for c in chosen if dorsal_syn[c] > ventral_syn[c])
         # Sense anterior to self; clamp at the head, where there is nothing ahead.
         sensed = np.clip(
             np.array([positions[c] - offset for c in chosen]).round().astype(int),
@@ -285,6 +325,7 @@ class Proprioception:
             receptive_joints=receptive,
             asymmetric=asymmetric,
             rate_fraction=rate_fraction,
+            dorsal_targets=dorsal,
         )
 
     def currents(
@@ -347,7 +388,17 @@ class Proprioception:
                 # Blended in the sensed quantity rather than in the current, so
                 # the asymmetric gains below apply to whatever is being sensed.
                 window = (1.0 - self.rate_fraction) * window + self.rate_fraction * rate_window
-            dorsal = cell.startswith("DB")
+            # DB, DA and SMDD drive dorsal muscle; VB, VA and SMDV ventral. Only
+            # "DB" was tested while B-type cells were the only targets; an A-type
+            # DA cell would otherwise have been read as ventral and given the
+            # wrong sign. SMDD's side is measured twice over: its synapses in Cook
+            # 2019 are 80 and 76 dorsal against 14 and 11 ventral, and its calcium
+            # rises with dorsal head bending (Yeon et al. 2018).
+            dorsal = (
+                cell in self.dorsal_targets
+                if self.dorsal_targets is not None
+                else cell.startswith(("DB", "DA", "SMDD"))
+            )
             sign = 1.0 if dorsal else -1.0
             if self.asymmetric and dorsal:
                 gain = np.where(window > 0.0, DORSAL_STRETCH_GAIN, DORSAL_COMPRESS_GAIN)

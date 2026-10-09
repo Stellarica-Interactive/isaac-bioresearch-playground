@@ -72,10 +72,13 @@ parser.add_argument(
 parser.add_argument("--neural-dt-ms", type=float, default=1.0)
 parser.add_argument(
     "--torque-scale",
-    default="5e-4",
+    default=None,
     help="N m per unit antagonist activation difference. Comma-separate to sweep "
-    "several in one Isaac session. Purely an engineering calibration constant: "
-    "see docs/model_assumptions.md.",
+    "several in one Isaac session. Purely an engineering calibration constant. "
+    "Default 1.25e-3: at the old 3e-3 the crawling loop bends hard enough to pass "
+    "through itself (model_assumptions 5AN.22), and 1.25e-3 crawls 40%% faster "
+    "than 1e-3 with a wave closer to the real one (5AO.6); --legacy-defaults "
+    "gives 5e-4.",
 )
 parser.add_argument("--stiffness", type=float, default=1e-4)
 parser.add_argument("--damping", type=float, default=2e-5)
@@ -204,7 +207,7 @@ parser.add_argument(
 parser.add_argument(
     "--proprioceptive-mv",
     type=float,
-    default=20.0,
+    default=None,
     help="Depolarisation of a B-type motor neuron per radian of sensed "
     "curvature, mV. Still the parameter that decides whether the loop oscillates "
     "at all, and still assumed -- but now in a unit where the assumption can be "
@@ -430,13 +433,53 @@ parser.add_argument(
 )
 parser.add_argument(
     "--self-collision",
+    action=argparse.BooleanOptionalAction,
+    default=None,
+    help="Stop the body passing through itself when it folds. On by default since "
+    "model_assumptions 5AO.5: the first forward crawls found relied on the body "
+    "passing through itself. --no-self-collision, or --legacy-defaults, turns it "
+    "off, which is how every W2 number was measured.",
+)
+parser.add_argument(
+    "--muscle-gap-scale",
+    type=float,
+    default=None,
+    help="Factor on the gap junctions between body-wall muscle cells. Default: the "
+    "committed, measurement-derived value in worm/neural/parameters.toml "
+    "[body_wall_muscle]; 1 is the uniform coupling every result before "
+    "model_assumptions 5AO.5 used.",
+)
+parser.add_argument(
+    "--legacy-defaults",
     action="store_true",
-    help="Stop the body passing through itself when it folds. Off by default "
-    "because it adds contact forces beside the drag model that stands in for "
-    "the substrate, and every W2 number was measured without it.",
+    help="The committed model before model_assumptions 5AO.5: curvature-only "
+    "proprioception at 20 mV/rad, uniform muscle coupling, torque 5e-4, no "
+    "self-collision. Every result in model_assumptions before 5AO.5, and the "
+    "README sections that say so, were measured this way. Explicit flags still win.",
 )
 parser.add_argument("--report-every", type=float, default=2.0)
 args, _ = parser.parse_known_args()
+
+# Defaults that changed when the crawl became the committed model (model_assumptions
+# 5AO.5). Resolved here rather than in add_argument so that --legacy-defaults can
+# restore the old set while an explicitly passed flag still wins over both.
+_COMMITTED = {
+    "torque_scale": "1.25e-3",
+    "proprioceptive_mv": 400.0,
+    "proprio_rate": None,  # Proprioception's own default, DEFAULT_RATE_FRACTION
+    "self_collision": True,
+    "muscle_gap_scale": None,  # build_runtime's own default, from parameters.toml
+}
+_LEGACY = {
+    "torque_scale": "5e-4",
+    "proprioceptive_mv": 20.0,
+    "proprio_rate": 0.0,
+    "self_collision": False,
+    "muscle_gap_scale": 1.0,
+}
+for _name, _value in (_LEGACY if args.legacy_defaults else _COMMITTED).items():
+    if getattr(args, _name) is None:
+        setattr(args, _name, _value)
 
 from isaacsim import SimulationApp  # noqa: E402
 
@@ -535,6 +578,7 @@ def main() -> int:
         connectome=connectome,
         dt_ms=args.neural_dt_ms,
         parameter_overrides=_parameter_overrides(),
+        muscle_gap_scale=args.muscle_gap_scale,
     )
     if args.conduction_delay_ms:
         runtime.s_pre = ConductionDelay.build(runtime, delay_ms=args.conduction_delay_ms)

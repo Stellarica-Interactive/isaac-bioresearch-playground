@@ -6551,6 +6551,285 @@ The positive control crawls under both laws, so this is not expected to matter.
 the 240 Hz physics rate — which is the discrete integrator's alternating mode and
 not dynamics of the model.
 
+## 5AO. Behaviour on the crawling loop: touch, reversal, chemotaxis
+
+§5D and §5J measured the touch and chemosensory pathways on a body that could not
+crawl, so neither could say anything about behaviour. The loop now crawls
+(§5AN.22–5AN.24). Every experiment here is paired and standalone: runs of the
+runner's chain, identical in build, calibration and start, differing only in the
+stimulus, so every difference between them is the stimulus's. All on the
+measurement-grounded crawl — muscle coupling at the measured ratio, 70% rate /
+30% tonic proprioception at 400 mV/rad, torque 1e-3, self-contact on — unless
+stated.
+
+### 5AO.1 Gentle touch: a phase reset, not an escape
+
+`tools/touch_response.py`, a 2-second touch at 30 s, 20 mV receptor potential
+(the runner's calibration), touched minus untouched:
+
+| touch | command interneurons during the touch | axial speed after |
+|---|---|---|
+| head, 0.15, lateral (ALM) | AVA, AVD, AVB, PVC all **+0.6 to +1.1 mV** | unchanged, +0.06 BL/s ± 0.02 |
+| head, 0.15, ventral (ALM + AVM) | all **+1.0 to +2.0 mV** | unchanged |
+| tail, 0.85 (PLM) | all **+1.1 to +2.0 mV** | unchanged |
+
+Predicted before the runs: no escape, because §5D.2b found touch reaching the
+muscles at half a percent. **That holds, and the directional signature of §5D does
+not survive the crawl.** The backward and forward commands rise *together*, by
+nearly the same amount for a head touch and a tail touch — a common-mode push
+through the gap junctions, not the measured anterior-reverses, posterior-
+accelerates logic. After the touch the paired runs drift apart by tens of
+millivolts in alternating sign, which is not a response either: the touch has
+shifted the gait's phase, and two phase-shifted oscillations differ by their own
+amplitude. Speed never changes sign.
+
+The reason is §5D.2's: under the exclude-unknown-sign policy, PLM keeps no signed
+chemical synapse at all and ALM keeps 44 of 59 units of weight, so what reaches
+the command interneurons arrives mostly through gap junctions, which carry no
+direction.
+
+### 5AO.2 Reversal: the body can crawl backward, nothing makes it choose to
+
+Driving the backward command interneurons instead of AVB (`--command`):
+
+| command, 20 mV | phase step | axial speed |
+|---|---|---|
+| AVB, the forward command | −16.4° | +0.061 BL/s |
+| AVA | −19.0°, still forward | +0.019 |
+| AVA and AVD | −12.6°, forward | +0.003, nearly stopped |
+
+A backward command only damps the forward gait. The model has one
+rhythm-generating loop, B-type proprioception, and it senses the body ahead and so
+hands bends tailward. In the animal, backward waves come from the A-type motor
+neurons: Gao et al. 2018 show they oscillate intrinsically (an UNC-2 calcium
+current; about a 50-second cycle when isolated) and drive backward locomotion, and
+*propose* that proprioception phase-couples them — "proprioception may … serve as
+feedbacks to regulate A-MN oscillation" — without measuring it.
+
+So, as an explicitly assumed probe (`a_type_proprio` in `tools/analyse_loop.py`,
+`--a-type-proprio` in `tools/loop_attractor.py`, off by default): VA and DA sense
+the body two segments *behind* them, the mirror of B-type, with the same law and
+target depolarisation. (Enabling it found a latent bug: the proprioceptive sign
+was chosen by the prefix `"DB"`, which would have read DA as ventral. Now
+`("DB", "DA")`.)
+
+| proprioception | command | result |
+|---|---|---|
+| A and B, 70% rate | AVA or AVB | **latched**: static ventral bend, no oscillation |
+| A and B, 100% rate | **AVA or AVB alike** | **backward crawl**, −0.12 BL/s, 98% along the axis, +15.4° per joint |
+| A only, 100% / 70% rate | AVA | backward, −0.099 / −0.053 BL/s, circling at 23–33°/s |
+
+The body *can* crawl backward, robustly, when the A-type circuit has a
+proprioceptive loop. But the direction is then set by **which proprioceptive
+population is present, not by the command**: AVA and AVB give the same backward
+crawl. In the animal the command interneurons gate which motor class is active —
+AVA through gap junctions to the A-type cells, AVB to the B-type — and a 20 mV
+command in this model does not gate anything; every motor neuron receives its
+proprioceptive current regardless of state.
+
+A touch-evoked reversal therefore needs two things this model does not have: a
+touch pathway that can flip the AVA/AVB state, which the sign-incomplete circuit of
+§5AO.1 cannot; and command-dependent gating of which motor circuit's loop runs.
+
+### 5AO.3 Chemotaxis: no steering
+
+The pirouette strategy needs reversals (§5AO.2). The weathervane strategy —
+curving toward the side where each head swing meets more odour — needs only
+forward crawling, so `tools/chemotaxis_response.py` tests it: crawl for 20 s, then
+place food three body lengths away, 45° to the left in one run, to the right in
+another, nowhere in a third.
+
+| pathway, full-scale response | heading, left run minus right run, after 60 s |
+|---|---|
+| AWC, 20 mV (the runner's calibration) | −0.02° |
+| AWC, 200 mV | −0.58° |
+| AWA + AWC, 200 mV | +0.18° |
+| ASE, 200 mV | +0.27° |
+
+Predicted before the runs: no steering. None, at any gain, with no consistent sign.
+At 200 mV the two food runs differ from the no-food run by up to about 2° — in the
+*same* direction, so the loop registers that food is ahead and cannot tell which
+side. The largest concentration change the sensors see in a head swing is 1.2% of
+full scale, about a quarter of a millivolt at the calibrated gain.
+
+### 5AO.4 What this says
+
+The crawl is a motor result. None of the three behaviours the sensory circuits
+are for — escape, reversal, chemotaxis — appears on it, and for one shared reason:
+**the sensory signals reach the command layer as a weak, undirected push**, and
+the command layer does not gate the motor circuit. The touch result is the
+clearest case, because the directional anatomy is measured and the direction is
+lost on the way, through synapses this model excludes for want of a sign
+(§5D.2, §6.1). The unknown-sign policy, decided at W1 for sound reasons, is now
+the most direct obstacle between the crawl and behaviour.
+
+### 5AO.5 Decision: the crawl is the committed model
+
+Taken on 2026-10-09, at the user's direction. The committed defaults are now the
+measurement-grounded crawl of §5AN.23–5AN.24, not the faster one of §5AN.22,
+because the faster one also needs every neuron gap junction twenty times weaker
+and nothing measured supports that.
+
+| | before | committed now | where | basis |
+|---|---|---|---|---|
+| gap junctions between body-wall muscle cells | ×1 | **×0.0035** | `parameters.toml` `[body_wall_muscle]`, applied by `build_runtime` | measured ratio (Liu et al. 2006) |
+| proprioception, rate share | 0.0 | **0.7** | `DEFAULT_RATE_FRACTION`, `worm/body/neural_bridge.py` | the 30% tonic part measured (Wen et al. 2012); the rate part assumed |
+| proprioceptive strength | 20 mV/rad | **400 mV/rad** | runner `--proprioceptive-mv` | assumed |
+| muscle torque | 5e-4 (3e-3 in every documented run) | **1e-3**, then **1.25e-3** in §5AO.6 | runner `--torque-scale` | engineering, as before |
+| self-collision | off | **on** | runner `--self-collision` | the body cannot pass through itself |
+
+**Nothing earlier is lost.** `--legacy-defaults` restores the old set exactly; an
+explicitly passed flag still wins over either set. Checked both ways:
+
+* `run_connectome.py --seconds 120 --physics-hz 240 --quasistatic`, no other
+  flags, is **bit-for-bit** the hand-flagged run of §5AN.24 — the same calibration
+  (884.1 pA/rad, a 7.4 pA command) and the same trajectory, 25.07, 116.17 and
+  211.97 mm from the start at 15, 30 and 45 s. It crawls 6.7 body lengths in
+  120 s, straight, at a 3.1 s period.
+* The standalone loop at the old settings (`tools/loop_attractor.py
+  --muscle-gap-scale 1`) reproduces §5AN.17's corrected legacy attractor to the
+  last printed digit: period 25.00 s, step +4.5°, −0.0118 BL/s.
+
+**What follows for reading this document.** Every result before this section was
+measured on the old defaults. The analysis tools build their own loops with
+explicit settings, but `build_runtime` now applies the muscle coupling to any
+network containing body-wall muscle, so reproducing a §5AN number needs
+`muscle_gap_scale=1.0` (`--muscle-gap-scale 1` in `loop_attractor.py` and the
+runner). README commands that describe old results now carry
+`--legacy-defaults`.
+
+**Three tests changed, deliberately.** The one requiring the default rate share
+to be 0.0 now requires 0.7, and says why. Two tests of the curvature law's sign
+and asymmetry had relied on 0.0 being the default; they now pin `rate_fraction=0.0`,
+since they test that law, not the default blend. The rest of the suite passes
+unchanged under the new defaults.
+
+### 5AO.6 Refining the gait: torque committed, neuron coupling left open
+
+The committed crawl of §5AO.5 is slow (0.06 BL/s against the real 0.1–0.3), its
+rhythm is slow (3.0 s against about 2 s) and its wave is long (−16.4° per joint
+against the scripted −23.1°). Everything left to adjust is an assumption, so this
+is a search over assumptions and is reported as one: torque (1e-3 to 1.5e-3),
+proprioceptive gain (400, 600 mV/rad), rate share (0.7, 0.8), and the neurons' own
+gap junctions (committed, or half), standalone, self-contact on, committed muscle
+coupling. The best of 24:
+
+| | torque | gain | rate | neuron gaps | period | step | speed | share | turning |
+|---|---|---|---|---|---|---|---|---|---|
+| committed in §5AO.5 | 1e-3 | 400 | 0.7 | ×1 | 3.00 s | −16.4° | +0.061 BL/s | 0.91 | −0.1°/s |
+| **A** | **1.25e-3** | 400 | 0.7 | ×1 | 3.16 s | **−20.1°** | **+0.087** | 0.92 | −0.8°/s |
+| **B** | 1e-3 | 400 | 0.7 | **×0.5** | **2.61 s** | **−20.8°** | **+0.110** | **0.99** | −0.7°/s |
+| B at torque 1.25e-3 | 1.25e-3 | 400 | 0.7 | ×0.5 | 2.73 s | −22.6° | +0.098 | 0.86 | +0.5°/s |
+| real *C. elegans* | | | | | about 2 s | about −23° | 0.1–0.3 | | |
+
+At torque 1.5e-3 the body comes within 1 mm of itself and speed falls as more of
+the motion goes sideways (share 0.33–0.69); at gain 600 the rhythm slows. Both A
+and B hold for 180 s and from starts perturbed by 2° and 5°, to the third
+printed digit; B with proprioception cut does not move.
+
+**A is committed.** It changes only the torque, an engineering constant that was
+never biology (§5C.3), and in Isaac (`--torque-scale 1.25e-3`, everything else
+default, predicted beforehand): **8.55 body lengths in 120 s**, period **3.2 s**,
+`travel` **+0.55**, clearance +1.84 mm, no joint pinned, B-type neighbours at
+adjacent correlation +0.35. Its path curves gently — the heading turned −86° over
+two minutes, against −0.8° per second predicted — where the 1e-3 crawl went
+straight; the trade is 40% more speed and a wave 4° closer to the real one.
+The runner's default torque is now **1.25e-3**.
+
+**B is not committed, and is the stronger result.** It crawls at a real animal's
+speed, with a near-real wave and rhythm, along a gently curving path. The change it needs
+is the neurons' gap-junction conductance, `g_gap_ps`, from 100 to 50 pS for
+neuron-to-neuron junctions — and that number is itself ASSUMED in
+`parameters.toml` (Kunert et al. 2014), so B trades one assumption for another
+rather than overriding a measurement. It is left as a decision because that
+conductance shapes every neural result in this project, not only the gait: the
+resting structure of §5N, the touch and chemosensory pathways of §5AO, the mode
+structure of §5AM–5AN. `--gap-scale neuron=0.5` runs it.
+
+**Isaac at B** (`--torque-scale 1e-3 --gap-scale neuron=0.5`, predicted beforehand: period 2.61 s, about 0.11 BL/s, turning −0.7° per second):
+
+| | standalone prediction | Isaac |
+|---|---|---|
+| distance | 0.110 BL/s along the body | **11.27 body lengths in 120 s** |
+| period | 2.61 s | **2.6 s** |
+| wave | forward, −20.9° per joint | **`travel` +0.64**, the strongest forward wave in this project |
+| heading | −0.7° per second | **−82° over the run** — a gentle curve |
+| self-clearance | +1.36 mm | **+1.64 mm** |
+| B-type neighbours | — | adjacent correlation −0.11, 56% shared |
+
+The 2.6 s period also confirms the run used torque 1e-3: B at 1.25e-3 predicts 2.73 s. (It was launched seconds before the committed torque changed; Python had already read the runner.)
+
+**What this changes for reading earlier sections.** §5AO.1–5AO.4 and the
+"bit-for-bit" check of §5AO.5 were measured at the then-committed torque of
+1e-3; `tools/touch_response.py` and `tools/chemotaxis_response.py` keep 1e-3 as
+their default so those numbers still reproduce. The runner's plain command now
+runs torque 1.25e-3.
+
+### 5AO.7 The head does not take part
+
+**Observed by eye** in the rendered crawl, and against video of real animals: the
+posterior half undulates, the anterior half stays nearly straight. A crawling
+*C. elegans* bends along its whole length, and the wave starts at the head.
+`tools/loop_attractor.py` now prints the bend amplitude joint by joint (the
+standard deviation of each joint angle over the attractor), head first:
+
+| joints | committed crawl (A) | B |
+|---|---|---|
+| 0–5, the head | **0.7–2.7°** | **0.5–1.7°** |
+| 6–11 | 3.4–5.4° | 2.8–10.6° |
+| 12–19 | 10–21° | 12–22° |
+
+The observation is right: the wave lives in the posterior 60% of the body and the
+head is carried, not driven.
+
+**Why.** Only the B-type motor neurons are proprioceptive, and they sit from
+segment 6 back; joints 0–3 are sensed by nobody (§5AN.15). The head muscles,
+segments 1–8, are driven by other cells entirely — RMD, SMB, SMD, URA, SAB,
+IL1, RIV and the inhibitory RME (the connectome's own neuromuscular synapses).
+None receives sensory feedback in the model, and the graded neurons cannot
+oscillate on their own (§5C.9), so the head has no rhythm source.
+
+**SMD, which is measured.** Yeon et al. 2018 show the SMD neurons are
+proprioceptive: SMDD's calcium rises with dorsal head bending and SMDV's with
+ventral, at zero lag; forced bends excite each even in paralysed animals; SMDD and
+SMDV innervate the dorsal and ventral head muscles — which the Cook connectome
+agrees with (SMDD: 80 and 76 synapses dorsal against 14 and 11 ventral; SMDV: 193
+and 202 ventral against 6 and 0). So `head_proprio` in `tools/analyse_loop.py`
+(`--head-proprio` in `tools/loop_attractor.py`) makes SMD a proprioceptive
+population with the B-type law. In the process each population's dorsal or ventral
+side is now taken from its cells' own neuromuscular synapses rather than their
+names; for every existing target the two agree, and the committed crawl
+reproduces to the last printed digit.
+
+| SMD proprioception | crawl | head joints 0–5 |
+|---|---|---|
+| B-type law and rule (senses the neck) | slows, or latches into a ventral bend | 0.7–3.2° |
+| rate-sensing, senses the head tip | **+0.104 BL/s**, −21.2° per joint | 0.6–2.7° |
+| rate-sensing, wider head field | +0.093, −22.7° | 0.3–2.9° |
+| gains 50–200 mV/rad | unchanged | 0.6–3.0° |
+
+Some variants even improve the body's crawl. **None moves the head.** SMD act on
+the neck — its synapses centre on segments 7–8 — and the head tip, muscles 1–4,
+is driven mainly by RMD.
+
+**RMD, which is not measured** — a diagnostic only, to locate the problem rather
+than to fix it:
+
+| head-tip feedback (rate-sensing) | crawl | head joints 0–5 |
+|---|---|---|
+| RMD and SMD, sensing the tip | +0.053 BL/s, no dominant period, no consistent wave, turning 3.9°/s | **8–11°** |
+| RMD alone | +0.015 | 4.9–7.2° |
+| RMD and SMD, sensing the neck | latched, coiled | 0.1–2.6° |
+
+The head *can* move once the cells that drive its tip get feedback — and then
+head and body do not coordinate into one wave. In the animal that coordination
+belongs to a head circuit of its own: RMD, SMD and the interneuron RIA, whose
+compartments encode head movement (Hendricks et al. 2012), with RMD's measured plateau potentials (§5F)
+as one candidate for a head oscillator, and Yeon et al.'s model, in which a
+rhythm from VB1 entrains SMDV and through it SMDD, as another. **The head needs
+an oscillator, and building one is a project of its own**; it is the most visible
+defect of the crawl and the next thing on the roadmap.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

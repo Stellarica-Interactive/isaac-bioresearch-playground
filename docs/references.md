@@ -288,7 +288,16 @@ sensory-motor neuron type mediates proprioceptive coordination of steering in
 *C. elegans* via two TRPC channels.** *PLOS Biology* 16:e2004929 (2018).
 doi:[10.1371/journal.pbio.2004929](https://doi.org/10.1371/journal.pbio.2004929)
 SMDD senses head-muscle stretch through TRP-1 and TRP-2. Cited in §5AN.24 in the
-same capacity as Li et al. 2006.
+same capacity as Li et al. 2006, and in §5AO.7 as the basis for making SMD a
+proprioceptive population: SMDD's calcium follows dorsal head bending and SMDV's
+ventral, and forced bends excite each.
+
+**Hendricks M, Ha H, Maffey N, Zhang Y. Compartmentalized calcium dynamics in a
+*C. elegans* interneuron encode head movement.** *Nature* 487:99–103 (2012).
+doi:[10.1038/nature11081](https://doi.org/10.1038/nature11081)
+RIA's compartmentalised calcium encodes head movement. Cited in §5AO.7 only as
+part of the head circuit a head oscillator would have to involve; nothing in the
+model uses it yet.
 
 **Fouad AD, Teng S, Mark JR, Liu A, Alvarez-Illera P, Ji H, Du A, Bhirgoo PD,
 Cornblath E, Guan SA, Fang-Yen C. Distributed rhythm generators underlie

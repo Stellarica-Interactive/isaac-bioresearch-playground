@@ -126,6 +126,30 @@ forward at 0.05 BL/s; weakening all gap junctions (`g_gap_ps` 5) gives 0.15.
    fragile attractor. Whether B-type neurons have a phasic component at all is
    the measurement that would settle the last assumption.
 
+**Since §5AO.5 the crawl is the committed model**: the plain
+`run_connectome.py --quasistatic` command crawls forward, and `--legacy-defaults`
+restores the old one for reproducing earlier results.
+
+**The head does not take part (§5AO.7)** — the most visible defect, noticed by
+eye: joints 0–5 bend 0.5–3° while the posterior body bends 10–22°. Only B-type
+neurons are proprioceptive and none drives the head. Measured SMD
+proprioception (Yeon et al. 2018) improves the body's crawl but drives the neck,
+not the tip; giving the tip's RMD neurons feedback (unmeasured, a diagnostic)
+moves the head 8–11° but breaks the coordination. **Next: a head oscillator** —
+the RMD/SMD/RIA circuit, RMD's measured plateau potentials, Yeon et al.'s
+VB1-to-SMDV entrainment.
+
+**Gait refinement (§5AO.6):** torque committed at 1.25e-3 (8.55 BL in 120 s in
+Isaac); halving the neuron gap junctions crawls at 0.11 BL/s with a near-real
+wave (11.3 BL in Isaac) but is left as a decision.
+
+**Behaviour on the crawl (§5AO.1–5AO.4):** gentle touch only resets the gait's
+phase — the touch receptors' direction is lost through synapses excluded for want
+of a sign; a backward command damps the forward gait rather than reversing it;
+an assumed A-type proprioceptive loop crawls backward but ignores the command;
+no chemotactic steering at any gain. The unknown-sign policy is now the most
+direct obstacle between the crawl and behaviour.
+
 ### 1.0b The steady response is rank-one (§5AM)
 
 `tools/analyse_modes.py` computes the linear transfer function of the whole

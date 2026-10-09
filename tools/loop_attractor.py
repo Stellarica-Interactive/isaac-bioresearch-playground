@@ -93,6 +93,10 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
         "turn": turn,
         "bias": float(np.degrees(a.mean())),
         "clear": 1000.0 * clear,
+        # Bend amplitude joint by joint, head first: where along the body the
+        # wave actually lives. A real crawl bends the whole length and starts at
+        # the head.
+        "profile": np.degrees(centred.std(axis=0)),
     }
 
 
@@ -123,6 +127,34 @@ def main() -> int:
     )
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument(
+        "--muscle-gap-scale",
+        type=float,
+        default=None,
+        help="body-wall muscle coupling; default committed, 1 as before 5AO.5",
+    )
+    parser.add_argument(
+        "--head-proprio",
+        action="store_true",
+        help="SMD neurons proprioceptive, as Yeon et al. 2018 measured (5AO.7)",
+    )
+    parser.add_argument("--head-offset", type=float, default=None, help="segments anterior")
+    parser.add_argument(
+        "--head-classes",
+        default="SMD",
+        help="head proprioceptive classes; SMD is measured (Yeon et al. 2018), others are not",
+    )
+    parser.add_argument("--head-mv", type=float, default=None)
+    parser.add_argument("--head-rate", type=float, default=None)
+    parser.add_argument("--head-receptive", type=float, default=None, help="fraction of body")
+    parser.add_argument(
+        "--a-type-proprio",
+        action="store_true",
+        help="ASSUMED probe: VA/DA sense the body behind them, mirroring B-type",
+    )
+    parser.add_argument(
+        "--command", default="AVBL,AVBR", help="command interneurons driven, as the runner's"
+    )
+    parser.add_argument(
         "--torque-scale",
         type=float,
         default=3.0e-3,
@@ -150,6 +182,15 @@ def main() -> int:
             param=args.param,
             gap_scale=args.gap_scale,
             self_contact=args.self_contact,
+            command_cells=args.command,
+            a_type_proprio=args.a_type_proprio,
+            head_proprio=args.head_proprio,
+            head_offset=args.head_offset,
+            head_classes=tuple(c.strip() for c in args.head_classes.split(",") if c.strip()),
+            head_mv=args.head_mv,
+            head_rate=args.head_rate,
+            head_receptive=args.head_receptive,
+            muscle_gap_scale=args.muscle_gap_scale,
         )
     )
     excluded = [c.strip() for c in args.proprio_exclude.split(",") if c.strip()]
@@ -167,11 +208,22 @@ def main() -> int:
         f"{', ' + ', '.join(args.param) if args.param else ''}"
         f"{', gap ' + ', '.join(args.gap_scale) if args.gap_scale else ''}"
         f"{', self-contact' if args.self_contact else ''}"
+        f"{f', command {args.command}' if args.command != 'AVBL,AVBR' else ''}"
+        f"{', A-type proprio' if args.a_type_proprio else ''}"
+        f"{f', head proprio {args.head_classes}' if args.head_proprio else ''}"
+        f"{f' (offset {args.head_offset:g})' if args.head_offset else ''}"
+        f"{f' ({args.head_mv:g} mV)' if args.head_mv else ''}"
+        f"{f' (rate {args.head_rate:g})' if args.head_rate is not None else ''}"
+        f"{f' (field {args.head_receptive:g})' if args.head_receptive else ''}"
         f"{f', torque {args.torque_scale:g}' if args.torque_scale != 3.0e-3 else ''}"
         f"{f', start {args.perturb_deg:g} deg seed {args.seed}' if args.perturb_deg else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
         f"axial {r['axial']:+.4f} BL/s, share {r['share']:+.2f}, amp {r['amp']:5.1f} deg, "
         f"turn {r['turn']:+6.1f} deg/s, bias {r['bias']:+5.2f} deg, clear {r['clear']:+.2f} mm"
+    )
+    print(
+        "    bend amplitude by joint, head to tail, deg: "
+        + " ".join(f"{v:.1f}" for v in r["profile"])
     )
     return 0
 

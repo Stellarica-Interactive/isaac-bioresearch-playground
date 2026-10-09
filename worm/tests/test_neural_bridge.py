@@ -153,6 +153,7 @@ def test_feedback_sign_is_opposite_for_dorsal_and_ventral() -> None:
         sensed_segment=np.array([5, 5]),
         gain_pa_per_rad=100.0,
         asymmetric=False,
+        rate_fraction=0.0,  # the curvature law's sign, not the default blend's
     )
     angles = np.zeros(BodyPlan().n_joints)
     angles[5] = 0.2
@@ -173,6 +174,7 @@ def test_dorsal_receptors_respond_asymmetrically() -> None:
         sensed_segment=np.array([5, 5]),
         gain_pa_per_rad=100.0,
         asymmetric=True,
+        rate_fraction=0.0,  # the curvature law's asymmetry, not the default blend's
     )
     plan = BodyPlan()
     bent, folded = np.zeros(plan.n_joints), np.zeros(plan.n_joints)
@@ -308,9 +310,15 @@ def _probe(rate_fraction: float) -> Proprioception:
     )
 
 
-def test_the_default_law_is_pure_curvature() -> None:
-    """Every result in model_assumptions assumed it, so it has to stay."""
-    assert Proprioception(("DB1",), np.array([0]), 1.0).rate_fraction == 0.0
+def test_the_default_law_is_mostly_rate_with_a_measured_tonic_part() -> None:
+    """The committed law since model_assumptions 5AO.5, and deliberately pinned.
+
+    This test used to require 0.0, the pure curvature law, because every result
+    up to then assumed it. Changing it was a decision, recorded in 5AO.5: 70% rate
+    so the loop can crawl, 30% curvature because Wen et al. 2012 measured a tonic
+    response. A future change should be as deliberate, so it fails here first.
+    """
+    assert Proprioception(("DB1",), np.array([0]), 1.0).rate_fraction == 0.7
 
 
 def test_a_held_bend_drives_the_tonic_law_and_not_the_phasic_one() -> None:
@@ -365,3 +373,43 @@ def test_without_history_only_the_tonic_share_is_reported() -> None:
     assert _probe(0.5).currents(bend)["DB1"] == pytest.approx(0.5 * tonic)
     # And nothing raises for the missing arguments.
     assert _probe(0.5).currents(bend, elapsed_ms=RATE_LAG_MS)["DB1"] == pytest.approx(0.5 * tonic)
+
+
+def test_a_type_cells_take_the_side_they_drive() -> None:
+    """DA drives dorsal muscle as DB does, VA ventral as VB does.
+
+    The sign used to be chosen by the prefix "DB" alone, which was right while
+    B-type cells were the only targets and would have read every DA cell as
+    ventral -- excited by the wrong bend -- the moment A-type cells were added
+    (model_assumptions 5AO.2).
+    """
+    proprio = Proprioception(
+        targets=("DA1", "VA1", "DB1", "VB1"),
+        sensed_segment=np.array([5, 5, 5, 5]),
+        gain_pa_per_rad=1.0,
+    )
+    angles = np.zeros(23)
+    angles[5] = 0.1  # dorsal
+    out = proprio.currents(angles)
+    assert out["DA1"] > 0.0 and out["DB1"] > 0.0
+    assert out["VA1"] < 0.0 and out["VB1"] < 0.0
+    assert out["DA1"] == out["DB1"] and out["VA1"] == out["VB1"]
+
+
+def test_build_takes_each_cells_side_from_its_own_synapses() -> None:
+    """Measured anatomy, not names, decides which bend excites a cell.
+
+    The name rule was right for B-type cells and would have been silently wrong
+    for any head neuron whose name does not start with DB; model_assumptions
+    5AO.7. RMDL and RMDR drive both sides about equally, so they have no "own
+    side" and are left out rather than assigned one.
+    """
+    connectome, _ = load("cook_2019_herm")
+    plan = BodyPlan()
+    b_type = Proprioception.build(connectome, plan)
+    assert b_type.dorsal_targets == frozenset(c for c in b_type.targets if c.startswith("DB"))
+
+    head = Proprioception.build(connectome, plan, classes=("SMD", "RMD"))
+    assert {"SMDDL", "SMDDR", "RMDDL", "RMDDR"} <= head.dorsal_targets
+    assert {"SMDVL", "SMDVR", "RMDVL", "RMDVR"} <= set(head.targets) - head.dorsal_targets
+    assert "RMDL" not in head.targets and "RMDR" not in head.targets
