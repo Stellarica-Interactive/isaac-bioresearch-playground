@@ -130,6 +130,15 @@ parser.add_argument(
     help="segments anterior of itself each head cell senses; 0.5 reaches the tip",
 )
 parser.add_argument(
+    "--head-ventral-scale",
+    type=float,
+    default=1.0,
+    help="gain of the ventral head cells' feedback relative to the dorsal. A "
+    "diagnostic, 1 by default: around 0.7 it can switch the head-locked crawl into a "
+    "faster one, but no value straightens the crawl found from rest. See "
+    "model_assumptions 5AO.9.",
+)
+parser.add_argument(
     "--muscle-tau-ms",
     type=float,
     default=None,
@@ -677,11 +686,14 @@ def main() -> int:
         )
         head_cells = [c for c in head.targets if c in runtime.network.cell_ids]
         head_proprio = replace(
-            head, gain_pa_per_rad=scale_for_depolarisation(runtime, head_cells, args.head_mv)
+            head,
+            gain_pa_per_rad=scale_for_depolarisation(runtime, head_cells, args.head_mv),
+            ventral_scale=args.head_ventral_scale,
         )
         print(
             f"\nPROBE: head proprioception on {', '.join(head.targets)}, "
-            f"{args.head_mv:g} mV/rad, rate share {args.head_rate:g}. SMD is measured "
+            f"{args.head_mv:g} mV/rad, rate share {args.head_rate:g}, ventral gain "
+            f"x{args.head_ventral_scale:g}. SMD is measured "
             "(Yeon et al. 2018); RMD is not."
         )
     # Every input is a target depolarisation, converted to a current against this

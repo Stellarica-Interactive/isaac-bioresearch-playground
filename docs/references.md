@@ -299,6 +299,25 @@ RIA's compartmentalised calcium encodes head movement. Cited in §5AO.7 only as
 part of the head circuit a head oscillator would have to involve; nothing in the
 model uses it yet.
 
+**Gray JM, Hill JJ, Bargmann CI. A circuit for navigation in *Caenorhabditis
+elegans*.** *PNAS* 102:3184–3191 (2005).
+doi:[10.1073/pnas.0409009101](https://doi.org/10.1073/pnas.0409009101)
+Cell ablations: "SMB motor neurons set the amplitude of sinusoidal movement", and
+RIV motor neurons specify the ventral bias of turns that follow a reversal. Cited
+in §5AO.8–5AO.9 for SMB's part in setting that amplitude.
+
+**Shen Y, Wen Q, Liu H, Zhong C, Qin Y, Harris G, Kawano T, Wu M, Xu T, Samuel ADT,
+Zhang Y. An extrasynaptic GABAergic signal modulates a pattern of forward movement
+in *Caenorhabditis elegans*.** *eLife* 5:e14197 (2016).
+doi:[10.7554/eLife.14197](https://doi.org/10.7554/eLife.14197)
+The GABAergic RMED and RMEV limit head bending amplitude: ablating them enlarges
+it, activating RME shrinks it. SMD drives RME, and RME inhibits SMD, both
+**extrasynaptically** -- through the muscarinic receptor GAR-2 on RME and the
+GABA-B receptor GBB-1/GBB-2 on SMD -- so neither link is a synapse in the
+connectome. Also: SMDD and RMED are active during dorsal head bends, SMDV and
+RMEV during ventral; RMED innervates ventral head muscle and RMEV dorsal. Cited in
+§5AO.8–5AO.9; the model has neither link.
+
 **Fouad AD, Teng S, Mark JR, Liu A, Alvarez-Illera P, Ji H, Du A, Bhirgoo PD,
 Cornblath E, Guan SA, Fang-Yen C. Distributed rhythm generators underlie
 *Caenorhabditis elegans* forward locomotion.** *eLife* 7:e29913 (2018).

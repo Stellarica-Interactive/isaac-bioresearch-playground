@@ -144,8 +144,17 @@ and body share a 2.5 s rhythm, the wave starts at the head, and it crawls at
 0.11–0.12 BL/s — confirmed in Isaac. Still wrong: it circles at about 5°/s,
 because the head motor neurons drive the ventral side twice as hard as the dorsal;
 the head swings about half as far as the body bends; and RMD's feedback is
-unmeasured. **Next:** what balances the head's ventral bias (RME, SMB); whether
-RMD's measured plateau potentials (§5F) can stand in for its unmeasured feedback.
+unmeasured.
+
+**No balance setting straightens it (§5AO.9).** A gain on the feedback to the
+ventral head cells shows two crawls that coexist. A slow one circles at +5–6°/s
+whatever the gain. A fast one, at 0.16 BL/s, runs nearly straight at a gain of
+about 0.74, and the loop does not reach it from rest. In Isaac, gain 0.7 lands in
+the fast crawl as predicted: 0.185 BL/s against the slow crawl's 0.12, curving at
+−3.4°/s. **Next:** the head's measured gain control, in which SMD drives RME and
+RME inhibits SMD, both extrasynaptically and so absent from any connectome (Shen
+et al. 2016); and whether RMD's measured plateau potentials (§5F) can stand in
+for its unmeasured feedback.
 
 **Gait refinement (§5AO.6):** torque committed at 1.25e-3 (8.55 BL in 120 s in
 Isaac); halving the neuron gap junctions crawls at 0.11 BL/s with a near-real

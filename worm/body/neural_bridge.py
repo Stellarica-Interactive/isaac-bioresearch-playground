@@ -259,6 +259,17 @@ class Proprioception:
     0 is the pure curvature law, which cannot help latching; 1 is purely phasic
     and cannot report a held posture at all. See :data:`DEFAULT_RATE_FRACTION`."""
 
+    ventral_scale: float = 1.0
+    """Multiplier on the gain of the cells that drive ventral muscle. 1.0 is
+    symmetric, and every population is built at 1.0.
+
+    A diagnostic for the head's dorsal-ventral balance, which steers the
+    head-locked crawl: the ventral head motor neurons make about twice the
+    neuromuscular synapses of the dorsal ones, and that crawl circles ventrally.
+    It is not fitted. Lowering it does not straighten the crawl the loop settles
+    into from rest; it moves the loop between two crawls that coexist, one of
+    which runs nearly straight at about 0.74 (model_assumptions 5AO.9)."""
+
     dorsal_targets: frozenset[str] | None = None
     """Targets that drive dorsal muscle, so are excited by dorsal bending.
 
@@ -404,5 +415,6 @@ class Proprioception:
                 gain = np.where(window > 0.0, DORSAL_STRETCH_GAIN, DORSAL_COMPRESS_GAIN)
             else:
                 gain = np.full_like(window, VENTRAL_GAIN)
-            out[cell] = float(self.gain_pa_per_rad * sign * np.mean(gain * window))
+            side = 1.0 if dorsal else self.ventral_scale
+            out[cell] = float(self.gain_pa_per_rad * side * sign * np.mean(gain * window))
         return out

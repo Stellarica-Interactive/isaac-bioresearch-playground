@@ -6883,9 +6883,11 @@ the open decision of §5AO.6.
 **What is still wrong.** It circles at about 5° per second. The head motor
 neurons drive the ventral side about twice as hard as the dorsal — SMDV and RMDV
 make roughly twice the neuromuscular synapses of SMDD and RMDD in Cook 2019 — so
-every head swing is lopsided. Something in the animal evidently balances that;
-RME and SMB, which limit head swing amplitude, are candidates the model has but
-does not engage. The head tip swings 8–9° against the body's 15–20°, where a real
+every head swing is lopsided. Something in the animal evidently balances that.
+RME, which limits head bending amplitude (Shen et al. 2016), and SMB, which sets
+the amplitude of sinusoidal movement (Gray et al. 2005), are candidates. The
+model has both cells, but RME acts on SMD through an extrasynaptic loop that no
+connectome records (§5AO.9). The head tip swings 8–9° against the body's 15–20°, where a real
 head swings at least as far as the body bends.
 
 SMB is the obvious counterweight — its neuromuscular synapses run the other way,
@@ -6895,6 +6897,106 @@ as a third head population (unmeasured, like RMD). With SMD + RMD + SMB at
 locked (2.40 s, +0.112 BL/s), **but the circling is unchanged** (+5.5°/s, mean
 bend −1.6°, ventral). SMD + SMB without RMD does not lock. The circling is not
 fixed by anything here.
+
+### 5AO.9 The head's balance: two crawls, and the straight one is not reached
+
+§5AO.8's head-locked crawl circles ventrally at about 5° per second. The head
+motor neurons' neuromuscular synapses are lopsided in Cook 2019 — SMDV 193 and
+202 onto ventral head muscle against SMDD's 80 and 76 onto dorsal, RMDV 83 and 84
+against RMDD's 47 and 51 — and a one-off diagnostic (not kept in the
+repository) that scaled SMDV's and RMDV's neuromuscular conductance down to the
+dorsal cells' reversed the circling (−11.9°/s). Nothing measured sets the balance, so `Proprioception` gained
+`ventral_scale`, a gain on the feedback to the cells that drive ventral muscle
+(`--head-ventral-scale`; 1, symmetric, is the default), to look for the value at
+which the crawl runs straight. Configuration as in §5AO.8 (variant B's body, RMD +
+SMD feedback at the head tip, 200 mV/rad, rate-sensing); `tools/loop_attractor.py`
+from rest, 80 s, unless stated. It now also prints the turning rate over
+consecutive 20 s windows, which tells a crawl that holds its turning from one
+that switches between crawls.
+
+**There are two crawls, and they coexist.**
+
+| | slow crawl | fast crawl |
+|---|---|---|
+| speed | 0.09–0.12 BL/s | 0.15–0.16 BL/s |
+| head tip swing | 6.6–8.9° | 8.9–12.2° |
+| turning | +4.5 to +6.3°/s, ventral, at every ventral gain from 0.7 to 1 | +1.6 to +3.2°/s at gains 0.78–0.8, falling to −9.8°/s at 0.5 |
+| found at ventral gain | 0.7 to 1 | 0.5 to 0.8 |
+
+Which one the loop settles into depends on where it starts. At gain 0.7 it finds
+the fast crawl from rest and the slow one from a start perturbed by 2°. Between
+0.72 and 0.77, fourteen starts — from rest and perturbed — all find the slow one.
+Each crawl holds its turning: over 240 s the slow crawl at 0.76 turns +5.3 to
++6.9°/s in every 20 s window, the fast crawl at 0.7 −3.0 to −3.9°/s. Run in the
+fast crawl at 0.7 for 40 s and then switched to another gain:
+
+| gain after the switch | crawl | turning | speed | head tip |
+|---|---|---|---|---|
+| 0.70 (from rest) | fast | −3.4°/s | 0.163 BL/s | 10.7° |
+| 0.74 | fast | **+0.9°/s** | 0.159 | 9.4° |
+| 0.76 | fast | +1.2°/s | 0.157 | 9.6° |
+| 0.78 | fast | +3.2°/s | 0.149 | 8.9° |
+| 0.80–1.0 | slow | +5.0 to +6.3°/s | 0.11–0.12 | |
+
+So a nearly straight crawl exists. At a ventral gain of about 0.74 the fast crawl
+turns under 1° per second, at 0.16 BL/s, with the head tip swinging 9.4°. But the
+loop does not reach it from rest; from rest, at that gain, it circles. The earlier
+diagnostic that equalised the anatomy was the same thing: its −11.9°/s came with
+0.156 BL/s and a 13.6° head tip, the fast crawl, so it switched crawls rather
+than rebalanced one.
+
+**Why the gain cannot straighten the slow crawl.** The head's law is purely
+rate-sensing (§5AO.8): its feedback averages to zero over a cycle, so scaling it
+changes how far the ventral cells swing, and the mean pull they exert only
+through that; in the slow crawl the turning does not move with it. Where the bias sits shows in the
+mean bend, joint by joint (`tools/loop_attractor.py` prints it). The crawl without
+head feedback carries a dorsal mean bend of up to 8.4° at joints 8–11, balanced by
+a ventral one at 13–15, and turns −0.7°/s. The slow crawl loses most of the dorsal
+one (at most 2.5°) and turns ventrally. The fast crawl keeps more of it (5.6–5.7°
+at joint 9) and adds a dorsal mean bend at the head tip.
+
+**Isaac, predicted beforehand** (`--torque-scale 1e-3 --gap-scale neuron=0.5
+--head-proprio --head-ventral-scale` 0.7 or 0.74). From rest the loop finds the
+fast crawl at gain 0.7, turning −3.4°/s, and the slow one at 0.74, +5.5°/s. Isaac,
+which also starts from a straight body at rest, agrees on both:
+
+| Isaac, 120 s | gain 0.7 | gain 0.74 |
+|---|---|---|
+| crawl | fast | slow |
+| turning, 20 s windows | **−3.4°/s** (−3.1 to −3.5) | **+5.7°/s** (+5.7 to +5.8) |
+| circle, fitted to the distance from the start | radius 3.1 BL | radius 1.2 BL |
+| speed, radius × turning rate | **0.185 BL/s** | 0.120 BL/s |
+| period, `travel`, amplitude | 2.5 s, +0.65, 12.3° | 2.5 s, +0.60, 11.2° |
+| clearance, joints pinned | ≥ +1.51 mm, none | ≥ +1.42 mm, none |
+
+So the fast crawl is real in Isaac too, at about one and a half times the slow
+one's speed and with a larger bend amplitude. The straight crawl the loop found by continuation
+is not reached from rest there either.
+
+**Decision.** The ventral gain stays at 1 and is not fitted. The value that
+straightens a crawl straightens one the loop does not settle into from rest, and
+landing in it by choosing the start would be tuning the initial condition, not
+the animal. `ventral_scale` and `--head-ventral-scale` stay, as diagnostics. The
+circling remains the known defect of `--head-proprio`.
+
+**What balances the head in the animal is not in the model.** The connectome has a
+counterweight in the other direction: the GABAergic RMED makes 78 synapses onto
+ventral head muscle, RMEV 29 onto dorsal. Shen et al. 2016 measured RMED's calcium
+rising with dorsal head bends and RMEV's with ventral ones, anti-correlated. Put
+together — an inference, not a measurement of balance — the heavier inhibition,
+RMED's onto ventral muscle, arrives while the head bends dorsally, which would
+push against the excitatory cells' ventral excess. In the head-locked crawl at
+gain 1 the model's RME neurons swing (8–10 mV), but RMED and RMEV swing together —
+each correlates best with the head's bend at the same lag and sign (+0.40 at
+−0.97 s, +0.39 at −1.02 s) — so they cannot do that. Their measured drive is
+extrasynaptic: SMD drives RME through the muscarinic receptor GAR-2, and RME
+limits head bending by inhibiting SMD through the GABA-B receptor GBB-1/GBB-2
+(Shen et al. 2016). No connectome records either link, and the model has
+neither; its RME neurons are driven by their synapses instead, mostly from SMB
+and IL2 and, for RMED, nine from SMDVR. That loop is measured in its signs and
+its effect and unmeasured in its gains and time constants, and modelling it is
+the next step for the head. SMB, which sets the amplitude of sinusoidal movement
+(Gray et al. 2005), was tried in §5AO.8 and left the circling unchanged.
 
 ## 6. Decisions taken, and what remains open
 

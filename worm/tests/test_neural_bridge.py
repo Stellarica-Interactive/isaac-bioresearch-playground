@@ -413,3 +413,27 @@ def test_build_takes_each_cells_side_from_its_own_synapses() -> None:
     assert {"SMDDL", "SMDDR", "RMDDL", "RMDDR"} <= head.dorsal_targets
     assert {"SMDVL", "SMDVR", "RMDVL", "RMDVR"} <= set(head.targets) - head.dorsal_targets
     assert "RMDL" not in head.targets and "RMDR" not in head.targets
+
+
+def test_ventral_scale_weights_only_the_ventral_cells() -> None:
+    """The probe of the head's dorsal-ventral balance is a gain on the ventral side.
+
+    At 1.0 (the default) both sides respond equally; any other value scales the
+    ventral cells' current and leaves the dorsal cells' untouched, so the
+    parameter cannot change which bend excites a cell (model_assumptions 5AO.9).
+    """
+    angles = np.zeros(23)
+    angles[5] = 0.1
+    out = {}
+    for scale in (1.0, 0.5):
+        proprio = Proprioception(
+            targets=("SMDDL", "SMDVL"),
+            sensed_segment=np.array([5, 5]),
+            gain_pa_per_rad=1.0,
+            dorsal_targets=frozenset({"SMDDL"}),
+            ventral_scale=scale,
+        )
+        out[scale] = proprio.currents(angles)
+    assert out[1.0]["SMDDL"] == pytest.approx(-out[1.0]["SMDVL"])
+    assert out[0.5]["SMDDL"] == out[1.0]["SMDDL"]
+    assert out[0.5]["SMDVL"] == pytest.approx(0.5 * out[1.0]["SMDVL"])

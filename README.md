@@ -258,10 +258,15 @@ body, so the wave starts at the head as it does in the animal:
 C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --torque-scale 1e-3 --gap-scale neuron=0.5 --head-proprio
 ```
 
-It goes round in circles, about one lap every 70 s, because the head's motor
-neurons drive the ventral side about twice as hard as the dorsal; and the feedback
-on RMD, the cells that move the head tip, is an assumption nobody has measured.
-§5AO.7–5AO.8.
+It goes round in circles, about one lap every 70 s. The head's motor neurons
+drive the ventral side about twice as hard as the dorsal, but weakening the
+feedback to the ventral side does not straighten it: the loop has two crawls, and
+the one it settles into from rest circles at any balance. Adding
+`--head-ventral-scale 0.7` tips it into the other crawl, about one and a half
+times as fast, with a wider head swing, curving gently the other way round a
+circle about six body lengths across. That is a switch between crawls, not a
+fix, and the feedback on RMD, the cells that move the head tip, is an assumption
+nobody has measured. §5AO.7–5AO.9.
 
 An earlier version of this section used the committed torque without
 `--self-collision`; that crawl relied on the body passing through itself and is

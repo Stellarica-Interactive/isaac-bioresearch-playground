@@ -73,6 +73,11 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
     axial = float(np.sum(np.einsum("ij,ij->i", steps, ax[:-1])))
     heading = np.unwrap(np.arctan2(ax[:, 1], ax[:, 0]))
     turn = float(np.degrees(heading[-1] - heading[0]) / (len(a) * dt))
+    # The same turning rate over consecutive 20 s windows: a loop that settles
+    # into one crawl turns at a steady rate; one that switches between crawls
+    # does not, and the overall rate is then an average of states.
+    w = max(1, int(round(20.0 / dt)))
+    turn_windows = np.degrees(np.diff(heading[::w])) / (w * dt)
     path = float(np.sum(np.linalg.norm(steps, axis=1)))
     length = float(loop.plan.total_length_m)
 
@@ -91,12 +96,15 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
         "share": axial / path if path > 0 else 0.0,
         "amp": float(np.degrees(centred.std(axis=0).max())),
         "turn": turn,
+        "turn_windows": turn_windows,
         "bias": float(np.degrees(a.mean())),
         "clear": 1000.0 * clear,
         # Bend amplitude joint by joint, head first: where along the body the
         # wave actually lives. A real crawl bends the whole length and starts at
         # the head.
         "profile": np.degrees(centred.std(axis=0)),
+        # The time-averaged bend joint by joint: where a turning bias lives.
+        "bias_profile": np.degrees(a.mean(axis=0)),
         # Each joint's phase at the dominant frequency, relative to joint 0,
         # unwrapped from head to tail. A wave starting at the head and running
         # tailward falls steadily; a head that is not part of the wave shows as a
@@ -161,6 +169,12 @@ def main() -> int:
         help="head proprioceptive classes; SMD is measured (Yeon et al. 2018), others are not",
     )
     parser.add_argument("--head-mv", type=float, default=None)
+    parser.add_argument(
+        "--head-ventral-scale",
+        type=float,
+        default=None,
+        help="gain on the ventral head cells' feedback relative to the dorsal (5AO.9)",
+    )
     parser.add_argument("--head-rate", type=float, default=None)
     parser.add_argument("--head-receptive", type=float, default=None, help="fraction of body")
     parser.add_argument(
@@ -207,6 +221,7 @@ def main() -> int:
             head_mv=args.head_mv,
             head_rate=args.head_rate,
             head_receptive=args.head_receptive,
+            head_ventral_scale=args.head_ventral_scale,
             muscle_gap_scale=args.muscle_gap_scale,
         )
     )
@@ -232,6 +247,7 @@ def main() -> int:
         f"{f' ({args.head_mv:g} mV)' if args.head_mv else ''}"
         f"{f' (rate {args.head_rate:g})' if args.head_rate is not None else ''}"
         f"{f' (field {args.head_receptive:g})' if args.head_receptive else ''}"
+        f"{'' if args.head_ventral_scale is None else f' (ventral x{args.head_ventral_scale:g})'}"
         f"{f', torque {args.torque_scale:g}' if args.torque_scale != 3.0e-3 else ''}"
         f"{f', start {args.perturb_deg:g} deg seed {args.seed}' if args.perturb_deg else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
@@ -242,6 +258,11 @@ def main() -> int:
         "    bend amplitude by joint, head to tail, deg: "
         + " ".join(f"{v:.1f}" for v in r["profile"])
     )
+    print(
+        "    mean bend by joint, head to tail, deg (+ dorsal): "
+        + " ".join(f"{v:+.1f}" for v in r["bias_profile"])
+    )
+    print("    turn by 20 s window, deg/s: " + " ".join(f"{v:+.1f}" for v in r["turn_windows"]))
     print(
         f"    period head {r['period_head']:.2f} s, body {r['period_body']:.2f} s; "
         "phase by joint vs joint 0, every 2nd, deg: "

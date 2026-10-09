@@ -152,6 +152,7 @@ class Loop:
             mv: float | None = None,
             law: float | None = None,
             receptive: float | None = None,
+            ventral_scale: float = 1.0,
         ) -> None:
             pop = Proprioception.build(
                 connectome,
@@ -168,6 +169,7 @@ class Loop:
                         self.runtime, cells, args.proprioceptive_mv if mv is None else mv
                     ),
                     rate_fraction=rate if law is None else law,
+                    ventral_scale=ventral_scale,
                 )
             )
 
@@ -184,6 +186,11 @@ class Loop:
                 mv=getattr(args, "head_mv", None),
                 law=getattr(args, "head_rate", None),
                 receptive=getattr(args, "head_receptive", None),
+                ventral_scale=(
+                    1.0
+                    if getattr(args, "head_ventral_scale", None) is None
+                    else float(args.head_ventral_scale)
+                ),
             )
         self.lag_steps = max(1, int(round(RATE_LAG_MS / (self.dt * 1000.0))))
         self.history: list[np.ndarray] = []
