@@ -111,6 +111,25 @@ parser.add_argument(
     "--param build does. See model_assumptions 5AN.21.",
 )
 parser.add_argument(
+    "--head-proprio",
+    action="store_true",
+    help="Give the head motor neurons proprioception, so the head takes part in "
+    "the wave. SMD is measured to be proprioceptive (Yeon et al. 2018); RMD, which "
+    "drives the head tip, is not -- with SMD alone the head stays straight. Off by "
+    "default. See model_assumptions 5AO.8.",
+)
+parser.add_argument("--head-classes", default="SMD,RMD")
+parser.add_argument("--head-mv", type=float, default=200.0, help="head gain, mV/rad")
+parser.add_argument(
+    "--head-rate", type=float, default=1.0, help="rate share of the head law (5AO.8)"
+)
+parser.add_argument(
+    "--head-offset",
+    type=float,
+    default=0.5,
+    help="segments anterior of itself each head cell senses; 0.5 reaches the tip",
+)
+parser.add_argument(
     "--muscle-tau-ms",
     type=float,
     default=None,
@@ -646,6 +665,25 @@ def main() -> int:
             sensed_segment=proprio.sensed_segment[keep],
         )
         print(f"\nPROBE: proprioception removed from {', '.join(sorted(dropped))}")
+    head_proprio = None
+    if args.head_proprio:
+        head_classes = tuple(c.strip() for c in args.head_classes.split(",") if c.strip())
+        head = Proprioception.build(
+            connectome,
+            plan,
+            classes=head_classes,
+            offset=args.head_offset,
+            rate_fraction=args.head_rate,
+        )
+        head_cells = [c for c in head.targets if c in runtime.network.cell_ids]
+        head_proprio = replace(
+            head, gain_pa_per_rad=scale_for_depolarisation(runtime, head_cells, args.head_mv)
+        )
+        print(
+            f"\nPROBE: head proprioception on {', '.join(head.targets)}, "
+            f"{args.head_mv:g} mV/rad, rate share {args.head_rate:g}. SMD is measured "
+            "(Yeon et al. 2018); RMD is not."
+        )
     # Every input is a target depolarisation, converted to a current against this
     # network's own conductances. Done once here rather than per step: each solve
     # settles the network several times. See common/neural/stimulus.py for why the
@@ -748,6 +786,7 @@ def main() -> int:
             noise_scale=noise_scale,
             bridge=bridge,
             proprio=proprio,
+            head_proprio=head_proprio,
             command=command,
             lesion_idx=lesion_idx,
             torque_scale=scale,
@@ -779,6 +818,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     noise_scale: np.ndarray,
     bridge: MuscleDrive,
     proprio: Proprioception,
+    head_proprio: Proprioception | None,
     command: dict[str, float],
     lesion_idx: np.ndarray,
     torque_scale: float,
@@ -1016,6 +1056,14 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                     elapsed_ms=lag_steps * dt * 1000.0,
                 )
             )
+            if head_proprio is not None:
+                runtime.inject_many(
+                    head_proprio.currents(
+                        angles,
+                        earlier_angles_rad=earlier,
+                        elapsed_ms=lag_steps * dt * 1000.0,
+                    )
+                )
         # The sham keeps its own state and does not exclude the probe. It used to
         # be the `if` of an if/elif whose `elif` drove the poke, so passing
         # --poke and --sham together silently ran only the sham -- and measuring a

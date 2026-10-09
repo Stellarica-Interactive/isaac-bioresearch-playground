@@ -6830,6 +6830,72 @@ rhythm from VB1 entrains SMDV and through it SMDD, as another. **The head needs
 an oscillator, and building one is a project of its own**; it is the most visible
 defect of the crawl and the next thing on the roadmap.
 
+### 5AO.8 The head joins the wave — when two rhythms match
+
+§5AO.7 found that head-tip feedback makes the head move but breaks coordination.
+`tools/loop_attractor.py` now also reports the dominant period of the head
+(joints 0–5) and of the body (joints 10–19) separately, and each joint's phase at
+the dominant frequency relative to the head, which shows why: **the head and the
+body become two oscillators**.
+
+With the committed body (A, a 3.2 s rhythm) and RMD + SMD feedback at the head
+tip, rate-sensing:
+
+| head gain | head period | body period | head joints 0–5 | crawl |
+|---|---|---|---|---|
+| 50–150 mV/rad | 3.0 s | 3.0 s, locked | 0.5–3.7° | +0.064 to +0.093 BL/s |
+| 200 | 3.5 s | 20 s | 2.8–5° | +0.026 |
+| 250–400 | **2.1–2.3 s** | **no rhythm** | 5–11° | +0.017 to +0.053 |
+
+A weak head locks to the body and barely moves; a head driven hard enough to
+swing runs at its own, faster rhythm, and the body loses its. The head loop is
+short — head motor neurons, head muscles, head joints — so its natural period is
+around 2.1–2.5 s, and A's body runs at 3.2 s. **They lock when their natural
+frequencies are close**, and variant B's body (§5AO.6) runs at 2.6 s:
+
+| B body, head feedback at the tip | head / body period | head joints 0–3 | phase, head to tail | speed | turning |
+|---|---|---|---|---|---|
+| none | 2.61 / 2.61 s | 0.6–1.7° | head outside the wave | +0.110 BL/s | −0.7°/s |
+| **200 mV/rad** | **2.50 / 2.50 s, locked** | **4.7–8.8°** | **0° → −424°, falling** | **+0.114 to +0.123** | +5.1 to +5.8°/s |
+| 300 mV/rad | 2.42 / 2.42 s | 3.9–7.9° | 0° → −456° | +0.094 | +4.0 to +4.7°/s |
+| 400 mV/rad | 2.22 / 2.73 s, unlocked | 4.5–7.8° | | +0.074 | |
+
+At 200 mV/rad the head tip swings 8–9° in step with the body, the phase falls
+steadily from head to tail — a wave that starts at the head, as in the animal —
+and it crawls at 0.11–0.12 BL/s, inside the real 0.1–0.3. A 180 s run and starts
+perturbed by 2° and 5° all lock at 2.50 s; at 300 mV/rad one perturbed start drifts
+out of lock. Proprioception cut: no motion.
+
+**Isaac, predicted beforehand** (`--torque-scale 1e-3 --gap-scale neuron=0.5
+--head-proprio`, whose defaults are RMD + SMD, 200 mV/rad, rate-sensing, sensing
+half a segment ahead): period **2.6 s**, `travel` **+0.55**, amplitude 10.7°,
+clearance +1.81 mm, no joint pinned — and turning at about **5° per second**, one
+lap of a circle about two body lengths across every 70 s, as predicted. The head
+visibly takes part.
+
+**What it rests on.** SMD proprioception is measured (Yeon et al. 2018). RMD
+proprioception is **not**: RMD drives the head tip, and without it the head does
+not move (§5AO.7), but nothing measures RMD responding to bending. The head's law
+(purely rate-sensing) and gain (200 mV/rad) are assumed, and the lock needs
+variant B's faster body, so the neurons' gap junctions at half strength — itself
+the open decision of §5AO.6.
+
+**What is still wrong.** It circles at about 5° per second. The head motor
+neurons drive the ventral side about twice as hard as the dorsal — SMDV and RMDV
+make roughly twice the neuromuscular synapses of SMDD and RMDD in Cook 2019 — so
+every head swing is lopsided. Something in the animal evidently balances that;
+RME and SMB, which limit head swing amplitude, are candidates the model has but
+does not engage. The head tip swings 8–9° against the body's 15–20°, where a real
+head swings at least as far as the body bends.
+
+SMB is the obvious counterweight — its neuromuscular synapses run the other way,
+148 and 136 dorsal for SMBD against 78 and 70 ventral for SMBV — so it was tried
+as a third head population (unmeasured, like RMD). With SMD + RMD + SMB at
+200 mV/rad the head swings more evenly (tip 9.4°, head joints 5–9°) and stays
+locked (2.40 s, +0.112 BL/s), **but the circling is unchanged** (+5.5°/s, mean
+bend −1.6°, ventral). SMD + SMB without RMD does not lock. The circling is not
+fixed by anything here.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

@@ -135,9 +135,17 @@ eye: joints 0–5 bend 0.5–3° while the posterior body bends 10–22°. Only 
 neurons are proprioceptive and none drives the head. Measured SMD
 proprioception (Yeon et al. 2018) improves the body's crawl but drives the neck,
 not the tip; giving the tip's RMD neurons feedback (unmeasured, a diagnostic)
-moves the head 8–11° but breaks the coordination. **Next: a head oscillator** —
-the RMD/SMD/RIA circuit, RMD's measured plateau potentials, Yeon et al.'s
-VB1-to-SMDV entrainment.
+moves the head 8–11° but breaks the coordination.
+
+**The head joins the wave when the rhythms match (§5AO.8).** Head and body are two
+oscillators; they lock when their natural periods are close. With variant B's
+faster body and head feedback on RMD + SMD at 200 mV/rad (`--head-proprio`), head
+and body share a 2.5 s rhythm, the wave starts at the head, and it crawls at
+0.11–0.12 BL/s — confirmed in Isaac. Still wrong: it circles at about 5°/s,
+because the head motor neurons drive the ventral side twice as hard as the dorsal;
+the head swings about half as far as the body bends; and RMD's feedback is
+unmeasured. **Next:** what balances the head's ventral bias (RME, SMB); whether
+RMD's measured plateau potentials (§5F) can stand in for its unmeasured feedback.
 
 **Gait refinement (§5AO.6):** torque committed at 1.25e-3 (8.55 BL in 120 s in
 Isaac); halving the neuron gap junctions crawls at 0.11 BL/s with a near-real

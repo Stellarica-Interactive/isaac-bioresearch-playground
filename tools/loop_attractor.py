@@ -97,7 +97,24 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
         # wave actually lives. A real crawl bends the whole length and starts at
         # the head.
         "profile": np.degrees(centred.std(axis=0)),
+        # Each joint's phase at the dominant frequency, relative to joint 0,
+        # unwrapped from head to tail. A wave starting at the head and running
+        # tailward falls steadily; a head that is not part of the wave shows as a
+        # jump between the head joints and the rest.
+        "phase": np.degrees(np.unwrap(np.angle(x_f * np.conj(x_f[0])))),
+        # Dominant period of the head (joints 0-5) and of the body (10-19)
+        # separately: one shared rhythm, or two oscillators that do not lock.
+        "period_head": _dominant_period(centred[:, :6], dt),
+        "period_body": _dominant_period(centred[:, 10:20], dt),
     }
+
+
+def _dominant_period(block: np.ndarray, dt: float) -> float:
+    spectrum = np.fft.rfft(block, axis=0)
+    power = (np.abs(spectrum) ** 2).sum(axis=1)
+    freqs = np.fft.rfftfreq(block.shape[0], dt)
+    k = int(np.argmax(power[1:]) + 1)
+    return float(1.0 / freqs[k])
 
 
 def main() -> int:
@@ -224,6 +241,11 @@ def main() -> int:
     print(
         "    bend amplitude by joint, head to tail, deg: "
         + " ".join(f"{v:.1f}" for v in r["profile"])
+    )
+    print(
+        f"    period head {r['period_head']:.2f} s, body {r['period_body']:.2f} s; "
+        "phase by joint vs joint 0, every 2nd, deg: "
+        + " ".join(f"{v:+.0f}" for v in r["phase"][::2])
     )
     return 0
 

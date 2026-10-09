@@ -249,6 +249,20 @@ It is not the default because that conductance sets every neural result in this
 project, not only the gait, and changing it is a decision rather than a tuning
 step; §5AO.6 has the case for it.
 
+**The head.** In every run above the front of the body stays nearly straight: only
+the B-type motor neurons sense the body, and none of them drives the head. Giving
+the head motor neurons feedback as well makes the head swing in step with the
+body, so the wave starts at the head as it does in the animal:
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --torque-scale 1e-3 --gap-scale neuron=0.5 --head-proprio
+```
+
+It goes round in circles, about one lap every 70 s, because the head's motor
+neurons drive the ventral side about twice as hard as the dorsal; and the feedback
+on RMD, the cells that move the head tip, is an assumption nobody has measured.
+§5AO.7–5AO.8.
+
 An earlier version of this section used the committed torque without
 `--self-collision`; that crawl relied on the body passing through itself and is
 withdrawn. How all of it was found -- eigenvalues, a phase argument, and
