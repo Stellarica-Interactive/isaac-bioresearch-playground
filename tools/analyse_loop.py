@@ -69,6 +69,27 @@ from worm.neural.config import RUNTIME_OVERLAYS, build_runtime, rescale_gap_junc
 GAIT_HZ = 0.5
 
 
+def _resolve_cells(connectome, spec: str) -> set[str]:
+    """Cell ids from a comma-separated list of ids or class names, as the runner's
+    --lesion reads them."""
+    wanted = {s.strip() for s in spec.split(",") if s.strip()}
+    return {
+        c.id
+        for c in connectome.cells
+        if c.id in wanted or (c.class_name and c.class_name in wanted)
+    }
+
+
+def _restrict(pop: Proprioception, present: set[str]) -> Proprioception:
+    """A proprioceptive population without the targets that are not in the network."""
+    keep = [i for i, c in enumerate(pop.targets) if c in present]
+    return replace(
+        pop,
+        targets=tuple(pop.targets[i] for i in keep),
+        sensed_segment=pop.sensed_segment[keep],
+    )
+
+
 def parse_gap_scale(items: list[str]) -> dict[str, float]:
     """``["muscle=0.05", ...]`` to ``{"muscle": 0.05}``, as ``--gap-scale`` takes them."""
     out = {}
@@ -97,8 +118,17 @@ class Loop:
         # result before model_assumptions 5AN.18 was computed on 437 cells against
         # the runner's 397. See 5AN.18 for what that changed.
         muscles = body_wall_muscle_ids()
+        # Two kinds of ablation (model_assumptions 5AO.10). "acute" removes the
+        # cells after the network is built and calibrated, below. "rebuilt" builds
+        # the network without them, so every threshold and gain is solved on what
+        # remains -- the animal developed without the cells.
+        self.lesioned = sorted(_resolve_cells(connectome, getattr(args, "lesion", None) or ""))
+        rebuilt = getattr(args, "lesion_mode", "acute") == "rebuilt"
         cells = tuple(
-            c.id for c in connectome.cells if c.category is CellCategory.NEURON or c.id in muscles
+            c.id
+            for c in connectome.cells
+            if (c.category is CellCategory.NEURON or c.id in muscles)
+            and not (rebuilt and c.id in self.lesioned)
         )
         self.runtime, _ = build_runtime(
             "cook_2019_herm",
@@ -192,6 +222,11 @@ class Loop:
                     else float(args.head_ventral_scale)
                 ),
             )
+        if rebuilt:
+            # Feedback onto a cell that is not there goes nowhere.
+            present = set(self.runtime.network.cell_ids)
+            self.proprio = _restrict(self.proprio, present)
+            self.extra_proprio = [_restrict(pop, present) for pop in self.extra_proprio]
         self.lag_steps = max(1, int(round(RATE_LAG_MS / (self.dt * 1000.0))))
         self.history: list[np.ndarray] = []
 
@@ -226,6 +261,31 @@ class Loop:
         #: the command, so anything a probe puts into ``command`` for a B-type cell
         #: is silently overwritten. This is the path for probes.
         self.extra: dict[str, float] = {}
+
+        # Tonic stimulation, "CELLS=mV": each listed cell (or class) is held that
+        # far above where it sits now, by a current solved against the settled
+        # network -- a stand-in for an optogenetic activation (model_assumptions
+        # 5AO.10). Added through ``extra``, so nothing overwrites it.
+        for item in getattr(args, "stimulate", None) or []:
+            names, _, mv = item.partition("=")
+            targets = sorted(_resolve_cells(connectome, names) & set(self.runtime.network.cell_ids))
+            for cell, current in solve_for_depolarisation(self.runtime, targets, float(mv)).items():
+                self.extra[cell] = self.extra.get(cell, 0.0) + current
+
+        # Ablation, after every calibration: the named cells lose their chemical
+        # output and their gap junctions, and nothing else is retuned -- the
+        # remaining cells keep the thresholds and gains they were built with, as
+        # a laser ablation leaves them. The runner's --lesion only holds a cell's
+        # chemical output at zero; this also cuts its electrical coupling, since a
+        # killed cell passes no current either way.
+        if self.lesioned and not rebuilt:
+            net = self.runtime.network
+            idx = [net.index(c) for c in self.lesioned]
+            g_gap, g_syn = net.g_gap.copy(), net.g_syn.copy()
+            g_gap[idx, :] = 0.0
+            g_gap[:, idx] = 0.0
+            g_syn[:, idx] = 0.0
+            self.runtime.network = replace(net, g_gap=g_gap, g_syn=g_syn)
 
     # -- the state ---------------------------------------------------------
 

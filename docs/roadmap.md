@@ -156,6 +156,13 @@ RME inhibits SMD, both extrasynaptically and so absent from any connectome (Shen
 et al. 2016); and whether RMD's measured plateau potentials (§5F) can stand in
 for its unmeasured feedback.
 
+**The head against measured lesions (§5AO.10).** Removing cells from the built
+network without retuning stops the crawl for SMD, SMB or RIA, which real animals
+survive. Rebuilt without them, the model crawls. Rebuilt lesions match Shen et
+al. 2016 for SMD (removing it shrinks head bending) but not for RME: in the
+head-locked crawl removing RME shrinks head bending, where in the animal it
+enlarges it. That table is the test the SMD–RME loop has to pass.
+
 **Gait refinement (§5AO.6):** torque committed at 1.25e-3 (8.55 BL in 120 s in
 Isaac); halving the neuron gap junctions crawls at 0.11 BL/s with a near-real
 wave (11.3 BL in Isaac) but is left as a decision.

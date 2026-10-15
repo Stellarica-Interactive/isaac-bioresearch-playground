@@ -248,3 +248,91 @@ class TouchField:
             for cell, value in contribution.items():
                 out[cell] = max(out.get(cell, 0.0), value)
         return out
+
+
+# -- the self-running demo ---------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class DemoPose:
+    """Where the demo probe should be, as a schedule rather than a position.
+
+    ``station`` is the current target, ``(fraction along the body, side)``, with
+    side +1 or -1 for the two sides of the body axis. ``previous`` is the one the
+    probe is gliding away from. ``glide`` runs 0 to 1 between their waiting points,
+    and ``depth`` 0 to 1 from the waiting point down onto the body.
+    """
+
+    station: tuple[float, int]
+    previous: tuple[float, int]
+    glide: float
+    depth: float
+    phase: str
+
+
+@dataclass(frozen=True)
+class TouchDemo:
+    """A touch schedule that runs by itself, for watching rather than measuring.
+
+    The probe waits beside the body, glides to its next spot, comes down onto the
+    body, rests against it, lifts away and waits again, then moves on: head, tail,
+    mid-body, alternating sides. It touches through the same receptors and the
+    same contact sensing as a mouse-dragged probe, so what the animal does is the
+    model's response and nothing else. The timings and spots are display choices,
+    not biology; a measurement uses ``--poke`` and ``--sham``.
+    """
+
+    first_s: float = 10.0
+    """When the first touch begins, so the crawl has settled before it."""
+    period_s: float = 10.0
+    move_s: float = 2.0
+    approach_s: float = 1.5
+    hold_s: float = 1.0
+    retreat_s: float = 1.5
+    stations: tuple[tuple[float, int], ...] = (
+        (0.10, +1),
+        (0.90, -1),
+        (0.50, +1),
+        (0.10, -1),
+        (0.90, +1),
+        (0.50, -1),
+    )
+
+    def __post_init__(self) -> None:
+        busy = self.move_s + self.approach_s + self.hold_s + self.retreat_s
+        if busy > self.period_s:
+            raise ValueError(
+                f"one touch takes {busy:g} s, longer than the {self.period_s:g} s period"
+            )
+        if not self.stations:
+            raise ValueError("the demo needs at least one place to touch")
+
+    def at(self, t: float) -> DemoPose:
+        """The probe's schedule at time ``t``, seconds."""
+        if t < self.first_s:
+            first = self.stations[0]
+            return DemoPose(first, first, 1.0, 0.0, "waiting")
+        k, local = divmod(t - self.first_s, self.period_s)
+        k = int(k)
+        station = self.stations[k % len(self.stations)]
+        previous = self.stations[(k - 1) % len(self.stations)] if k else station
+        edges = np.cumsum([self.move_s, self.approach_s, self.hold_s, self.retreat_s])
+        if local < edges[0]:
+            # The first touch starts where the probe waited: nothing to glide.
+            glide = _smooth(local / self.move_s) if k else 1.0
+            return DemoPose(station, previous, glide, 0.0, "moving")
+        if local < edges[1]:
+            depth = _smooth((local - edges[0]) / self.approach_s)
+            return DemoPose(station, previous, 1.0, depth, "approaching")
+        if local < edges[2]:
+            return DemoPose(station, previous, 1.0, 1.0, "touching")
+        if local < edges[3]:
+            depth = 1.0 - _smooth((local - edges[2]) / self.retreat_s)
+            return DemoPose(station, previous, 1.0, depth, "lifting")
+        return DemoPose(station, previous, 1.0, 0.0, "resting")
+
+
+def _smooth(x: float) -> float:
+    """Smoothstep: starts and stops at rest, so the probe eases in and out."""
+    x = min(max(x, 0.0), 1.0)
+    return x * x * (3.0 - 2.0 * x)

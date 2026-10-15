@@ -78,6 +78,11 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
     # does not, and the overall rate is then an average of states.
     w = max(1, int(round(20.0 / dt)))
     turn_windows = np.degrees(np.diff(heading[::w])) / (w * dt)
+    # Head bending amplitude as Shen et al. 2016 measure it: the curvature
+    # averaged over the first 18% of the body, then its standard deviation over
+    # time. Joints 0-3 sit at 4-17% of the length. Mean bend per joint rather
+    # than curvature, which differs by the (equal) segment length.
+    head_amp = float(np.degrees(a[:, :4].mean(axis=1).std()))
     path = float(np.sum(np.linalg.norm(steps, axis=1)))
     length = float(loop.plan.total_length_m)
 
@@ -97,6 +102,7 @@ def measure(loop: Loop, seconds: float, transient: float) -> dict[str, float]:
         "amp": float(np.degrees(centred.std(axis=0).max())),
         "turn": turn,
         "turn_windows": turn_windows,
+        "head_amp": head_amp,
         "bias": float(np.degrees(a.mean())),
         "clear": 1000.0 * clear,
         # Bend amplitude joint by joint, head first: where along the body the
@@ -151,6 +157,27 @@ def main() -> int:
         help="random initial joint angles of this size, to probe for other attractors",
     )
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--lesion",
+        default="",
+        help="cells or classes to ablate: chemical output and gap junctions removed, "
+        "after calibration (5AO.10)",
+    )
+    parser.add_argument(
+        "--lesion-mode",
+        choices=("acute", "rebuilt"),
+        default="acute",
+        help="acute: removed after the network is built and calibrated; rebuilt: the "
+        "network is built without the cells, every threshold and gain solved on what "
+        "remains (5AO.10)",
+    )
+    parser.add_argument(
+        "--stimulate",
+        action="append",
+        default=[],
+        metavar="CELLS=MV",
+        help="hold cells or classes this many mV depolarised, e.g. RMED,RMEV=10 (5AO.10)",
+    )
     parser.add_argument(
         "--muscle-gap-scale",
         type=float,
@@ -223,6 +250,9 @@ def main() -> int:
             head_receptive=args.head_receptive,
             head_ventral_scale=args.head_ventral_scale,
             muscle_gap_scale=args.muscle_gap_scale,
+            lesion=args.lesion,
+            lesion_mode=args.lesion_mode,
+            stimulate=args.stimulate,
         )
     )
     excluded = [c.strip() for c in args.proprio_exclude.split(",") if c.strip()]
@@ -249,10 +279,13 @@ def main() -> int:
         f"{f' (field {args.head_receptive:g})' if args.head_receptive else ''}"
         f"{'' if args.head_ventral_scale is None else f' (ventral x{args.head_ventral_scale:g})'}"
         f"{f', torque {args.torque_scale:g}' if args.torque_scale != 3.0e-3 else ''}"
-        f"{f', start {args.perturb_deg:g} deg seed {args.seed}' if args.perturb_deg else ''}: "
+        f"{f', start {args.perturb_deg:g} deg seed {args.seed}' if args.perturb_deg else ''}"
+        f"{f', lesion {args.lesion} ({args.lesion_mode})' if args.lesion else ''}"
+        f"{', stimulate ' + ' '.join(args.stimulate) if args.stimulate else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
         f"axial {r['axial']:+.4f} BL/s, share {r['share']:+.2f}, amp {r['amp']:5.1f} deg, "
-        f"turn {r['turn']:+6.1f} deg/s, bias {r['bias']:+5.2f} deg, clear {r['clear']:+.2f} mm"
+        f"turn {r['turn']:+6.1f} deg/s, bias {r['bias']:+5.2f} deg, clear {r['clear']:+.2f} mm, "
+        f"head bend amplitude {r['head_amp']:.2f} deg"
     )
     print(
         "    bend amplitude by joint, head to tail, deg: "

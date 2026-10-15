@@ -129,3 +129,57 @@ def test_segment_fraction_spans_the_body() -> None:
     field = TouchField.build(plan)
     assert field.segment_fraction(0) < 0.1
     assert field.segment_fraction(plan.n_segments - 1) > 0.9
+
+
+# -- the self-running demo ---------------------------------------------------------
+
+
+def test_demo_does_not_touch_before_it_starts_or_between_touches() -> None:
+    """The probe is down only between approaching and lifting; every other phase
+    leaves it at its waiting point, clear of the body."""
+    from worm.body.touch import TouchDemo
+
+    demo = TouchDemo()
+    assert demo.at(0.0).depth == 0.0 and demo.at(0.0).phase == "waiting"
+    for t in np.arange(0.0, 70.0, 0.05):
+        pose = demo.at(float(t))
+        if pose.phase in ("waiting", "moving", "resting"):
+            assert pose.depth == 0.0
+        if pose.phase == "touching":
+            assert pose.depth == 1.0
+        if pose.depth > 0.0:
+            assert pose.glide == 1.0  # it never descends while still travelling
+
+
+def test_demo_moves_smoothly() -> None:
+    """No jumps: depth and glide change by small steps at a 20 Hz sample, so the
+    probe eases on and off the body instead of teleporting as --poke does."""
+    from worm.body.touch import TouchDemo
+
+    demo = TouchDemo()
+    poses = [demo.at(float(t)) for t in np.arange(0.0, 70.0, 0.05)]
+    for a, b in zip(poses, poses[1:], strict=False):
+        assert abs(b.depth - a.depth) < 0.06
+        if a.station == b.station:
+            assert abs(b.glide - a.glide) < 0.06
+
+
+def test_demo_visits_every_station_in_turn() -> None:
+    from worm.body.touch import TouchDemo
+
+    demo = TouchDemo()
+    touched = []
+    for k in range(len(demo.stations) + 1):
+        t = demo.first_s + k * demo.period_s + demo.move_s + demo.approach_s + 0.5
+        pose = demo.at(t)
+        assert pose.phase == "touching"
+        touched.append(pose.station)
+    assert touched[:-1] == list(demo.stations)
+    assert touched[-1] == demo.stations[0]
+
+
+def test_demo_refuses_a_touch_longer_than_its_period() -> None:
+    from worm.body.touch import TouchDemo
+
+    with pytest.raises(ValueError):
+        TouchDemo(period_s=3.0)

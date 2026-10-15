@@ -6998,6 +6998,79 @@ its effect and unmeasured in its gains and time constants, and modelling it is
 the next step for the head. SMB, which sets the amplitude of sinusoidal movement
 (Gray et al. 2005), was tried in §5AO.8 and left the circling unchanged.
 
+### 5AO.10 The head against measured lesions
+
+Before adding the SMD–RME loop of §5AO.9, the head as it stands was tested
+against what removing or driving its cells does in the animal. Shen et al. 2016
+measured that ablating SMD shrinks head bending, that ablating RMED and RMEV
+enlarges it (RMEL and RMER do nothing), and that activating RME
+optogenetically shrinks it. Gray et al. 2005 report that SMB "set the amplitude
+of sinusoidal movement"; which way an ablation moves it could not be confirmed
+from the primary text, so SMB is reported here but not scored.
+
+`tools/loop_attractor.py` gained what that needs. `--lesion` removes cells,
+`--stimulate CELLS=MV` holds cells depolarised (a stand-in for the optogenetics),
+and every run now prints the **head bending amplitude** as Shen et al. define it:
+the curvature averaged over the first 18% of the body, then its standard
+deviation over time. Joints 0–3 sit at 4–17% of the body.
+
+**Acute ablation tests the tuning, not the circuit.** Two kinds of lesion are
+available (`--lesion-mode`). *Acute* removes the cells' chemical output and gap
+junctions after the network is built, and retunes nothing. *Rebuilt* builds the
+network without them, so every threshold and gain is solved on what remains. On
+the committed crawl:
+
+| ablated | acute | rebuilt |
+|---|---|---|
+| none | 0.087 BL/s, amplitude 21° | |
+| SMD | **no movement**: straight and still | 0.089 BL/s, 25° |
+| SMB | **no movement**: latched, joints 15–19 bent 18–31° ventrally | 0.094 BL/s, 24° |
+| RIA | **no movement** | 0.085 BL/s, 21° |
+| AIY | 0.086 BL/s, 21° | 0.086 BL/s, 21° |
+| RMED, RMEV | 0.094 BL/s, 23° | 0.094 BL/s, 23° |
+
+Animals without SMD, SMB or RIA crawl. The model's do too once rebuilt, and stop
+dead when the cells are pulled out of a network tuned around them. Every
+neuron's sigmoid threshold is placed relative to that cell's resting potential in
+the *intact* network (§5A, §5L; after Kunert et al. 2014). Remove a
+well-connected cell without solving again and its partners lose input they were
+tuned around, and the loop falls off its operating point. Whether real
+neurons re-tune after a cell is lost is not known, and an animal scored after an
+ablation has had time to adjust. So the rebuilt lesion assumes they re-tune and
+the acute one that they do not. Only the rebuilt lesion is compared with the
+animal below; the acute one is a test of the tuning procedure, which a
+connectome-wide model built this way does not pass.
+
+**Rebuilt lesions against the measurements.** Head bending amplitude, the
+head-locked crawl of §5AO.8 (gain 1, from rest) and the committed crawl, whose
+head barely moves:
+
+| manipulation | animal | head-locked crawl | committed crawl |
+|---|---|---|---|
+| none | | 5.6° (6.4° from a perturbed start) | 0.67° |
+| SMD ablated | smaller | **1.3°, agrees** | 0.59°, agrees |
+| RMED, RMEV ablated | larger | **3.6°, opposite** | 1.75°, agrees |
+| all four RME ablated | larger | **4.2°, opposite** | |
+| RMED, RMEV held +10 mV | smaller | 6.0° and 5.8° (two starts), no clear effect | 0.87°, opposite |
+| RMED, RMEV held +20 mV | smaller | 5.4° both, smaller | |
+| SMB ablated | not scored | 4.4° | 0.49° |
+
+(Stimulation is applied to the intact network, as the optogenetics are.)
+
+SMD behaves as measured: the head-locked crawl's head depends on it. **RME does
+not.** In the crawl where the head moves, removing RME shrinks head bending
+where in the animal it enlarges it, and driving RME barely moves it. The
+§5AO.9 experiment that made RMED and RMEV follow head bends with their measured
+sides points the same way: in five of six settings (100–400 mV/rad, tonic or
+rate-sensing) the head tip swung further, 10.2–12.7° against 7.8°, and the
+circling ranged from +2.1 to +5.9°/s. In the model RME can act only through its
+synapses, onto head muscle and a few neurons. In the animal it limits bending by
+inhibiting SMD through GABA-B, and Shen et al. show the muscle's GABA-A receptor
+is not needed for that. That loop is the one §5AO.9
+names as the next step, and this table is now the test it has to pass in the
+head-locked crawl: RME ablation enlarges head bending, RME activation shrinks
+it, and SMD ablation still shrinks it.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

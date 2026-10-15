@@ -96,3 +96,87 @@ def test_refuses_a_map_with_no_equilibrium() -> None:
 def test_jacobian_of_an_affine_map_is_its_matrix() -> None:
     a, b, x_star = _system(radius=0.9)
     assert np.allclose(jacobian(_AffineLoop(a, b), x_star), a, atol=1e-6)
+
+
+def test_a_lesion_removes_the_cells_and_nothing_else() -> None:
+    """An ablated cell transmits nothing, chemically or electrically; every other
+    connection, and every other cell's tuning, is left as built.
+
+    The runner's --lesion holds a cell's chemical output at zero and leaves its gap
+    junctions, through which a killed cell would still pass current. The loop's
+    ablation cuts both (model_assumptions 5AO.10).
+    """
+    import argparse
+
+    from tools.analyse_loop import Loop
+
+    def build(lesion: str) -> Loop:
+        return Loop(
+            argparse.Namespace(
+                unknown_sign="exclude",
+                physics_hz=240.0,
+                neural_dt_ms=1.0,
+                torque_scale=1e-3,
+                proprioceptive_mv=400.0,
+                proprio_rate=0.7,
+                command_mv=20.0,
+                settle_s=0.0,
+                open_loop=False,
+                param=[],
+                lesion=lesion,
+            )
+        )
+
+    intact, lesioned = build("").runtime, build("SMD")
+    net = lesioned.runtime.network
+    assert lesioned.lesioned == ["SMDDL", "SMDDR", "SMDVL", "SMDVR"]
+    idx = [net.index(c) for c in lesioned.lesioned]
+    keep = [i for i in range(net.n) if i not in idx]
+    assert not net.g_syn[:, idx].any() and not net.g_gap[:, idx].any()
+    assert not net.g_gap[idx, :].any() and not net.gap_row_sum[idx].any()
+    assert intact.network.g_syn[:, idx].any() and intact.network.g_gap[:, idx].any()
+    np.testing.assert_array_equal(
+        net.g_syn[np.ix_(keep, keep)], intact.network.g_syn[np.ix_(keep, keep)]
+    )
+    np.testing.assert_array_equal(
+        net.g_gap[np.ix_(keep, keep)], intact.network.g_gap[np.ix_(keep, keep)]
+    )
+    # The survivors keep the sigmoid thresholds they were built with.
+    np.testing.assert_array_equal(
+        lesioned.runtime.model.v_threshold_mv, intact.model.v_threshold_mv
+    )
+
+
+def test_a_rebuilt_lesion_builds_the_network_without_the_cells() -> None:
+    """The rebuilt ablation leaves the cells out of the network altogether, and
+    no proprioceptive population still feeds them (model_assumptions 5AO.10)."""
+    import argparse
+
+    from tools.analyse_loop import Loop
+
+    loop = Loop(
+        argparse.Namespace(
+            unknown_sign="exclude",
+            physics_hz=240.0,
+            neural_dt_ms=1.0,
+            torque_scale=1e-3,
+            proprioceptive_mv=400.0,
+            proprio_rate=0.7,
+            command_mv=20.0,
+            settle_s=0.0,
+            open_loop=False,
+            param=[],
+            head_proprio=True,
+            head_classes=("SMD", "RMD"),
+            lesion="SMD",
+            lesion_mode="rebuilt",
+        )
+    )
+    cells = set(loop.runtime.network.cell_ids)
+    assert loop.lesioned == ["SMDDL", "SMDDR", "SMDVL", "SMDVR"]
+    assert not cells & set(loop.lesioned)
+    for pop in (loop.proprio, *loop.extra_proprio):
+        assert set(pop.targets) <= cells
+        assert len(pop.sensed_segment) == len(pop.targets)
+    assert any(c.startswith("RMD") for c in loop.extra_proprio[0].targets)
+    loop.step()  # feedback reaches only cells that exist

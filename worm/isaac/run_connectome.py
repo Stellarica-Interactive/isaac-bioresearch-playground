@@ -424,6 +424,16 @@ parser.add_argument(
     "headless and put in a test.",
 )
 parser.add_argument(
+    "--touch-demo",
+    action="store_true",
+    help="A self-running touch demo: from 10 s the probe glides in, rests against "
+    "the body, lifts away and moves on -- head, tail, mid-body, alternating sides, "
+    "one touch every 10 s -- and the run prints each touch and what the command "
+    "neurons did. For watching; the timings are display choices. Gentle touch in "
+    "this model resets the gait rather than producing an escape "
+    "(model_assumptions 5AO.1), so expect that, not a reversal.",
+)
+parser.add_argument(
     "--tint-change",
     action="store_true",
     help="colour the body by how the muscle drive is CHANGING rather than what it "
@@ -552,7 +562,7 @@ from worm.body.neural_bridge import (  # noqa: E402
     Proprioception,
 )
 from worm.body.quasistatic import QuasiStaticBody  # noqa: E402
-from worm.body.touch import TOUCH_RECEPTORS, TouchField  # noqa: E402
+from worm.body.touch import TOUCH_RECEPTORS, TouchDemo, TouchField  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
     DEFAULT_PROBE_RADIUS_SCALE,
@@ -870,8 +880,24 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             f"--sham {sham[0]:g}:{sham[1]:g} overlaps --poke {poke[0]:g}:{poke[1]:g}. "
             "The sham window must contain no touch; move one of them."
         )
-    probe_path = add_probe(plan, collider=args.probe_pushes) if (args.probe or poke) else None
-    probe = RigidPrim(probe_path) if probe_path else None
+    demo = TouchDemo() if args.touch_demo else None
+    if demo is not None and (poke is not None or sham is not None):
+        raise SystemExit("--touch-demo touches on its own schedule; drop --poke and --sham.")
+    if demo is not None:
+        print(
+            f"\nAUTO-TOUCH DEMO: one touch every {demo.period_s:g} s from t={demo.first_s:g} s, "
+            "cycling " + ", ".join(f"{_body_region(f)} ({_side_name(s)})" for f, s in demo.stations)
+        )
+    probe_path = (
+        add_probe(plan, collider=args.probe_pushes)
+        if (args.probe or poke or demo is not None)
+        else None
+    )
+    # With the standard translate/orient/scale ops, so the probe can still be placed
+    # when there is no physics view to write through -- the timeline paused or
+    # stopped -- and Isaac falls back to USD, which needs an orient op the sphere
+    # was authored without. Without it the demo crashed mid-run on exactly that.
+    probe = RigidPrim(probe_path, reset_xform_op_properties=True) if probe_path else None
     tint = ActivityTint.build(plan.n_segments, probe_path=probe_path) if not args.no_tint else None
     SimulationManager.set_physics_dt(dt)
     masses = plan.masses_kg()
@@ -1008,6 +1034,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     # to give the seeded phase its own report and then reset the measurement.
     handed_over = args.seed_wave <= 0.0
     touching = False
+    demo_phase = ""
     # The sham window's own state, so it cannot be confused with a real touch.
     sham_open = False
     sham_peak: dict[str, float] = {}
@@ -1111,6 +1138,17 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         if probe is not None:
             if poke is not None:
                 _drive_poke(probe, links, plan, t, poke)
+            elif demo is not None:
+                pose = _drive_touch_demo(probe, links, plan, t, demo)
+                if pose is not None and pose.phase != demo_phase:
+                    if pose.phase == "approaching":
+                        fraction, side = pose.station
+                        print(
+                            f"    t={t:5.1f}s  AUTO-TOUCH: probe coming down on the "
+                            f"{_body_region(fraction)} ({fraction:.2f} along the body), "
+                            f"{_side_name(side)} side"
+                        )
+                    demo_phase = pose.phase
             contact, ventral = _probe_contact(probe, links, plan)
             if contact.any():
                 currents = touch.currents_from_segments(contact, ventral=ventral)
@@ -1407,6 +1445,60 @@ def _drive_poke(
         positions=np.asarray(target, dtype=np.float32).reshape(1, 3),
         orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
     )
+
+
+def _drive_touch_demo(
+    probe: RigidPrim, links: RigidPrim, plan: BodyPlan, t: float, demo: TouchDemo
+):
+    """Place the probe where the demo's schedule says, on the body as it is now.
+
+    Waiting points sit beside the target segment and raised above it, so that
+    however the body coils it cannot run into a waiting probe: four body radii up
+    is further than the contact sensing reaches. Seen from the top-down camera
+    the raise is invisible, and the probe simply comes in from the side. The
+    contact point is the one ``_drive_poke`` uses, resting against the surface.
+    """
+    pose = demo.at(t)
+    positions = np.asarray(links.get_world_poses()[0])[:, :3]
+    if not np.all(np.isfinite(positions)):
+        return None  # the body has already diverged; do not feed PhysX a NaN pose
+    probe_radius = DEFAULT_PROBE_RADIUS_SCALE * plan.max_radius_m
+    lift = 4.0 * plan.max_radius_m
+    aside = 0.25 * plan.total_length_m
+
+    def places(station: tuple[float, int]) -> tuple[np.ndarray, np.ndarray]:
+        fraction, side = station
+        segment = int(np.clip(round(fraction * (plan.n_segments - 1)), 0, plan.n_segments - 1))
+        axis = np.gradient(positions[:, :2], axis=0)[segment]
+        norm = np.linalg.norm(axis)
+        normal = np.array([-axis[1], axis[0]]) / norm if norm > 1e-12 else np.array([0.0, 1.0])
+        normal = normal * side
+        reach = plan.segments()[segment].radius_m + probe_radius
+        contact = positions[segment].copy()
+        contact[:2] += normal * reach
+        waiting = positions[segment].copy()
+        waiting[:2] += normal * (reach + aside)
+        waiting[2] += lift
+        return contact, waiting
+
+    contact, waiting = places(pose.station)
+    _, waiting_before = places(pose.previous)
+    hover = waiting_before + (waiting - waiting_before) * pose.glide
+    target = hover + (contact - hover) * pose.depth
+    probe.set_world_poses(
+        positions=np.asarray(target, dtype=np.float32).reshape(1, 3),
+        orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
+    )
+    return pose
+
+
+def _body_region(fraction: float) -> str:
+    return "head" if fraction < 0.35 else "tail" if fraction > 0.65 else "mid-body"
+
+
+def _side_name(side: int) -> str:
+    # The planar convention of _probe_contact: +1 is the side it reads as dorsal.
+    return "dorsal" if side > 0 else "ventral"
 
 
 def _probe_contact(
