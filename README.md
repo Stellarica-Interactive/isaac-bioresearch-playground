@@ -374,6 +374,21 @@ the body's own motion contributes, and a real touch has to beat it. A sham windo
 once produced the same −21 mV as a genuine touch, so the run withholds a verdict
 unless the response clears background by 2×.
 
+Hands-off, for watching:
+
+```powershell
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 70 --physics-hz 240 --quasistatic --touch-demo
+```
+
+From t=10 s the probe comes in by itself every 10 s: it travels across raised
+above the body, drops onto the head, tail or mid-body (alternating sides), rests
+there a second, lifts and moves on. It turns green while it registers contact,
+and the run prints each touch, the receptor currents it produced and the command
+neurons' response against background. The timings and spots are display choices;
+measure with `--poke` and `--sham`. On the inside of a curled body the probe can
+press on a second stretch of body as well, and the printout says which segments
+it touched.
+
 Expect no escape. On the crawling loop a gentle touch nudges all four command
 interneuron groups up by 1--2 mV together and shifts the gait's phase; the
 worm keeps crawling forward (§5AO.1). The direction the anatomy encodes is lost

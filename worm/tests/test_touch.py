@@ -183,3 +183,20 @@ def test_demo_refuses_a_touch_longer_than_its_period() -> None:
 
     with pytest.raises(ValueError):
         TouchDemo(period_s=3.0)
+
+
+def test_demo_probe_travels_high_then_drops_straight_down() -> None:
+    """Across at the waiting height, then vertically onto the contact point, so the
+    probe is never low over any part of the body but the one it is touching."""
+    from worm.body.touch import demo_probe_point
+
+    waiting = np.array([0.0, 30.0, 8.0])
+    contact = np.array([5.0, 3.0, 1.0])
+    np.testing.assert_allclose(demo_probe_point(contact, waiting, 0.0), waiting)
+    np.testing.assert_allclose(demo_probe_point(contact, waiting, 1.0), contact)
+    for depth in np.linspace(0.0, 1.0, 41):
+        point = demo_probe_point(contact, waiting, float(depth))
+        if depth <= 0.5:
+            assert point[2] == waiting[2]  # still at the waiting height
+        else:
+            np.testing.assert_allclose(point[:2], contact[:2])  # only descending

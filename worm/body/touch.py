@@ -336,3 +336,18 @@ def _smooth(x: float) -> float:
     """Smoothstep: starts and stops at rest, so the probe eases in and out."""
     x = min(max(x, 0.0), 1.0)
     return x * x * (3.0 - 2.0 * x)
+
+
+def demo_probe_point(contact: np.ndarray, waiting: np.ndarray, depth: float) -> np.ndarray:
+    """Where the demo probe is, ``depth`` of the way from its waiting point down.
+
+    Two legs, never a diagonal: across at the waiting height until it is above
+    the contact point, then straight down onto it, and the reverse on the way
+    back. A diagonal from beside the body down to it passes low over whatever
+    else the bent body has nearby, and brushed the mid-body on its way to the
+    tail. Each leg eases in and out.
+    """
+    above = np.array([contact[0], contact[1], waiting[2]])
+    if depth <= 0.5:
+        return waiting + (above - waiting) * _smooth(depth / 0.5)
+    return above + (contact - above) * _smooth((depth - 0.5) / 0.5)

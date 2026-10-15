@@ -562,7 +562,12 @@ from worm.body.neural_bridge import (  # noqa: E402
     Proprioception,
 )
 from worm.body.quasistatic import QuasiStaticBody  # noqa: E402
-from worm.body.touch import TOUCH_RECEPTORS, TouchDemo, TouchField  # noqa: E402
+from worm.body.touch import (  # noqa: E402
+    TOUCH_RECEPTORS,
+    TouchDemo,
+    TouchField,
+    demo_probe_point,
+)
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
     DEFAULT_PROBE_RADIUS_SCALE,
@@ -1035,6 +1040,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     handed_over = args.seed_wave <= 0.0
     touching = False
     demo_phase = ""
+    receptor_peak: dict[str, float] = {}
     # The sham window's own state, so it cannot be confused with a real touch.
     sham_open = False
     sham_peak: dict[str, float] = {}
@@ -1166,6 +1172,10 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                         f"-> {', '.join(f'{c} {v:.1f}pA' for c, v in sorted(currents.items()))}"
                     )
                 touching = True
+                # The strongest each receptor was driven. The TOUCH line reports
+                # the first frame of contact, which for a probe that eases on is the
+                # edge of the contact margin and so close to zero.
+                receptor_peak = {c: max(receptor_peak.get(c, 0.0), v) for c, v in currents.items()}
                 peak = {
                     k: max(peak.get(k, 0.0), v - baseline[k], key=abs)
                     for k, v in _command_state(runtime).items()
@@ -1190,6 +1200,11 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
                     + ", ".join(f"{k} {v:+.2f}mV" for k, v in sorted(peak.items()))
                     + muscle_note
                 )
+                print(
+                    "                 receptors peaked at "
+                    + ", ".join(f"{c} {v:.1f}pA" for c, v in sorted(receptor_peak.items()))
+                )
+                receptor_peak = {}
                 print(
                     "                 background over an equal window with no touch: "
                     + ", ".join(f"{k} {v:.2f}mV" for k, v in sorted(background.items()))
@@ -1484,7 +1499,7 @@ def _drive_touch_demo(
     contact, waiting = places(pose.station)
     _, waiting_before = places(pose.previous)
     hover = waiting_before + (waiting - waiting_before) * pose.glide
-    target = hover + (contact - hover) * pose.depth
+    target = demo_probe_point(contact, hover, pose.depth)
     probe.set_world_poses(
         positions=np.asarray(target, dtype=np.float32).reshape(1, 3),
         orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
