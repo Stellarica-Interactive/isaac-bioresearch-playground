@@ -1,11 +1,13 @@
 # What is left
 
 Status as of 2026-10-15. **The connectome crawls.** The committed model
-(`model_assumptions.md` §5AO.5) moves forward in Isaac: 8.55 body lengths in two
-minutes at a 3.2 s period, along a gently curving path, never passing through
-itself. It stops when proprioception is cut. The assumptions it rests on are in
-the table under §1.0; the one carrying most weight is the rate-sensing share of
-proprioception, which nobody has measured.
+(`model_assumptions.md` §5AO.17) moves forward in Isaac at 0.134 body lengths a
+second, inside the real animal's 0.1–0.3, on a 2.6 s rhythm with a wave of 24°
+per joint (the real one is 23°). It curves gently, one lap every 2.8 minutes, and
+never passes through itself. It stops when proprioception is cut. The
+assumptions it rests on are in the table under §1.0 and in §5AO.17; the one
+carrying most weight is the rate-sensing share of proprioception, which nobody
+has measured.
 
 What does not work yet:
 
@@ -13,7 +15,7 @@ What does not work yet:
 |---|---|---|
 | the head | stays nearly straight. It joins the wave only with feedback onto RMD that nobody has measured, and then the crawl circles. Measured parts added since (RME, the SMD–RME loop, RMD's own biophysics) do not give it a rhythm, because the whole network moves in step with the body | §1.0, `model_assumptions.md` §5AO.7–5AO.13 |
 | touch | the receptors fire and the worm does not respond: no escape. `--touch-demo` shows it | §5AO.1 |
-| reversal | commands work only through gap junctions here, and the measured backward route is chemical. With AVA's synapses onto the A-type motor neurons excitatory (their measured function), a 40 mV command and the assumed A-type loop, the backward command switches on a backward crawl from half the starts; the forward command never wins with both loops present. Making AVA's junctions one-way, as measured, breaks even that: the A cells' rhythm in the animal is their own (Gao et al. 2018), and the model has no measured source for it | §5AO.2, §5AO.14–5AO.16 |
+| reversal | commands work only through gap junctions here, and the measured backward route is chemical. With AVA's synapses onto the A-type motor neurons excitatory (their measured function), a 40 mV command and the assumed A-type loop, the backward command switches on a backward crawl from half the starts; the forward command never wins with both loops present. Making AVA's junctions one-way, as measured, breaks even that: the A cells' rhythm in the animal is their own (Gao et al. 2018). A phenomenological oscillator fitted to Gao et al.'s numbers is potentiated by AVA as measured, but either stops the crawl or leaves it going forward | §5AO.2, §5AO.14–5AO.18 |
 | steering | no chemotaxis | §5AO.3 |
 
 Until 2026-10-03 the nervous system did not crawl at all, and the history of how

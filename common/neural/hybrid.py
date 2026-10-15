@@ -79,6 +79,7 @@ it decides how strongly a plateau is transmitted downstream.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from typing import Any
 
 import numpy as np
 
@@ -152,6 +153,7 @@ class HybridRuntime:
         substep_ms: float = DEFAULT_DT_MS,
         recentre_threshold: bool = True,
         threshold_offset_mv: float = 0.0,
+        model: Any = None,
     ) -> HybridRuntime:
         """Promote ``cells`` to the conductance model, leaving every other cell alone.
 
@@ -164,7 +166,14 @@ class HybridRuntime:
         model_assumptions 5L every graded cell's sigmoid sits
         ``v_threshold_offset_mv`` above its rest, so a run that wants the promoted
         cells to follow the same convention passes that value.
+
+        ``model`` runs ``cells`` on a model object instead of a published one: any
+        object with ``step(state, dt_ms, i_ext_pa, g_ext_ns)``,
+        ``resting_state(n_cells)`` and ``model_id``, whose state's first row is the
+        membrane potential. ``cells`` must then be given.
         """
+        if model is not None and cells is None:
+            raise ValueError("a model object has no default cell set; pass cells")
         wanted = cells if cells is not None else INTRINSIC_MODELS[model_id]
         present = tuple(c for c in wanted if c in runtime.network.cell_ids)
         if not present:
@@ -173,7 +182,8 @@ class HybridRuntime:
                 "Build the runtime with those cells, or pass a different set."
             )
         indices = np.array([runtime.network.index(c) for c in present], dtype=np.int64)
-        model = ConductanceModel.load(model_id)
+        if model is None:
+            model = ConductanceModel.load(model_id)
 
         if recentre_threshold:
             # See the module docstring: keep the convention that a cell sits at the

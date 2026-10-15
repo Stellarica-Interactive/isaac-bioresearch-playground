@@ -172,7 +172,8 @@ C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 2
 
 The connectome drives the body: body curvature into the B-type motor neurons,
 302 coupled ODEs, muscle activation, joint torque, movement, back to curvature.
-No scripted wave anywhere.
+No scripted wave anywhere. [Presentation](#presentation) below draws the
+connectome over it, live.
 
 `--quasistatic` solves the body's force balance instead of integrating its
 momentum, and it is on every command here because a worm on agar is overdamped
@@ -186,15 +187,23 @@ rather than ~3 minutes. **Do not quote numbers from a windowed run** -- pass
 `--physics-hz 240` for anything measured, and see
 [`model_assumptions.md`](docs/model_assumptions.md) §5Y for why.
 
-What to expect: **it crawls forward**, about 8.6 body lengths in two minutes on
-a 3.2 s rhythm, along a gently curving path (under a degree a second), the body
-never touching itself. That is the committed model since
-[`model_assumptions.md`](docs/model_assumptions.md) §5AO.5–5AO.6: the muscle cells
-coupled to each other at the ratio Liu et al. 2006 measured, proprioception that
-is 70% rate-sensing and 30% tonic, under half the old muscle torque, and
-self-collision on. On the slow side -- 0.07 to 0.09 BL/s against a real animal's
-0.1--0.3 -- and two of those four changes are assumptions; the section below has
-the faster variants and what each change rests on.
+What to expect: **it crawls forward**, at about 0.13 body lengths a second --
+inside a real animal's 0.1--0.3 -- on a 2.6 s rhythm, with a wave that moves 24°
+per joint against the real animal's 23°. The path curves gently, one lap of a
+circle about seven body lengths across every 2.8 minutes, and the body never
+touches itself. That is the committed model of
+[`model_assumptions.md`](docs/model_assumptions.md) §5AO.17. The muscle cells
+are coupled to each other at the ratio Liu et al. 2006 measured. Proprioception
+is 70% rate-sensing and 30% tonic. The neurons' gap junctions are at half the
+uniform strength and the muscle torque is a third of the old value.
+Self-collision is on. Inhibitory synapses onto neurons reverse at −80 mV, below
+the network's rest, so they inhibit. Several of those are assumptions; the
+section below says which.
+
+The committed model before §5AO.17 -- full-strength neuron junctions, more
+torque, and an inhibitory reversal that sat above rest -- crawled 8.6 body
+lengths in two minutes on a 3.2 s rhythm. It reproduces with
+`--gap-scale neuron=1 --torque-scale 1.25e-3 --param e_inh_mv=-45`.
 
 Until §5AO.5 the same command did **not** crawl:
 the animal coiled and tumbled, its wave travelling the wrong way. That model is
@@ -232,22 +241,17 @@ proprioception responds to a held bend, so it cannot be purely rate-sensing (Wen
 et al. 2012). With only the muscle coupling set to its measured ratio, the
 neurons' gap junctions as committed, and 30% of the proprioceptive signal tonic,
 it still crawls forward, more slowly. That version, with the torque refined in
-§5AO.6, is now the committed default: the plain command under *Watch the worm*
-runs it.
+§5AO.6, was the committed default from §5AO.5 to §5AO.17.
 
-The neurons' own gap junctions are a third lever. Their committed strength,
-100 pS, is itself an assumption (Kunert et al. 2014), and at half of it the
-default model crawls at **0.11 BL/s** -- inside the real animal's range -- with a
-wave of −21° per joint against the real −23°, on a 2.6 s rhythm, along a gently
-curving path -- 11.3 body lengths in two minutes in Isaac:
-
-```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --torque-scale 1e-3 --gap-scale neuron=0.5
-```
-
-It is not the default because that conductance sets every neural result in this
-project, not only the gait, and changing it is a decision rather than a tuning
-step; §5AO.6 has the case for it.
+Two more levers made the present default (§5AO.17). The neurons' own gap
+junctions, whose uniform 100 pS is itself an assumption (Kunert et al. 2014), are
+at half strength, which gave a faster crawl with a wave near the real one
+(§5AO.6). And the inhibitory reversal potential, left at Kunert et al.'s −45 mV
+when the leak moved to a measured −70 mV, had been *exciting* every resting cell
+it reached. Moving it below rest for synapses onto neurons makes the crawl faster
+again and brings the wave to the real animal's; for synapses onto muscle it is
+kept at −45 mV, because moving those makes the worm circle, and why is an open
+question that a measured muscle resting potential would settle.
 
 **The head.** In every run above the front of the body stays nearly straight: only
 the B-type motor neurons sense the body, and none of them drives the head. Giving
@@ -255,18 +259,15 @@ the head motor neurons feedback as well makes the head swing in step with the
 body, so the wave starts at the head as it does in the animal:
 
 ```powershell
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --torque-scale 1e-3 --gap-scale neuron=0.5 --head-proprio
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --head-proprio
 ```
 
-It goes round in circles, about one lap every 70 s. The head's motor neurons
-drive the ventral side about twice as hard as the dorsal, but weakening the
-feedback to the ventral side does not straighten it: the loop has two crawls, and
-the one it settles into from rest circles at any balance. Adding
-`--head-ventral-scale 0.7` tips it into the other crawl, about one and a half
-times as fast, with a wider head swing, curving gently the other way round a
-circle about six body lengths across. That is a switch between crawls, not a
-fix, and the feedback on RMD, the cells that move the head tip, is an assumption
-nobody has measured. §5AO.7–5AO.9.
+It goes round in circles, about one lap every 45 s: the head's motor neurons
+drive the ventral side about twice as hard as the dorsal. `--head-ventral-scale
+0.7`, a weaker feedback to the ventral side, eases that to about one lap every
+two minutes. Neither is a fix -- on the earlier model it switched between two
+crawls rather than rebalancing one -- and the feedback on RMD, the cells that move
+the head tip, is an assumption nobody has measured. §5AO.7–5AO.17.
 
 An earlier version of this section used the committed torque without
 `--self-collision`; that crawl relied on the body passing through itself and is
@@ -395,6 +396,39 @@ worm keeps crawling forward (§5AO.1). The direction the anatomy encodes is lost
 because most of the touch receptors' chemical synapses have no known sign and
 are left out. `--legacy-defaults` reproduces the §5D measurements.
 
+### Presentation
+
+The default view is already dressed for showing: one smooth skin over the 24
+segments, shifted orange where the dorsal muscles are driven and blue where the
+ventral ones are, on a generated agar texture under soft light. The connectome
+can be drawn live on top:
+
+```powershell
+# inside the body's outline, bending with it
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --connectome inside --camera-framing 1.3
+
+# larger, floating over the agar beside the worm, bending with it
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --connectome above --camera-framing 1.8
+
+# flat, in a panel of its own
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --connectome screen
+```
+
+Neurons are coloured by synaptic activation on a fixed scale -- blue at rest,
+rose half-way, gold at the most a synapse can release -- and each synapse takes
+its presynaptic neuron's colour, so activity can be seen spreading. The drawing
+holds all 302 neurons and the 600 strongest chemical synapses. Motor neurons sit
+where their own muscle synapses are; every other neuron is placed by region
+(nerve ring, mid-body, tail ganglia) with a scatter, because the repository has
+no soma coordinates. **It is a display layout, not anatomy.**
+
+`--screenshot-every 5 --screenshot-dir shots` saves the viewport every five
+simulated seconds, and with `--connectome screen` the panel beside each frame.
+`--no-skin --ground grid` brings back the capsules and the checkerboard.
+
+All of this is display only. Nothing in it feeds back into the body or the
+network, and a run measures the same with any of it on or off.
+
 ### Controls worth running
 
 ```powershell
@@ -408,7 +442,7 @@ C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --legacy-defau
 C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 60 --legacy-defaults --torque-scale 3e-3 --quasistatic --shuffle-sign
 ```
 
-`--help` lists all forty flags. Several exist only to keep results honest:
+`--help` lists every flag. Several exist only to keep results honest:
 `--lesion`, `--no-proprioception`, `--shuffle-sign`, `--sham`, `--unknown-sign`.
 
 ### The conductance-based neuron models

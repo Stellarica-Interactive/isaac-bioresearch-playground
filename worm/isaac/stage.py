@@ -277,15 +277,22 @@ class ActivityTint:
         *,
         root_path: str = DEFAULT_ROOT,
         probe_path: str | None = None,
+        paint_segments: bool = True,
     ) -> ActivityTint:
+        """``paint_segments=False`` leaves the capsules unpainted -- when a skin is
+        drawn over them they are hidden -- and only works out their colours."""
         import isaacsim.core.experimental.utils.stage as stage_utils
         from pxr import UsdGeom
 
         stage = stage_utils.get_current_stage()
-        segments = [
-            UsdGeom.Gprim(stage.GetPrimAtPath(f"{root_path}/segment_{i:02d}"))
-            for i in range(n_segments)
-        ]
+        segments = (
+            [
+                UsdGeom.Gprim(stage.GetPrimAtPath(f"{root_path}/segment_{i:02d}"))
+                for i in range(n_segments)
+            ]
+            if paint_segments
+            else [None] * n_segments
+        )
         probe = UsdGeom.Gprim(stage.GetPrimAtPath(probe_path)) if probe_path else None
         return cls(segment_prims=segments, probe_prim=probe)
 
@@ -295,8 +302,11 @@ class ActivityTint:
         *,
         touching: bool = False,
         reference: np.ndarray | None = None,
-    ) -> None:
+    ) -> np.ndarray:
         """``net_activation`` is dorsal minus ventral per segment.
+
+        Returns the colour given to each segment, ``(n_segments, 3)``, so a skin
+        drawn over the segments can carry the same picture.
 
         Scaled by the largest magnitude present rather than an absolute range,
         because the connectome's antagonist difference is around 5e-3 while a
@@ -321,19 +331,22 @@ class ActivityTint:
         scale = float(np.abs(net).max())
         strength = net / scale if scale > 1e-12 else np.zeros_like(net)
 
+        painted = []
         for prim, value in zip(self.segment_prims, strength, strict=False):
-            if prim is None or not prim.GetPrim().IsValid():
-                continue
             target = self.dorsal_colour if value >= 0.0 else self.ventral_colour
             blend = abs(float(value))
-            colour = Gf.Vec3f(
-                *(n + (t - n) * blend for n, t in zip(self.neutral_colour, target, strict=True))
+            rgb = tuple(
+                n + (t - n) * blend for n, t in zip(self.neutral_colour, target, strict=True)
             )
-            prim.CreateDisplayColorAttr().Set(Vt.Vec3fArray([colour]))
+            painted.append(rgb)
+            if prim is None or not prim.GetPrim().IsValid():
+                continue
+            prim.CreateDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(*rgb)]))
 
         if self.probe_prim is not None and self.probe_prim.GetPrim().IsValid():
             colour = self.touch_colour if touching else self.probe_colour
             self.probe_prim.CreateDisplayColorAttr().Set(Vt.Vec3fArray([Gf.Vec3f(*colour)]))
+        return np.array(painted)
 
 
 def add_probe(

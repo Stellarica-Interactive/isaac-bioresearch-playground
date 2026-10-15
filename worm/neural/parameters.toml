@@ -163,20 +163,37 @@ source = "Kunert et al. 2014."
 note = "Reversal potential for a synapse predicted excitatory. A generic cation-channel value."
 
 [parameters.e_inh_mv]
+value = -80.0
+unit = "mV"
+confidence = "assumed"
+source = "Kunert et al. 2014's relation to the leak, re-applied; docs/model_assumptions.md 5AO.17."
+note = """
+Reversal potential for an inhibitory synapse onto a neuron. A generic chloride
+value. CHANGED from -45.0 on 2026-10-15. Kunert et al. 2014 put it 10 mV below
+their -35 mV leak so that an inhibitory synapse hyperpolarized; when e_leak_mv
+moved to -70 mV (2026-09-11) it was left at -45, above the network's -61 mV rest,
+so every inhibitory synapse onto a neuron depolarised it (5AO.14). -80 restores
+Kunert et al.'s 10 mV below the leak. Measured exception: AVA onto the A-type
+motor neurons, through the chloride channel LGC-46, excites at rest (Liu et al.
+2017), which no single neuronal value can reproduce. Synapses onto muscle use
+e_inh_muscle_mv."""
+improvement = "Chloride reversal potentials measured in C. elegans neurons."
+
+[parameters.e_inh_muscle_mv]
 value = -45.0
 unit = "mV"
 confidence = "assumed"
-source = "Kunert et al. 2014."
+source = "Kunert et al. 2014, kept for muscle; docs/model_assumptions.md 5AO.17."
 note = """
-Reversal potential for a synapse predicted inhibitory. A generic chloride value.
-It was chosen to sit below Kunert et al.'s e_leak_mv of -35 mV, so that an
-inhibitory synapse hyperpolarized. Since e_leak_mv moved to -70 mV (2026-09-11)
-it sits ABOVE the network's rest (median -61 mV): every inhibitory synapse now
-depolarises a resting cell and inhibits only above -45 mV, and it can never bring
-a cell to its release threshold (rest + v_threshold_offset_mv). For one synapse,
-AVA onto the A-type motor neurons through the chloride channel LGC-46, excitation
-at rest is measured (Liu et al. 2017); for the rest it is open. See
-docs/model_assumptions.md 5AO.14."""
+Reversal potential for an inhibitory synapse onto body-wall muscle: the GABA
+synapses from the D-type motor neurons, measured inhibitory (McIntire et al. 1993;
+Richmond and Jorgensen 1999). Kept at the old -45 mV when e_inh_mv moved to -80,
+because -80 here makes the crawl circle at 11 degrees per second (5AO.17). The
+model's muscle cells rest like its neurons, near -61 mV, so -45 depolarises them.
+Whether real body-wall muscle rests above -45 mV, which would make this value
+inhibitory as measured, is the open question; this value stands until a measured
+muscle resting potential settles it."""
+improvement = "A measured resting potential and GABA reversal for body-wall muscle."
 
 # ---------------------------------------------------------------------------
 # Transmitter release

@@ -111,6 +111,11 @@ class GradedLeakyIntegratorParameters:
     e_inh_mv: float = -45.0
     """Inhibitory reversal potential. ASSUMED."""
 
+    e_inh_muscle_mv: float | None = None
+    """Inhibitory reversal potential for synapses onto muscle cells. ASSUMED.
+    ``None`` uses ``e_inh_mv`` for every cell, as every parameter set before
+    docs/model_assumptions.md 5AO.17 did."""
+
     beta_per_mv: float = 0.125
     """Steepness of the transmitter-release sigmoid. ASSUMED."""
 
@@ -152,6 +157,12 @@ class GradedLeakyIntegratorParameters:
         phi = 1.0 / (1.0 + math.exp(self.beta_per_mv * self.v_threshold_offset_mv))
         rise = phi * self.a_r_per_ms
         return rise / (rise + self.a_d_per_ms)
+
+    @property
+    def s_ceiling(self) -> float:
+        """The most synaptic activation can reach: its steady state with release
+        saturated, ``phi = 1``. Well short of 1 with the default rates."""
+        return self.a_r_per_ms / (self.a_r_per_ms + self.a_d_per_ms)
 
     def with_overrides(self, **kwargs: float) -> GradedLeakyIntegratorParameters:
         return replace(self, **kwargs)

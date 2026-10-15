@@ -48,7 +48,7 @@ from enum import StrEnum
 
 import numpy as np
 
-from common.data.schemas import Connectome, Sign, SynapseType
+from common.data.schemas import CellCategory, Connectome, Sign, SynapseType
 
 PS_PER_NS = 1000.0
 
@@ -212,6 +212,7 @@ def build_matrices(
     e_leak_mv: float,
     weight_scaling: WeightScaling = WeightScaling.LINEAR,
     cells: tuple[str, ...] | None = None,
+    e_inh_muscle_mv: float | None = None,
 ) -> NetworkMatrices:
     """Build conductance and reversal-potential matrices from a connectome.
 
@@ -234,6 +235,14 @@ def build_matrices(
     e_rev = np.zeros((n, n), dtype=np.float64)
 
     excitatory = inhibitory = mixed = from_policy = excluded = 0
+    # Inhibitory synapses onto muscle may reverse elsewhere than onto neurons
+    # (docs/model_assumptions.md 5AO.17); by default they do not.
+    muscles = (
+        {c.id for c in connectome.cells if c.category is CellCategory.MUSCLE}
+        if e_inh_muscle_mv is not None
+        else set()
+    )
+    e_inh_onto_muscle_mv = e_inh_mv if e_inh_muscle_mv is None else e_inh_muscle_mv
 
     for e in connectome.connections:
         i, j = index.get(e.post), index.get(e.pre)
@@ -254,7 +263,7 @@ def build_matrices(
             reversal = e_exc_mv
             excitatory += 1
         elif e.sign is Sign.INHIBITORY:
-            reversal = e_inh_mv
+            reversal = e_inh_onto_muscle_mv if e.post in muscles else e_inh_mv
             inhibitory += 1
         elif e.sign is Sign.MIXED:
             reversal = e_leak_mv
@@ -266,7 +275,7 @@ def build_matrices(
             if unknown_sign is UnknownSignPolicy.EXCITATORY:
                 reversal = e_exc_mv
             elif unknown_sign is UnknownSignPolicy.INHIBITORY:
-                reversal = e_inh_mv
+                reversal = e_inh_onto_muscle_mv if e.post in muscles else e_inh_mv
             else:
                 reversal = e_leak_mv
             from_policy += 1

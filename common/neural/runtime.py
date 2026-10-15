@@ -206,6 +206,7 @@ class NeuralRuntime:
             e_leak_mv=p.e_leak_mv,
             weight_scaling=weight_scaling,
             cells=tuple(cells) if cells is not None else None,
+            e_inh_muscle_mv=p.e_inh_muscle_mv,
         )
         model = prepare(GradedLeakyIntegrator(params=p), network)
         return cls(network=network, model=model, dt_ms=dt_ms, integrator=integrator)

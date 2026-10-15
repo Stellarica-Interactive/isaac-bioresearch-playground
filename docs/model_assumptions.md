@@ -7402,6 +7402,132 @@ connection: an A-type oscillator built from Gao et al.'s UNC-2 current, which
 would itself be assumed in its parameters, or motor neurons with intrinsic
 dynamics more generally.
 
+### 5AO.17 Two decisions: variant B is committed, and the chloride reversal is split
+
+Both decided on 2026-10-15, at the user's request, and both change the committed
+model.
+
+**Variant B.** §5AO.6 left the neurons' gap junctions as a decision. They are
+now at half their uniform strength, with the torque at 1e-3: the runner's default
+`--gap-scale` is `neuron=0.5` and its torque 1e-3. Passing any `--gap-scale`
+replaces the default, so `--gap-scale neuron=1` restores full-strength
+junctions, and `--legacy-defaults` still restores the model before §5AO.5. The
+basis is §5AO.6's. The junction strength was never measured either way, and B
+crawls faster with a wave nearer the real one; the head can also lock to it
+(§5AO.8).
+
+**The chloride reversal.** §5AO.14 found the inhibitory reversal still at
+Kunert et al.'s −45 mV, which since §5H has sat above the network's rest, so every
+"inhibitory" synapse excited a resting cell. Moved for all 562 chloride-class
+connections, on variant B, 80 s, starts from rest and 2° off (the two agree):
+
+| inhibitory reversal | speed | wave per joint | turning |
+|---|---|---|---|
+| −45 mV (as it was) | 0.110 BL/s | −20.8° | −0.7°/s |
+| −60 | 0.126 | −25.4° | +8°/s |
+| −70 | 0.124 | −25.2° | +12°/s |
+| −80 | 0.120 | −25.3° | +14°/s |
+
+Below rest the crawl is faster, but it circles. Splitting the 562 connections by
+target, at −70 mV:
+
+| reversal moved for | speed | wave per joint | turning |
+|---|---|---|---|
+| synapses onto neurons only (409) | 0.132 BL/s | −23.6° | −1.6°/s |
+| synapses onto muscle only (153, the D-type GABA synapses) | 0.107 | −24.3° | **+11.4°/s** |
+
+The circling comes entirely from the synapses onto muscle. Onto neurons alone,
+every value from −70 to −80 mV crawls at 0.131–0.136 BL/s with a wave of −23.3°
+to −24.4° per joint (the real animal's is −23°) and turns about 2°/s.
+
+**Decision.** `e_inh_mv` is now −80 mV, for inhibitory synapses onto neurons.
+That is Kunert et al.'s 10 mV below the leak, re-applied after the leak moved, and
+it restores what the parameter's own note said it was for. A new parameter,
+`e_inh_muscle_mv`, keeps synapses onto muscle at −45 mV (`build_matrices` takes
+it, and leaving it unset gives every cell one reversal, as before). The reason
+for keeping −45 there is not a measurement. The model's muscle cells rest like
+its neurons, near −61 mV, so at −45 mV the GABA synapses that are measured to
+inhibit body-wall muscle (McIntire et al. 1993; Richmond and Jorgensen 1999)
+still depolarise it; moving them below rest makes the crawl circle. Either real
+muscle rests above −45 mV, and the value is right and the muscle's rest is what
+is wrong, or the circling points at an imbalance in the D-type motor neurons. A
+measured resting potential for body-wall muscle would settle it, and the
+parameter's note says so. The measured exception among neurons remains: AVA onto
+the A-type motor neurons excites at rest through a chloride channel (§5AO.14),
+which no single neuronal value can reproduce.
+
+**The committed model now**, in the analysis loop, 120 s, three starts:
+
+| | before (A, −45 mV) | now |
+|---|---|---|
+| speed | 0.087 BL/s | **0.135–0.136 BL/s** |
+| period | 3.16 s | 2.56 s |
+| wave per joint | −19.7° | **−24.2° to −24.3°** (real −23°) |
+| turning | −0.6°/s | −2.1 to −2.2°/s |
+| closest approach to itself | | +1.26 mm |
+| proprioception cut | no motion | no motion |
+
+**Isaac, predicted beforehand from the loop** (the plain `run_connectome.py --seconds 120 --physics-hz 240 --quasistatic`, windowed): turning −2.16°/s, steady in every 20 s window (−2.04 to −2.26), against −2.1 to −2.2 predicted; speed from the fitted circle 0.134 BL/s against 0.135–0.136; period 2.5–2.6 s; `travel` +0.76, against the previous default's +0.55 and variant B's +0.64; no joint pinned; closest approach +1.26 mm. It runs round a circle about seven body lengths across, one lap every 2.8 minutes, covering about 15 body lengths of path in two minutes where the previous default covered 8.6.
+
+**The head probe under the new model.** `--head-proprio` still locks the head to the body (head bending 7.7–7.9°, 2.70 s) but circles faster, +8.3°/s from rest and from a nudged start, at 0.096–0.099 BL/s. `--head-ventral-scale 0.7` no longer tips it into §5AO.9's faster crawl: it eases the circling to +3.4°/s at the same speed. §5AO.9's two coexisting crawls were found on the earlier model and are not re-examined here.
+
+To reproduce the model as it was before this section, pass `--gap-scale neuron=1
+--torque-scale 1.25e-3 --param e_inh_mv=-45`. Every committed-crawl figure from
+§5AO.5 to §5AO.16 was measured that way; the probes in those sections are not
+re-run.
+
+### 5AO.18 The A-type cells as Gao et al.'s slow oscillators: AVA potentiates them, the worm still does not reverse
+
+§5AO.16 ended on the A-type cells' missing rhythm source. Gao et al. 2018
+measured it. Isolated from the premotor interneurons, the A cells burst every
+50–90 s for 2–3 s. The calcium channel UNC-2 underlies the bursting. In crawling
+animals the cycle is about five times faster, which the authors put down to
+proprioception. And AVA potentiates the cells, mainly through its chemical
+synapses. None of it gives a conductance or a time constant, and the measured
+VA5 model has no UNC-2.
+
+So `worm/neural/a_oscillator.py` is **phenomenological**, every parameter
+assumed. It has a fast regenerative inward current standing in for UNC-2, a slow
+recovery current that builds during a burst and decays slowly between bursts,
+and the graded model's membrane. Its parameters are chosen so that an isolated
+cell bursts every 66 s for 2.2 s, inside Gao et al.'s two measured ranges, and
+tests hold it there. It runs on all 21 DA and VA cells through the hybrid
+runtime, which now takes a model object as well as a published model
+(`--intrinsic a_oscillator_gao2018`). Getting it to oscillate at all needed one
+non-obvious choice: the recovery current must be fully on across the whole burst
+voltage range. With its midpoint at the burst voltage, the cell settles into a
+stable middle state after its first burst and never bursts again.
+
+The committed model of §5AO.17, 120 s, starts 2° off straight:
+
+| oscillator strength (common factor on its conductances) | command | A cells in a burst | crawl |
+|---|---|---|---|
+| no A cells at all (rebuilt lesion) | forward (AVB 20 mV) | | forward, 0.105 BL/s |
+| 1 (3 and 10 nS) | forward | | **stops**: a standing wave, +0.006 BL/s, from both starts |
+| 1, AVA's junctions one-way (and PVC's) | forward | | still stops |
+| 1 | backward (AVA 40 mV, its synapses excitatory), with or without the A-type loop | | no net motion |
+| 1/5 | forward / backward | 4.1% / 4.7% of the time | stops / stops |
+| 1/20 | forward | 5.9% | forward, 0.125 BL/s, +2.6°/s |
+| 1/20 | backward | **28%** | still **forward**, 0.131 BL/s, circling at +12°/s |
+
+**AVA's potentiation works as measured**: under the backward command the weak
+oscillators spend five times as long bursting. **The worm still does not
+reverse.** The bursts do not organise into a headward wave, and the forward B loop
+keeps running. Made strong enough to matter, the oscillators stop the crawl
+outright. Each burst drives the muscles through the A cells' synapses, and each
+quiet phase pulls their gap-junction partners towards −80 mV (AVA holds 36% of
+that coupling, other A cells most of the rest, PVC 11%). Making AVA's junctions
+one-way, as measured, does not rescue it.
+
+Two things are still missing, and neither is measured in a form the model can
+use. One is whatever turns separate bursts into a wave: Gao et al. credit
+proprioception, and the model's A-type loop is the assumed stand-in for it, which
+did not help here. The other is a gate that holds the forward loop down while AVA
+is on (§5AO.15).
+
+**Decision.** Not adopted. The oscillator, its tests and `--intrinsic
+a_oscillator_gao2018` stay as a probe. Reversal remains open.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

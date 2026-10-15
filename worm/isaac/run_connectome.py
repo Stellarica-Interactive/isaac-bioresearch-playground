@@ -102,13 +102,16 @@ parser.add_argument(
 parser.add_argument(
     "--gap-scale",
     action="append",
-    default=[],
+    default=None,
     metavar="CLASS=FACTOR",
     help="Scale one class of gap junction, by the cells it joins: neuron, muscle "
     "(body-wall muscle to body-wall muscle) or neuron-muscle. Repeatable. "
     "g_gap_ps sets all three at once; nothing measured says they share a "
     "conductance. Sigmoid midpoints are re-solved afterwards, exactly as a "
-    "--param build does. See model_assumptions 5AN.21.",
+    "--param build does. Default: neuron=0.5, the committed model since "
+    "model_assumptions 5AO.17 (assumed, not measured); passing any --gap-scale "
+    "replaces it, so --gap-scale neuron=1 restores full-strength neuron junctions. "
+    "See 5AN.21, 5AO.6.",
 )
 parser.add_argument(
     "--head-proprio",
@@ -307,7 +310,7 @@ parser.add_argument(
     default=[],
     metavar="NAME=VALUE",
     help="Override a biophysical parameter for this run, repeatable, e.g. "
-    "--param g_gap_ps=30. Seven of eleven are still ASSUMED (see "
+    "--param g_gap_ps=30. Most are still ASSUMED (see "
     "worm/neural/parameters.toml), so being able to sweep any of them from the "
     "command line is how their influence gets measured rather than argued about.",
 )
@@ -466,8 +469,52 @@ parser.add_argument(
 parser.add_argument(
     "--no-grid",
     action="store_true",
-    help="hide the checkerboard. It is scenery with no collider, so this changes "
-    "nothing a run measures.",
+    help="hide the ground. It is scenery with no collider, so this changes "
+    "nothing a run measures. Same as --ground none.",
+)
+parser.add_argument(
+    "--ground",
+    choices=("agar", "grid", "none"),
+    default="agar",
+    help="what the worm crawls over, for the eye only: a generated agar texture, the "
+    "old checkerboard, or nothing. No collider either way; the substrate is the drag "
+    "model.",
+)
+parser.add_argument(
+    "--skin",
+    action=argparse.BooleanOptionalAction,
+    default=True,
+    help="draw one smooth body over the segments, coloured by the muscle drive. "
+    "Display only; the segments stay the physics bodies.",
+)
+parser.add_argument(
+    "--connectome",
+    choices=("off", "screen", "above", "inside"),
+    default="off",
+    help="draw the connectome live, neurons coloured by synaptic activation (blue "
+    "at rest, through rose, to gold) and synapses by their presynaptic neuron: in a "
+    "panel on screen, floating above the agar beside the worm, or inside its body's "
+    "outline. Both 3D modes bend with the body. The 302 neurons and the 600 "
+    "strongest synapses; motor neurons sit where their muscle synapses are, the "
+    "rest by region (a display layout, not soma positions).",
+)
+parser.add_argument(
+    "--camera-framing",
+    type=float,
+    default=None,
+    help="how many body lengths the view spans (default 2.5); smaller is closer, "
+    "1.3 or so for presentation shots",
+)
+parser.add_argument(
+    "--screenshot-every",
+    type=float,
+    default=0.0,
+    help="save the viewport every this many simulated seconds (0: never)",
+)
+parser.add_argument(
+    "--screenshot-dir",
+    default="screenshots",
+    help="where --screenshot-every saves its frames",
 )
 parser.add_argument(
     "--self-collision",
@@ -492,7 +539,8 @@ parser.add_argument(
     action="store_true",
     help="The committed model before model_assumptions 5AO.5: curvature-only "
     "proprioception at 20 mV/rad, uniform muscle coupling, torque 5e-4, no "
-    "self-collision. Every result in model_assumptions before 5AO.5, and the "
+    "self-collision, full-strength neuron gap junctions, and the inhibitory "
+    "reversal at -45 mV. Every result in model_assumptions before 5AO.5, and the "
     "README sections that say so, were measured this way. Explicit flags still win.",
 )
 parser.add_argument("--report-every", type=float, default=2.0)
@@ -502,7 +550,11 @@ args, _ = parser.parse_known_args()
 # 5AO.5). Resolved here rather than in add_argument so that --legacy-defaults can
 # restore the old set while an explicitly passed flag still wins over both.
 _COMMITTED = {
-    "torque_scale": "1.25e-3",
+    # Variant B since model_assumptions 5AO.17: neuron gap junctions at half
+    # strength and torque 1e-3, a faster crawl with a near-real wavelength
+    # (5AO.6). Before that, torque 1.25e-3 with full-strength neuron junctions.
+    "torque_scale": "1e-3",
+    "gap_scale": ["neuron=0.5"],
     "proprioceptive_mv": 400.0,
     "proprio_rate": None,  # Proprioception's own default, DEFAULT_RATE_FRACTION
     "self_collision": True,
@@ -510,6 +562,7 @@ _COMMITTED = {
 }
 _LEGACY = {
     "torque_scale": "5e-4",
+    "gap_scale": [],
     "proprioceptive_mv": 20.0,
     "proprio_rate": 0.0,
     "self_collision": False,
@@ -518,6 +571,10 @@ _LEGACY = {
 for _name, _value in (_LEGACY if args.legacy_defaults else _COMMITTED).items():
     if getattr(args, _name) is None:
         setattr(args, _name, _value)
+# The inhibitory reversal moved in parameters.toml (model_assumptions 5AO.17), so
+# the legacy model restores it explicitly; a --param e_inh_mv still wins.
+if args.legacy_defaults and not any(p.startswith("e_inh_mv=") for p in args.param):
+    args.param.append("e_inh_mv=-45")
 
 from isaacsim import SimulationApp  # noqa: E402
 
@@ -525,6 +582,8 @@ simulation_app = SimulationApp({"headless": args.headless})
 
 # --- 2. Everything else -------------------------------------------------------
 
+import time  # noqa: E402
+from pathlib import Path  # noqa: E402
 from typing import Any  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -568,6 +627,7 @@ from worm.body.touch import (  # noqa: E402
     TouchField,
     demo_probe_point,
 )
+from worm.body.visuals import ConnectomeDrawing  # noqa: E402
 from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
     DEFAULT_PROBE_RADIUS_SCALE,
@@ -578,6 +638,13 @@ from worm.isaac.stage import (  # noqa: E402
     build_scene,
     dof_order,
 )  # noqa: E402
+from worm.isaac.visuals import (  # noqa: E402
+    ConnectomeOverlay,
+    ViewportCapture,
+    WormSkin,
+    add_agar_ground,
+    presentation_lighting,
+)
 from worm.loader import load  # noqa: E402
 from worm.neural.config import (  # noqa: E402
     RUNTIME_OVERLAYS,
@@ -642,7 +709,7 @@ def main() -> int:
         print(
             "  gap junctions rescaled by class: "
             + ", ".join(f"{k} x{v:g}" for k, v in factors.items())
-            + " -- ASSUMED, see model_assumptions 5AN.21"
+            + " -- ASSUMED, see model_assumptions 5AN.21 and 5AO.17"
         )
     print(report.summary())
 
@@ -814,6 +881,20 @@ def main() -> int:
             bridge=bridge,
             proprio=proprio,
             head_proprio=head_proprio,
+            drawing=(
+                ConnectomeDrawing.build(
+                    connectome,
+                    runtime.network.cell_ids,
+                    runtime.network.g_syn,
+                    plan,
+                    activation_range=(
+                        runtime.model.params.s_at_rest,
+                        runtime.model.params.s_ceiling,
+                    ),
+                )
+                if args.connectome != "off"
+                else None
+            ),
             command=command,
             lesion_idx=lesion_idx,
             torque_scale=scale,
@@ -846,6 +927,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     bridge: MuscleDrive,
     proprio: Proprioception,
     head_proprio: Proprioception | None,
+    drawing: ConnectomeDrawing | None,
     command: dict[str, float],
     lesion_idx: np.ndarray,
     torque_scale: float,
@@ -873,9 +955,21 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     )
 
     root_path, joint_paths = build_scene(plan, self_collision=args.self_collision)
-    camera = add_camera(plan)
-    if not args.no_grid:
+    camera = add_camera(plan, **({"framing": args.camera_framing} if args.camera_framing else {}))
+    ground = "none" if args.no_grid else args.ground
+    if ground == "grid":
         add_ground_grid(plan)
+    elif ground == "agar":
+        add_agar_ground(plan)
+    if args.skin or ground == "agar":
+        # The light the skin and agar colours were chosen under. The capsules
+        # and checkerboard keep the scene's own.
+        presentation_lighting()
+    skin = WormSkin.build(plan, root_path=root_path) if args.skin else None
+    overlay = (
+        ConnectomeOverlay.build(args.connectome, drawing, plan) if drawing is not None else None
+    )
+    capture = ViewportCapture(Path(args.screenshot_dir), args.screenshot_every)
     poke = [float(x) for x in args.poke.split(":")] if args.poke else None
     sham = [float(x) for x in args.sham.split(":")] if args.sham else None
     if sham is not None and poke is not None and poke[0] < sham[1] and sham[0] < poke[1]:
@@ -903,7 +997,11 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
     # stopped -- and Isaac falls back to USD, which needs an orient op the sphere
     # was authored without. Without it the demo crashed mid-run on exactly that.
     probe = RigidPrim(probe_path, reset_xform_op_properties=True) if probe_path else None
-    tint = ActivityTint.build(plan.n_segments, probe_path=probe_path) if not args.no_tint else None
+    tint = (
+        ActivityTint.build(plan.n_segments, probe_path=probe_path, paint_segments=skin is None)
+        if not args.no_tint
+        else None
+    )
     SimulationManager.set_physics_dt(dt)
     masses = plan.masses_kg()
     articulation = Articulation(root_path)
@@ -1034,11 +1132,34 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             dof_indices=dofs,
         )
 
+    def refresh_view(t: float, segment_colours: np.ndarray | None) -> None:
+        """Every frame: the camera, the skin, the connectome, screenshots.
+
+        Display only -- it reads the simulation and writes nothing back. Every
+        frame because anything updated less often visibly steps: the skin used to
+        move on every sixth frame and the camera on every fourth.
+        """
+        centres = np.asarray(links.get_world_poses()[0])[:, :3]
+        if not np.all(np.isfinite(centres)):
+            return
+        if skin is not None:
+            skin.update(centres, segment_colours)
+        if overlay is not None:
+            overlay.update(centres, runtime.state[1], t)
+        # Keep the animal in frame -- it travels several body lengths -- or, with
+        # a drawing beside it, the two together.
+        shift = overlay.view_shift if overlay is not None else 0.0
+        camera.follow(centres[:, :2].mean(axis=0) + shift)
+        capture.maybe(t, overlay.image if overlay is not None else None)
+
     start = _centroid(links)
+    wall_start, frames = time.perf_counter(), 0
     # Whether the scripted wave has stopped and the loop is on its own. Used once,
     # to give the seeded phase its own report and then reset the measurement.
     handed_over = args.seed_wave <= 0.0
     touching = False
+    # The tint's latest colours, which the skin keeps between the tint's updates.
+    painted: np.ndarray | None = None
     demo_phase = ""
     receptor_peak: dict[str, float] = {}
     # The sham window's own state, so it cannot be confused with a real touch.
@@ -1258,6 +1379,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             )
             drive_body(muscle_model.joint_torques())
             simulation_app.update()
+            frames += 1
             t += dt
             history.append(angles.copy())
             if motor_idx.size:
@@ -1269,8 +1391,7 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
             # the frame within seconds and printed nothing until FINAL. The
             # positive control the README tells people to watch was the one run
             # nobody could see, in the viewport or in the output.
-            if len(history) % 4 == 0:
-                camera.follow(_centroid(links))
+            refresh_view(t, None)
             if t - reported >= args.report_every:
                 reported = t
                 _report(t, start, links, plan, angles, history, hz=args.physics_hz)
@@ -1304,28 +1425,29 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         if drive_reference is None and t > 1.0:
             drive_reference = drive_now.copy()
         if tint is not None and len(history) % 6 == 0:
-            tint.update(
+            painted = tint.update(
                 drive_now,
                 touching=touching,
                 reference=drive_reference if args.tint_change else None,
             )
+        refresh_view(t, painted)
         drive_body(muscle_model.joint_torques())
 
         simulation_app.update()
+        frames += 1
         t += dt
         history.append(angles.copy())
         if motor_idx.size:
             motor_trace.append(runtime.state[1, motor_idx].copy())
             motor_v.append(runtime.state[0, motor_idx].copy())
-        # Keep the animal in frame; it travels several body lengths.
-        if len(history) % 4 == 0:
-            camera.follow(_centroid(links))
 
         if t - reported >= args.report_every:
             reported = t
             _report(t, start, links, plan, angles, history, hz=args.physics_hz)
 
     _report(args.seconds, start, links, plan, angles, history, final=True, hz=args.physics_hz)
+    wall = time.perf_counter() - wall_start
+    print(f"  wall clock {wall:.0f} s, {frames / max(wall, 1e-9):.0f} frames a second")
     if switch is not None:
         print(f"         latched high at the end: {100 * switch.fraction_on:.0f}% of them")
     if motor_trace and args.dump_motor:

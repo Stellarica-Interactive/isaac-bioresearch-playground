@@ -66,6 +66,7 @@ from worm.body.neural_bridge import (
 from worm.body.quasistatic import QuasiStaticBody
 from worm.importers.naming import body_wall_muscle_ids
 from worm.loader import load
+from worm.neural.a_oscillator import A_TYPE_CELLS, AOscillator
 from worm.neural.config import (
     RUNTIME_OVERLAYS,
     add_extrasynaptic,
@@ -406,7 +407,18 @@ class Loop:
 
         self.hybrid: HybridRuntime | None = None
         model_id = getattr(args, "intrinsic", None)
-        if model_id:
+        if model_id == AOscillator.model_id:
+            # The A-type motor neurons as Gao et al. 2018's slow oscillators, a
+            # phenomenological model (worm/neural/a_oscillator.py; 5AO.18). Stable
+            # at a half-millisecond substep, so it runs at four substeps a step.
+            self.hybrid = HybridRuntime.build(
+                self.runtime,
+                model=AOscillator(),
+                cells=A_TYPE_CELLS,
+                substep_ms=0.5,
+                threshold_offset_mv=self.runtime.model.params.v_threshold_offset_mv,
+            )
+        elif model_id:
             self.hybrid = HybridRuntime.build(
                 self.runtime,
                 model_id=model_id,

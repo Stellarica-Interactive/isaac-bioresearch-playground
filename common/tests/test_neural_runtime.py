@@ -290,6 +290,15 @@ class TestEquilibrium:
         assert s_star == pytest.approx(0.5 * P.a_r_per_ms / (0.5 * P.a_r_per_ms + P.a_d_per_ms))
         assert s_star == pytest.approx(1.0 / 11.0)
 
+    def test_a_cell_driven_far_past_threshold_settles_at_the_ceiling(self) -> None:
+        """Release saturates, so activation tops out at ``s_ceiling``, not at 1."""
+        c = net(["A", "B"], [signed("A", "B", 3, Sign.EXCITATORY)])
+        rt = NeuralRuntime.build(c, unknown_sign=UnknownSignPolicy.EXCLUDE)
+        rt.inject("A", 1.0)  # about 100 mV through a 10 pS leak
+        rt.run(3000.0)
+        assert P.s_ceiling == pytest.approx(1.0 / 6.0)
+        assert rt.activation("A") == pytest.approx(P.s_ceiling, rel=1e-3)
+
 
 class TestSigmoid:
     def test_midpoint_is_a_half(self) -> None:
@@ -678,3 +687,53 @@ class TestModelProtocol:
         model = GradedLeakyIntegrator()
         assert model.v_threshold_mv is None
         assert prepare(model, m).v_threshold_mv is not None
+
+
+class TestMuscleInhibitoryReversal:
+    """Inhibitory synapses onto muscle can reverse elsewhere than onto neurons
+    (docs/model_assumptions.md 5AO.17), and by default do not."""
+
+    def network(self) -> Connectome:
+        cells = (
+            Cell(id="D", category=CellCategory.NEURON),
+            Cell(id="N", category=CellCategory.NEURON),
+            Cell(id="M", category=CellCategory.MUSCLE),
+        )
+        return Connectome(
+            id="test",
+            organism="Test",
+            sex="hermaphrodite",
+            stage="adult",
+            scope=Scope.WHOLE_ANIMAL,
+            cells=cells,
+            connections=(
+                signed("D", "N", 3, Sign.INHIBITORY),
+                signed("D", "M", 3, Sign.INHIBITORY),
+                signed("N", "M", 3, Sign.EXCITATORY),
+            ),
+            provenance=PROV,
+        )
+
+    def build(self, **extra: float) -> object:
+        return build_matrices(
+            self.network(),
+            unknown_sign=UnknownSignPolicy.EXCLUDE,
+            g_syn_ps=100,
+            g_gap_ps=100,
+            e_exc_mv=0,
+            e_inh_mv=-80,
+            e_leak_mv=-70,
+            **extra,
+        )
+
+    def test_muscle_takes_its_own_reversal(self) -> None:
+        m = self.build(e_inh_muscle_mv=-45)
+        d, n, mu = m.index("D"), m.index("N"), m.index("M")
+        assert m.e_rev[n, d] == -80  # onto a neuron
+        assert m.e_rev[mu, d] == -45  # onto muscle
+        assert m.e_rev[mu, n] == 0  # excitatory is untouched
+
+    def test_unset_means_one_reversal_for_every_cell(self) -> None:
+        m = self.build()
+        assert m.e_rev[m.index("M"), m.index("D")] == -80
+        assert GradedLeakyIntegratorParameters().e_inh_muscle_mv is None
