@@ -329,7 +329,28 @@ doi:[10.1038/ncomms14818](https://doi.org/10.1038/ncomms14818)
 Paired recordings of AVA and the A-type motor neurons: their gap junctions "only
 allow antidromic current", from motor neuron into AVA, and that back-flow
 amplifies AVA's chemical drive of the motor neurons; disrupting either kind of
-synapse impairs escape. Cited in §5AO.13: the model's gap junctions are symmetric.
+synapse impairs escape. Also: AVA is cholinergic, and its transmission to the A
+cells runs through the receptor LGC-46 and is excitatory. Cited in §5AO.13–5AO.14:
+the model's gap junctions are symmetric, and it classes that synapse as
+mixed-sign.
+
+**Takayanagi-Kiya S, Zhou K, Jin Y. Release-dependent feedback inhibition by a
+presynaptically localized ligand-gated anion channel.** *eLife* 5:e21734 (2016).
+doi:[10.7554/eLife.21734](https://doi.org/10.7554/eLife.21734)
+LGC-46 is an acetylcholine-gated chloride channel. Cited in §5AO.14: the measured
+excitatory AVA → A synapse is therefore a chloride synapse, so chloride reverses
+above those cells' resting potential.
+
+**Gao S, Guan SA, Fouad AD, Meng J, Kawano T, Huang YC, Li Y, Alcaire S, Hung W,
+Lu Y, Qi YB, Jin Y, Alkema M, Fang-Yen C, Zhen M. Excitatory motor neurons are
+local oscillators for backward locomotion.** *eLife* 7:e29915 (2018).
+doi:[10.7554/eLife.29915](https://doi.org/10.7554/eLife.29915)
+Forward and backward locomotion have different oscillators; the A-type motor
+neurons oscillate intrinsically (an UNC-2 calcium current) and can drive backward
+locomotion without the premotor interneurons, and AVA, through its mixed
+gap-junction and chemical configuration, both inhibits and potentiates their
+activity depending on its own state. Cited in §5AO.2 for the assumed A-type loop,
+and in §5AO.15 for the state-dependent gating the model lacks.
 
 **Fouad AD, Teng S, Mark JR, Liu A, Alvarez-Illera P, Ji H, Du A, Bhirgoo PD,
 Cornblath E, Guan SA, Fang-Yen C. Distributed rhythm generators underlie

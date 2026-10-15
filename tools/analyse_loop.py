@@ -49,7 +49,7 @@ from dataclasses import replace
 
 import numpy as np
 
-from common.data.schemas import CellCategory
+from common.data.schemas import CellCategory, Connectome, Sign, SynapseType
 from common.neural.hybrid import HybridRuntime
 from common.neural.stimulus import scale_for_depolarisation, solve_for_depolarisation
 from common.neural.synapses import UnknownSignPolicy
@@ -74,6 +74,33 @@ from worm.neural.config import (
 )
 
 GAIT_HZ = 0.5
+
+
+def override_signs(connectome: Connectome, spec: str) -> tuple[Connectome, int]:
+    """Reclassify chemical synapses: ``"PRE>POST=sign"``, cells or classes.
+
+    ``"AVA>DA,VA=excitatory"`` gives every chemical synapse from an AVA cell onto
+    a DA or VA cell the excitatory sign. For probes whose basis is a measurement
+    the sign data does not carry (model_assumptions 5AO.15); the source becomes
+    ``"override"`` so a printout never passes it off as the data's own.
+    """
+    from dataclasses import replace as _replace
+
+    edge, _, sign_name = spec.partition("=")
+    pre_spec, _, post_spec = edge.partition(">")
+    sign = Sign(sign_name.strip().lower())
+    pre = _resolve_cells(connectome, pre_spec)
+    post = _resolve_cells(connectome, post_spec)
+    if not pre or not post:
+        raise ValueError(f"{spec!r} names no cells on one side")
+    changed = 0
+    updated = []
+    for e in connectome.connections:
+        if e.synapse_type is SynapseType.CHEMICAL and e.pre in pre and e.post in post:
+            changed += 1
+            e = _replace(e, sign=sign, field_sources={**e.field_sources, "sign": "override"})
+        updated.append(e)
+    return _replace(connectome, connections=tuple(updated)), changed
 
 
 def _resolve_cells(connectome, spec: str) -> set[str]:
@@ -118,6 +145,12 @@ class Loop:
             overrides[name.strip()] = float(value)
 
         connectome, _ = load("cook_2019_herm", annotations=RUNTIME_OVERLAYS)
+        # Reclassified synapses, before anything is built from the connectome, so
+        # thresholds and every calibration are solved with them in place.
+        self.overridden = 0
+        for item in getattr(args, "sign_override", None) or []:
+            connectome, n = override_signs(connectome, item)
+            self.overridden += n
         self.plan = BodyPlan()
         # The runner's cell set exactly: every neuron and the 95 body-wall muscles.
         # This used to take every muscle cell in the connectome -- 135, including

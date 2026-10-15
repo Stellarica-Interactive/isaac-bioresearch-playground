@@ -233,6 +233,19 @@ def main() -> int:
         "--command", default="AVBL,AVBR", help="command interneurons driven, as the runner's"
     )
     parser.add_argument(
+        "--command-mv",
+        type=float,
+        default=20.0,
+        help="how far the command interneurons are depolarised, mV (the runner's 20)",
+    )
+    parser.add_argument(
+        "--sign-override",
+        action="append",
+        default=[],
+        metavar="PRE>POST=SIGN",
+        help="reclassify chemical synapses before the build, e.g. AVA>DA,VA=excitatory (5AO.15)",
+    )
+    parser.add_argument(
         "--torque-scale",
         type=float,
         default=3.0e-3,
@@ -254,7 +267,7 @@ def main() -> int:
             proprioceptive_mv=args.proprioceptive_mv,
             proprio_rate=args.proprio_rate,
             muscle_tau_ms=args.muscle_tau_ms,
-            command_mv=20.0,
+            command_mv=args.command_mv,
             settle_s=0.0,
             open_loop=args.open_loop,
             param=args.param,
@@ -273,6 +286,7 @@ def main() -> int:
             lesion=args.lesion,
             lesion_mode=args.lesion_mode,
             rme_loop=args.rme_loop,
+            sign_override=args.sign_override,
             intrinsic=args.intrinsic,
             rme_excite_ns=args.rme_excite_ns,
             rme_inhibit_ns=args.rme_inhibit_ns,
@@ -313,6 +327,8 @@ def main() -> int:
         f"{f', lesion {args.lesion} ({args.lesion_mode})' if args.lesion else ''}"
         f"{loop_label}"
         f"{f', intrinsic {args.intrinsic}' if args.intrinsic else ''}"
+        f"{f', command {args.command_mv:g} mV' if args.command_mv != 20.0 else ''}"
+        f"{', ' + ', '.join(args.sign_override) if args.sign_override else ''}"
         f"{', stimulate ' + ' '.join(args.stimulate) if args.stimulate else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
         f"axial {r['axial']:+.4f} BL/s, share {r['share']:+.2f}, amp {r['amp']:5.1f} deg, "

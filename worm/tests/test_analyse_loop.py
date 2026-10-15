@@ -218,3 +218,34 @@ def test_the_loop_can_run_cells_on_their_measured_biophysics() -> None:
     v = loop.runtime.state[0, loop.hybrid.indices]
     assert np.all(np.isfinite(v))
     np.testing.assert_array_equal(v, loop.hybrid.state[0])  # the conductance model owns them
+
+
+def test_a_sign_override_reclassifies_exactly_the_named_synapses() -> None:
+    """``override_signs`` changes the chemical synapses between the named cells or
+    classes and nothing else, and marks them so a printout cannot pass the new
+    sign off as the data's own (model_assumptions 5AO.15)."""
+    from common.data.schemas import Sign, SynapseType
+    from tools.analyse_loop import override_signs
+    from worm.loader import load
+    from worm.neural.config import RUNTIME_OVERLAYS
+
+    connectome, _ = load("cook_2019_herm", annotations=RUNTIME_OVERLAYS)
+    changed, n = override_signs(connectome, "AVA>DA,VA=excitatory")
+
+    def is_target(e) -> bool:
+        return (
+            e.synapse_type is SynapseType.CHEMICAL
+            and e.pre in ("AVAL", "AVAR")
+            and e.post[:2] in ("DA", "VA")
+            and e.post[2:].isdigit()
+        )
+
+    targets = [e for e in changed.connections if is_target(e)]
+    assert n == len(targets) == 40
+    assert all(e.sign is Sign.EXCITATORY and e.field_sources["sign"] == "override" for e in targets)
+    before = [e for e in connectome.connections if not is_target(e)]
+    after = [e for e in changed.connections if not is_target(e)]
+    assert before == after
+
+    with pytest.raises(ValueError):
+        override_signs(connectome, "NOBODY>DA=excitatory")

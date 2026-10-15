@@ -5038,7 +5038,10 @@ the committed values, excitation gets `0 − (−61.4) = +61.4 mV` of driving fo
 and inhibition `−70 − (−61.4) = −8.6 mV`: **inhibition is seven times weaker per
 unit conductance, by construction.** Driving `e_inh_mv` to −150 mV — eighty
 millivolts below rest, physically absurd — reduces mode 1 only to 88.3%, and it
-still has zero sign changes.
+still has zero sign changes. (*Corrected in §5AO.14:* the −70 mV above is the reversal of
+the mixed-sign shunt, not of the chloride class, which was at −45 mV and so
+depolarising at that rest. The conclusion that follows — no negative coupling
+anywhere — is unaffected, and if anything stronger.)
 
 `(A − F)^-1` has **zero negative entries out of 190,969** at the committed
 parameters, so by Perron–Frobenius its dominant singular vector is non-negative:
@@ -7247,6 +7250,110 @@ the gait through electrical coupling. That is not a defect of the head circuit,
 and nothing in the head can remove it. **Next:** rectifying AVA–A gap junctions
 as Liu et al. measured them. It is the measured half of the escape circuit
 (§5AO.1–5AO.2) that the model gets wrong, not a fix for the head.
+
+### 5AO.14 Toward reversal: AVA's synapses onto the A-type motor neurons
+
+The backward command interneuron AVA reaches the A-type motor neurons, which
+drive backward crawling, by two routes. Liu et al. 2017 recorded both, and the
+model gets both wrong:
+
+| route | model | measured (Liu et al. 2017) |
+|---|---|---|
+| chemical, AVA → DA and VA (39 connections) | "mixed": Fenyves et al. 2020 predict both excitatory and inhibitory acetylcholine receptors in the A cells, so it is a shunt at the leak reversal (−70 mV) | **excitatory**: AVA's acetylcholine, through the receptor LGC-46 in the A cells, drives slow currents in bursts of 5–15 s that coincide with muscle activity |
+| gap junctions, AVA–A (about 10 nS from each AVA) | symmetric | **antidromic only**: current flows from the motor neuron into AVA, and amplifies the chemical transmission; disrupting either route impairs escape |
+
+LGC-46 is an acetylcholine-gated **chloride** channel (Takayanagi-Kiya et al.
+2016). A chloride synapse that excites means chloride reverses above the A cells'
+resting potential. That is what the model's chloride class already does:
+`e_inh_mv` is −45 mV, and the network rests at a median −61 mV (range −68 to
+−47). Classing these 39 synapses by their measured receptor rather than their
+predicted mixed sign is the measured correction. It was tried with the network
+re-solved, 60 s, starts 2° off straight:
+
+| command | proprioception | AVA → A as committed (mixed) | as chloride (measured receptor) |
+|---|---|---|---|
+| AVB | B-type (the committed crawl) | forward 0.087 BL/s | forward 0.076 BL/s |
+| AVA | B-type | no movement; A cells' mean activation 0.008 | **no movement; 0.008** |
+| AVA | A and B (§5AO.2's probe, 100% rate) | headward wave, no net motion | −0.030 BL/s, no clear rhythm |
+| AVB | A and B | no net motion | −0.003 BL/s, no clear rhythm |
+
+The committed crawl survives the correction, but AVA still does not recruit the
+A cells, and the reason is two assumed constants. A chloride synapse can pull a
+cell up to −45 mV and no further. Every cell's release threshold sits 30 mV above
+its rest (§5L), so the A cells' is at −31 mV, 14 mV beyond anything chloride can
+reach. **In this model a chloride synapse can never make its target release
+transmitter**, whatever it does in the animal. The last two rows hint that the
+command starts to matter once the A cells have a loop, but they are single
+irregular runs, not a result.
+
+**The chloride reversal was never revisited.** `e_inh_mv` has been −45 mV since
+the first commit, with the note "it sits below e_leak_mv, so an inhibitory synapse
+hyperpolarizes rather than merely shunting". That held for Kunert et al.'s −35 mV
+leak. Since §5H moved the leak to −70 mV it has not: all 562 chloride-class
+connections target cells resting below −45 mV, so every one depolarises its
+target at rest and inhibits only above −45 mV. The note is corrected. For the
+AVA → A synapse that behaviour is measured to be right. For the other 561 nobody
+has measured where chloride reverses, and whether they should excite at rest is
+open. (§5AM.3 gave inhibition a driving force of "−70 − (−61.4)". That −70 is
+the mixed-sign shunt's reversal; the chloride class sat at −45 mV, +16.4 mV at
+that rest.)
+
+**Decision.** Nothing is changed in the model. The sign correction is measured
+but has no effect, because two assumed constants block it. **Next for reversal:**
+the antidromic gap junctions, which are measured, and the gap between the
+chloride reversal and the release threshold, which is assumed on both sides.
+
+### 5AO.15 The backward command can switch on backward crawling — sometimes
+
+§5AO.14 left AVA unable to recruit the A cells whatever its synapse's sign. Even
+classed as excitatory (`--sign-override "AVA>DA,VA=excitatory"`), the A cells'
+activation under an AVA command stays at 0.008. The reason is AVA itself. Under
+its 20 mV command it sits at −56 mV, 25 mV below its release threshold
+(−31 mV), with an activation of 0.008: none of its chemical synapses transmit
+anything. The forward command works for a different reason. AVB reaches the B
+cells through gap junctions, which have no threshold, and its voltage rides
+their swings, −117 to +4 mV. **In this model a command works only electrically.**
+The measured backward route is chemical, since AVA's gap junctions conduct the
+other way (§5AO.13), so at the committed command strength it cannot reach its
+motor neurons.
+
+With the command at 40 mV (`--command-mv 40`, above that threshold), AVA's
+synapses onto the A cells excitatory (their measured function), and the A-type
+proprioceptive loop of §5AO.2 in place (`--a-type-proprio --proprio-rate 1`),
+120 s from starts 2° off straight:
+
+| 40 mV command, A and B loops | AVA → A as committed (mixed) | AVA → A excitatory |
+|---|---|---|
+| **AVA** | no motion (+0.002 to +0.004 BL/s) | **backward, −0.109 to −0.123 BL/s, a headward wave at a 2.38 s period, from 3 of 6 starts**; from the others still or drifting irregularly (+0.004, +0.000, −0.023) |
+| **AVB** | no net motion (−0.016) | never forward: −0.033 to +0.005 BL/s from 5 starts |
+
+The six AVA starts come from two builds that differ by one synapse: the scratch
+run reclassified the 39 mixed-sign synapses, and `--sign-override` also signs
+the one whose sign was unknown.
+
+At 30 mV neither command crawls. The committed crawl keeps going with the
+override in place: 0.083 BL/s against 0.087.
+
+This is the first time a command in this model has chosen anything: the backward
+command can switch backward crawling on, which nothing else in the model does. It
+is not yet a direction switch. Half the starts do not crawl, and with both loops
+present the forward command never produces forward crawling. The A loop runs
+whatever the command says, as §5AO.2 found. In the animal the backward circuit is
+held down during forward movement. Kawano et al. 2011 traced part of that to gap
+junctions that reduce its activity, and Gao et al. 2018 show AVA itself inhibits
+or potentiates the A cells' own oscillation depending on AVA's state, through its
+mixed gap-junction and chemical configuration. Nothing does that here.
+
+**What it rests on.** The excitatory AVA → A synapse is measured as a function
+(Liu et al. 2017), but in the animal it runs through a chloride channel, which the
+model's chloride class cannot reproduce (§5AO.14); classing it as excitatory
+stands in for that. The 40 mV command is assumed, as the committed 20 mV is. The
+A-type loop is assumed, proposed by Gao et al. 2018 and not measured.
+
+**Decision.** Not adopted. The committed model and runner are unchanged, and the
+probe is reproducible from `tools/loop_attractor.py`. **Next for reversal:** hold
+the A loop down while the forward command is on, then a touch pathway that can
+flip the commands (§5AO.1).
 
 ## 6. Decisions taken, and what remains open
 

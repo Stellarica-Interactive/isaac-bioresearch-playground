@@ -169,8 +169,14 @@ confidence = "assumed"
 source = "Kunert et al. 2014."
 note = """
 Reversal potential for a synapse predicted inhibitory. A generic chloride value.
-Note it sits below e_leak_mv, so an inhibitory synapse hyperpolarizes rather than
-merely shunting."""
+It was chosen to sit below Kunert et al.'s e_leak_mv of -35 mV, so that an
+inhibitory synapse hyperpolarized. Since e_leak_mv moved to -70 mV (2026-09-11)
+it sits ABOVE the network's rest (median -61 mV): every inhibitory synapse now
+depolarises a resting cell and inhibits only above -45 mV, and it can never bring
+a cell to its release threshold (rest + v_threshold_offset_mv). For one synapse,
+AVA onto the A-type motor neurons through the chloride channel LGC-46, excitation
+at rest is measured (Liu et al. 2017); for the rest it is open. See
+docs/model_assumptions.md 5AO.14."""
 
 # ---------------------------------------------------------------------------
 # Transmitter release
