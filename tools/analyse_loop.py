@@ -50,6 +50,7 @@ from dataclasses import replace
 import numpy as np
 
 from common.data.schemas import CellCategory
+from common.neural.hybrid import HybridRuntime
 from common.neural.stimulus import scale_for_depolarisation, solve_for_depolarisation
 from common.neural.synapses import UnknownSignPolicy
 from worm.body.geometry import BodyPlan
@@ -64,7 +65,13 @@ from worm.body.neural_bridge import (
 from worm.body.quasistatic import QuasiStaticBody
 from worm.importers.naming import body_wall_muscle_ids
 from worm.loader import load
-from worm.neural.config import RUNTIME_OVERLAYS, build_runtime, rescale_gap_junctions
+from worm.neural.config import (
+    RUNTIME_OVERLAYS,
+    add_extrasynaptic,
+    build_runtime,
+    rescale_gap_junctions,
+    smd_rme_loop,
+)
 
 GAIT_HZ = 0.5
 
@@ -146,6 +153,20 @@ class Loop:
         if gap_scale:
             # Before anything is calibrated against the network, as --param is.
             rescale_gap_junctions(self.runtime, connectome, gap_scale)
+        # The head's extrasynaptic gain control, SMD exciting RME and RME
+        # inhibiting SMD (Shen et al. 2016; model_assumptions 5AO.11). Part of the
+        # animal's wiring, so added before anything is calibrated; a rebuilt
+        # lesion of either class takes its links with it.
+        self.extrasynaptic: list[str] = []
+        if getattr(args, "rme_loop", False):
+            self.extrasynaptic = add_extrasynaptic(
+                self.runtime,
+                smd_rme_loop(
+                    args.rme_excite_ns,
+                    args.rme_inhibit_ns,
+                    pairing=getattr(args, "rme_pairing", "same"),
+                ),
+            )
         self.dt = 1.0 / args.physics_hz
         self.substeps = max(1, int(round(self.dt * 1000.0 / args.neural_dt_ms)))
 
@@ -287,6 +308,20 @@ class Loop:
             g_syn[:, idx] = 0.0
             self.runtime.network = replace(net, g_gap=g_gap, g_syn=g_syn)
 
+        # Cells run on their own measured biophysics rather than as graded
+        # integrators (common/neural/hybrid.py), with the network's own threshold
+        # convention: the output sigmoid 5L's offset above the cell's measured
+        # rest. Simulation only -- ``get``/``put``, and so ``fixed_point``, do not
+        # carry the conductance model's state. model_assumptions 5AO.12.
+        self.hybrid: HybridRuntime | None = None
+        model_id = getattr(args, "intrinsic", None)
+        if model_id:
+            self.hybrid = HybridRuntime.build(
+                self.runtime,
+                model_id=model_id,
+                threshold_offset_mv=self.runtime.model.params.v_threshold_offset_mv,
+            )
+
     # -- the state ---------------------------------------------------------
 
     def joints(self, x: np.ndarray) -> np.ndarray:
@@ -352,7 +387,10 @@ class Loop:
         for cell, current in self.extra.items():
             self.runtime.i_ext_pa[self.runtime.network.index(cell)] += current
         for _ in range(self.substeps):
-            self.runtime.step()
+            if self.hybrid is not None:
+                self.hybrid.step()
+            else:
+                self.runtime.step()
         self.muscle.step(self.bridge.drive(self.runtime.state[1]), dt_ms=self.dt * 1000.0)
         self.body.step(self.muscle.joint_torques(), dt_s=self.dt)
 

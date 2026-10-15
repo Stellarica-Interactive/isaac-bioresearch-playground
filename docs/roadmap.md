@@ -1,12 +1,24 @@
 # What is left
 
-Status as of 2026-10-03. The project has a **working body and a non-working
-nervous system**, which is a cleaner position than it has been in: when the worm
-fails to crawl it is now possible to say the failure is neural without
-qualification.
+Status as of 2026-10-15. **The connectome crawls.** The committed model
+(`model_assumptions.md` §5AO.5) moves forward in Isaac: 8.55 body lengths in two
+minutes at a 3.2 s period, along a gently curving path, never passing through
+itself. It stops when proprioception is cut. The assumptions it rests on are in
+the table under §1.0; the one carrying most weight is the rate-sensing share of
+proprioception, which nobody has measured.
 
-Measured on the scripted positive control, which is the same body, drag, solver
-and torque the connectome gets:
+What does not work yet:
+
+| | state | where |
+|---|---|---|
+| the head | stays nearly straight. It joins the wave only with feedback onto RMD that nobody has measured, and then the crawl circles. Measured parts added since (RME, the SMD–RME loop, RMD's own biophysics) do not give it a rhythm, because the whole network moves in step with the body | §1.0, `model_assumptions.md` §5AO.7–5AO.13 |
+| touch | the receptors fire and the worm does not respond: no escape. `--touch-demo` shows it | §5AO.1 |
+| reversal | the body can crawl backward, and nothing makes it choose to | §5AO.2 |
+| steering | no chemotaxis | §5AO.3 |
+
+Until 2026-10-03 the nervous system did not crawl at all, and the history of how
+it came to is §1.0 below. The body was validated first, on the scripted positive
+control, which is the same body, drag, solver and torque the connectome gets:
 
 | | model | real *C. elegans* |
 |---|---|---|
@@ -17,19 +29,14 @@ and torque the connectome gets:
 | heading held over 90 s | within 18.6° | — |
 | self-intersection | none (`clear` ≥ +1.57 mm) | impossible |
 
-Self-contact is implemented and off by default; with it on, a curl deep enough to
-fold the body keeps **+0.79 mm** of clearance where it previously overlapped by
-5.80 mm.
+Self-contact is on in the committed model; a curl deep enough to fold the body
+keeps **+0.79 mm** of clearance where it once overlapped by 5.80 mm.
 
-And on the connectome driving it: **0.717 BL in 60 s, inter-joint phase −6.1°,
-`travel` +0.00, B-type adjacent correlation +1.00.** One signal, so no wave can
-travel. That is the problem.
-
-**Twelve hypotheses have now been tested and rejected.** The ten of
-`negative_result.md` and §5Q–§5U, plus §5AK (a proprioceptive law that cannot
-latch) and §5AL (a groove with memory). Both of the new ones are rejected with
-their controls done, and both are documented with the measurement rather than the
-intention.
+On 2026-10-03 the connectome driving that body managed **0.717 BL in 60 s,
+inter-joint phase −6.1°, `travel` +0.00, B-type adjacent correlation +1.00**: one
+signal, so no wave could travel. Twelve hypotheses had been tested and rejected by
+then (the ten of `negative_result.md` and §5Q–§5U, plus §5AK and §5AL). What
+changed it was phasic proprioception and the measured muscle coupling (§1.0).
 
 ---
 
@@ -162,6 +169,29 @@ survive. Rebuilt without them, the model crawls. Rebuilt lesions match Shen et
 al. 2016 for SMD (removing it shrinks head bending) but not for RME: in the
 head-locked crawl removing RME shrinks head bending, where in the animal it
 enlarges it. That table is the test the SMD–RME loop has to pass.
+
+**The SMD–RME loop fails it (§5AO.11).** Added as two extrasynaptic links,
+measured in sign but not in strength, it enlarges head bending at every strength
+and pairing tried, so removing RME still shrinks it. In this model inhibiting SMD
+does not restrain the head: its swing comes from the unmeasured feedback on RMD.
+**Next for the head:** a rhythm source that does not rest on that, namely RMD's
+measured plateau potentials (§5F) and RIA.
+
+**The measured RMD switches, all six together (§5AO.12).** Today's network no
+longer clamps it on, as it did in §5F. In the committed crawl it flips its plateau
+in time with the body, but dorsal and ventral switch as one, so the head does not
+bend; in variant B it latches on. Removing RIA, the RMD dorsal–ventral gap
+junctions, or the half-centre's weak inhibition does not separate them: the whole
+network moves in step with the body (command and head motor neurons swing 33–37 mV
+per stroke), and that common drive overrides the head's own wiring.
+
+**It comes from the motor neurons' gap junctions (§5AO.13).** The command
+interneurons take the gait back through the gap junctions they share with the B-
+and A-type motor neurons, and that back-flow is measured: AVA–A junctions pass
+current only from motor neuron to AVA (Liu et al. 2017). The model's symmetric
+junctions also let AVA drive the A-type cells electrically, which the animal does
+not. **Next:** rectifying AVA–A gap junctions, the measured half of the escape
+circuit.
 
 **Gait refinement (§5AO.6):** torque committed at 1.25e-3 (8.55 BL in 120 s in
 Isaac); halving the neuron gap junctions crawls at 0.11 BL/s with a near-real

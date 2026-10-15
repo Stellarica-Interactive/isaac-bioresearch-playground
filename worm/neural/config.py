@@ -11,7 +11,7 @@ exactly which values it used. See that file before trusting any number.
 from __future__ import annotations
 
 import tomllib
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from importlib.resources import files
@@ -292,3 +292,96 @@ def rescale_gap_junctions(
     runtime.network = network
     runtime.model = model
     runtime.state = model.initial_state(network)
+
+
+@dataclass(frozen=True)
+class ExtrasynapticLink:
+    """A coupling between two cells that is not a synapse, so no connectome has it.
+
+    Neuromodulators and transmitter released outside synapses reach receptors on
+    cells the releasing cell never contacts. Shen et al. 2016 measured two such
+    links in the head (model_assumptions 5AO.11), and nothing in an electron
+    micrograph shows either. ``sign`` is "excitatory" or "inhibitory";
+    ``g_ns`` is the conductance, which for these links is never measured.
+    """
+
+    pre: str
+    post: str
+    g_ns: float
+    sign: str
+
+
+def add_extrasynaptic(runtime: NeuralRuntime, links: Sequence[ExtrasynapticLink]) -> list[str]:
+    """Add couplings the connectome cannot show, then rebuild as a build would.
+
+    Each link is a graded chemical connection from ``pre`` onto ``post``, with the
+    network's own synaptic dynamics and the reversal potential of its sign. Where
+    the pair is already connected the two combine exactly: both are gated by the
+    same presynaptic activation, so the conductances add and the reversal
+    potential is their conductance-weighted mean. Links naming a cell that is not
+    in the network -- removed by a lesion, say -- are skipped. Every cell's
+    sigmoid midpoint is then re-solved and the state reset, as
+    :func:`rescale_gap_junctions` does, so the network rests where a network built
+    with these connections would. Returns the links added, as "PRE->POST".
+    """
+    net = runtime.network
+    params = runtime.model.params
+    reversal = {"excitatory": params.e_exc_mv, "inhibitory": params.e_inh_mv}
+    g_syn = net.g_syn.copy()
+    e_rev = net.e_rev.copy()
+    added = []
+    for link in links:
+        if link.sign not in reversal:
+            raise ValueError(f"sign must be excitatory or inhibitory, not {link.sign!r}")
+        if link.g_ns < 0.0:
+            raise ValueError(f"negative conductance for {link.pre}->{link.post}")
+        if link.pre not in net.cell_ids or link.post not in net.cell_ids:
+            continue
+        i, j = net.index(link.post), net.index(link.pre)
+        g_old = g_syn[i, j]
+        g_new = g_old + link.g_ns
+        if g_new > 0.0:
+            e_rev[i, j] = (g_old * e_rev[i, j] + link.g_ns * reversal[link.sign]) / g_new
+        g_syn[i, j] = g_new
+        added.append(f"{link.pre}->{link.post}")
+    network = replace(net, g_syn=g_syn, e_rev=e_rev)
+    model = prepare(GradedLeakyIntegrator(params=params), network)
+    runtime.network = network
+    runtime.model = model
+    runtime.state = model.initial_state(network)
+    return added
+
+
+#: The pairs Shen et al. 2016 recorded active together: SMDD and RMED during dorsal
+#: head bends, SMDV and RMEV during ventral.
+_SMD_RME_PAIRS = (
+    ("SMDDL", "RMED"),
+    ("SMDDR", "RMED"),
+    ("SMDVL", "RMEV"),
+    ("SMDVR", "RMEV"),
+)
+
+
+def smd_rme_loop(
+    excite_ns: float, inhibit_ns: float, *, pairing: str = "same"
+) -> list[ExtrasynapticLink]:
+    """The head's measured gain control, as links (Shen et al. 2016; 5AO.11).
+
+    SMD excites RME extrasynaptically, through the muscarinic receptor GAR-2 on
+    RME, and RME inhibits SMD extrasynaptically, through the GABA-B receptor
+    GBB-1/GBB-2 on SMD. Measured: both signs, that RME's activity follows SMD's
+    and the head's bending (SMDD with RMED, SMDV with RMEV), and the effect --
+    without RME the head bends further, with RME driven it bends less. Not
+    measured: either conductance, and which SMD each RME inhibits. ``pairing``
+    "same" returns each RME's inhibition to the SMD cells that drive it, a gain
+    control per side; "all" lets each RME inhibit all four.
+    """
+    if pairing not in ("same", "all"):
+        raise ValueError(f"pairing must be 'same' or 'all', not {pairing!r}")
+    links = [ExtrasynapticLink(smd, rme, excite_ns, "excitatory") for smd, rme in _SMD_RME_PAIRS]
+    if pairing == "same":
+        targets = [(rme, smd) for smd, rme in _SMD_RME_PAIRS]
+    else:
+        targets = [(rme, smd) for rme in ("RMED", "RMEV") for smd, _ in _SMD_RME_PAIRS]
+    links += [ExtrasynapticLink(rme, smd, inhibit_ns, "inhibitory") for rme, smd in targets]
+    return links

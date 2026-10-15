@@ -151,11 +151,19 @@ class HybridRuntime:
         cells: tuple[str, ...] | None = None,
         substep_ms: float = DEFAULT_DT_MS,
         recentre_threshold: bool = True,
+        threshold_offset_mv: float = 0.0,
     ) -> HybridRuntime:
         """Promote ``cells`` to the conductance model, leaving every other cell alone.
 
         Cells absent from the network are skipped rather than raising, so a body
         model that excludes the head still works.
+
+        ``threshold_offset_mv`` places the promoted cells' output sigmoid that far
+        above their measured resting potential. 0 is this module's original
+        convention, kept as the default so earlier results reproduce. Since
+        model_assumptions 5L every graded cell's sigmoid sits
+        ``v_threshold_offset_mv`` above its rest, so a run that wants the promoted
+        cells to follow the same convention passes that value.
         """
         wanted = cells if cells is not None else INTRINSIC_MODELS[model_id]
         present = tuple(c for c in wanted if c in runtime.network.cell_ids)
@@ -176,7 +184,7 @@ class HybridRuntime:
                 dtype=np.float64,
                 copy=True,
             )
-            thresholds[indices] = rest
+            thresholds[indices] = rest + threshold_offset_mv
             runtime.model = replace(  # type: ignore[type-var]
                 runtime.model,
                 v_threshold_mv=thresholds,

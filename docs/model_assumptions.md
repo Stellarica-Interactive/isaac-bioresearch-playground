@@ -7071,6 +7071,183 @@ names as the next step, and this table is now the test it has to pass in the
 head-locked crawl: RME ablation enlarges head bending, RME activation shrinks
 it, and SMD ablation still shrinks it.
 
+### 5AO.11 The SMD–RME loop: added, and the head still fails the lesion test
+
+Shen et al. 2016's gain control, added as two extrasynaptic links
+(`add_extrasynaptic` and `smd_rme_loop` in `worm/neural/config.py`; `--rme-loop`
+in `tools/loop_attractor.py`). SMD excites RME, SMDD driving RMED and SMDV
+driving RMEV, the pairs recorded active together. RME inhibits SMD, either the
+SMD cells that drive it ("same") or all four ("all"). Signs and pairing of
+the excitation are measured. Neither conductance is measured, and nor is which
+SMD each RME inhibits. Each link is a graded connection with the network's own
+synaptic dynamics, added before calibration, and the network is re-solved as a
+build with them would be. A test holds that a link onto an existing synapse
+(SMDVR already synapses onto RMED) carries exactly the current of the two side
+by side.
+
+The test it had to pass is §5AO.10's. With RME removed the head-locked crawl bends
+its head 4.2°, and the rebuilt network then has no loop either. So with the loop
+in place the intact crawl must bend *less* than 4.2° for removing RME to enlarge
+head bending, as in the animal, and more than SMD-removed's 1.3°.
+
+| SMD→RME / RME→SMD, nS | pairing | crawl | head bending amplitude | turning |
+|---|---|---|---|---|
+| no loop | | slow | 5.6° (6.4° perturbed) | +5.6°/s |
+| 0.5 / 0.5 | same | slow | 6.1° | +6.4°/s |
+| 1 / 1 | same | fast | 7.6° | +1.1°/s |
+| 2 / 2 | same | slow | 6.6° (6.5° perturbed) | +4.9°/s |
+| 4 / 4 | same | fast | 8.2° (8.4° perturbed) | −0.2°/s (−1.9°/s) |
+| 1 / 4 | same | slow | 7.8° | +3.7°/s |
+| 4 / 1 | same | fast | 7.0° | +0.9°/s |
+| 0.5, 1, 2, 4 each way | all | fast, fast, slow, fast | 7.6°, 7.9°, 7.5°, 9.3° | +1.7, +1.2, +3.0, −5.1°/s |
+| 2 / 0, excitation only | same | fast | 6.5° | +1.2°/s |
+| 0 / 2 and 0 / 4, inhibition only | same | fast | 7.4° and 9.1° | +3.6, +3.2°/s |
+| 2 / 2, RMED and RMEV held +20 mV | same | slow | 6.2° | +2.9°/s |
+
+("Slow" and "fast" are §5AO.9's two crawls: 0.11 against 0.13–0.15 BL/s.)
+
+**No variant passes.** Every one enlarges head bending (6.1–9.3° against 5.6°),
+so with the loop in place removing RME still *shrinks* head bending, the reverse
+of the animal. Only one measured direction comes out right: driving RME with the
+loop in place shrinks head bending a little, 6.6° to 6.2°. Taken apart, neither
+half limits anything. Excitation alone makes RME follow the bends, as recorded,
+and its synapses onto head muscle then deepen them (§5AO.10). Inhibition alone
+*enlarges* the head's swing, more the stronger it is: in this model inhibiting
+SMD does not restrain the head. In the animal SMD promotes head bending and is
+what RME restrains (Shen et al. 2016). The model's head swing does not come from
+SMD. It comes from the unmeasured feedback onto RMD that §5AO.8 added to make the
+head move, and SMD acts mostly on the neck. Lesion tests of SMD and RME cannot be
+passed by adding links on top of that.
+
+About half the variants tip the crawl into §5AO.9's fast crawl, and some of
+those run almost straight (4/4 "same": −0.2°/s from rest). That is not
+adopted: the loop fails the test it was added to pass, and a loop kept for its
+side effect would be a fitted steering knob, which §5AO.9 already declined.
+
+**Decision.** The loop stays off. `add_extrasynaptic` stays, as the general
+mechanism for couplings no connectome can show, with its tests; `--rme-loop`
+stays as a diagnostic. The head's next step is not another link but a source for
+its rhythm that does not rest on unmeasured feedback: RMD's measured plateau
+potentials (§5F) and the RIA interneuron (§5AO.7).
+
+### 5AO.12 The measured RMD in today's network: a switch, and all six flip together
+
+§5AO.11 named RMD's measured plateau potentials as the head's next rhythm source.
+§5F tried them first and found the network held the measured cell permanently
+on, pushing 112–301 pA into a cell whose two states survive about 4 pA. Since
+then §5H moved the leak and synapse conductances to fit RMD and AWC, and §5L put
+every cell's sigmoid 30 mV above its rest. So this repeats §5F on today's model.
+`tools/loop_attractor.py --intrinsic rmd_nicoletti2019` runs the six RMD cells on
+Nicoletti et al. 2019's conductance model through `common/neural/hybrid.py`. Their
+output sigmoid sits 30 mV above their measured rest, the network's convention
+since §5L. `HybridRuntime.build` gained `threshold_offset_mv` for that; its
+default, 0, keeps every earlier result.
+
+**§5F's blocker is gone.** In today's network the measured RMD rests at −64 to
+−66 mV, inside its bistable range (§5F.2: −65 mV at a 2 pA bias, bistable up to
+about 4 pA).
+
+**It switches, but all six together.** In the committed crawl RMD flips between
+its two states in time with the body: down to −90 mV, up to −23 to −30 mV,
+on the plateau half the time, 16 switches in 22.5 s, one cycle per 2.8 s body
+period. Every RMD switches at the same moments, dorsal and ventral alike, so
+their pulls on the two sides of the head cancel. In variant B's body the plateau
+latches on and stays there.
+
+| measured RMD, 80 s, starts 2° off straight, two seeds alike | RMD | speed | head bending amplitude | head and body | turning |
+|---|---|---|---|---|---|
+| committed crawl | switches with the body | 0.109 BL/s (graded RMD: 0.087) | 0.63° (0.67°) | locked, 2.86 s (3.16 s) | −2.3°/s (−0.8) |
+| variant B, no head feedback | latched on | 0.129 BL/s (0.110) | 1.09° | locked, 2.50 s (2.61 s) | +0.8°/s (−0.7) |
+| B, measured SMD feedback | latched on | 0.111 BL/s (0.090) | 3.4° (2.2°) | **not locked**: head 6.0 s, body 3.16 s | +11.5°/s (+4.7) |
+| B, SMD + assumed RMD feedback (§5AO.8) | not recorded | 0.120 BL/s (0.103) | 3.3° (5.6°) | locked, 2.40 s | +8.7°/s (+5.6) |
+
+The committed crawl starts from rest with the measured RMD as it does without.
+Variant B with SMD feedback does not. Its straight rest becomes stable, nothing
+moves in 30 s, and a 2° nudge starts it.
+
+So the measured RMD crawls faster, by 17–25%, but gives the head no rhythm. With
+SMD feedback it swings the head further than the graded model does, but out of
+step with the body and circling twice as fast. With the assumed RMD feedback it
+swings the head less.
+
+**Why all six flip together — three explanations tested, none holds.** The RMD
+wiring has the classic motif for a rhythm made by alternation, a half-centre:
+dorsal and ventral partners inhibit each other (RMDVR→RMDDL 0.43 nS, RMDVL→RMDDR
+0.41, RMDDR→RMDVL 0.26, RMDDL→RMDVR 0.22). Three things could defeat it, and each
+was removed in turn in the committed crawl (a diagnostic, applied to the built
+network), measuring the correlation between the dorsal and ventral RMD voltages:
+
+| removed | dorsal–ventral correlation | switches, dorsal / ventral |
+|---|---|---|
+| nothing | **+1.00** | 7 / 7 |
+| RIA, which excites every RMD by about 0.5 nS (rebuilt lesion) | +1.00 | 8 / 8, as without the lesion over the same longer window |
+| the dorsal–ventral gap junctions (RMDDL–RMDVL 0.2 nS, RMDDR–RMDVR 0.5 nS) | +1.00 | 7 / 7 |
+| the half-centre's weak driving force: RMD–RMD inhibition given −70 mV for −45 | +1.00 | 7 / 7 |
+| both of the last two | +1.00 | 7 / 7 |
+
+RIA is a natural suspect because the animal separates it and the model does not:
+Hendricks et al. 2012 imaged RIA's nerve-ring axon as dorsal and ventral
+compartments, nrD following dorsal head bends and nrV ventral, uncorrelated with
+each other, each taking its own side's SMD synapses, and kept apart by the motor
+neurons' acetylcholine through GAR-3. A one-compartment RIA cannot do that. But
+removing RIA altogether leaves the synchrony exactly where it was, so the missing
+compartments are not what holds the RMDs together here.
+
+What does is the rest of the network, which carries the body's rhythm
+everywhere. In the committed crawl the command interneurons (AVA, AVB, AVD, AVE,
+PVC) swing with a median standard deviation of 37 mV and the head motor neurons
+of 33 mV, at the body's period. That reaches the RMDs as a common drive, and
+against it their own wiring makes no difference. (How far these voltages range
+is not itself evidence against the model; §5Q.2 explains why. The point here is
+only that the swing is shared.)
+
+**Decision.** The measured RMD is not adopted. It gives the head no rhythm, and
+adopting it in the committed crawl, where it is faster, would need the hybrid in
+the Isaac runner and a run 4.5× slower. It remains available as `--intrinsic`.
+Splitting RIA into compartments is not the next step on its own either, since
+removing RIA changes nothing. **The head cannot have a rhythm of its own while the
+whole network moves in step with the body.** Where that shared drive comes from
+and how it spreads is upstream of the head, and that is where the next step
+belongs.
+
+### 5AO.13 Where the shared rhythm comes from: the motor neurons' gap junctions
+
+§5AO.12 traced the RMD synchrony to a drive the whole network shares. In the
+committed crawl, the current into each command interneuron was split by source
+over 15 s of settled crawling: gap junction or chemical synapse, from a body motor
+neuron or from anything else.
+
+| cell | voltage s.d. | gap, from body motor neurons | gap, from others | chemical | largest single source |
+|---|---|---|---|---|---|
+| AVBL | 39 mV | 26.8 pA s.d. | 22.5 pA | 4.6 pA | DB7, 1.3 nS gap: 63 pA |
+| AVAL | 38 mV | 12.7 pA | 6.4 pA | 7.9 pA | VB11 gap: 13 pA |
+| AVEL | 35 mV | 0.4 pA | 1.8 pA | 1.7 pA | RIML gap: 1.0 pA |
+| PVCL | 41 mV | 11.2 pA | 8.7 pA | 3.2 pA | DB7 gap: 40 pA |
+
+The command drive itself, 7.5 pA into AVB, is constant. The gait reaches the
+command layer through the gap junctions it shares with the B- and A-type motor
+neurons, whose proprioceptive swings are large (§5Q.2). From there it spreads:
+AVE, with almost nothing from the motor neurons, swings as far as the rest,
+through RIM and AVA.
+
+**That route exists in the animal.** Liu et al. 2017 recorded the gap junctions
+between AVA and the A-type motor neurons directly: they "only allow antidromic
+current", from the motor neurons into AVA, and that back-flow amplifies AVA's
+chemical drive of the motor neurons; disrupting them impairs escape. So motor
+activity flowing back into at least one command interneuron is measured, not an
+artefact. The model gets that half right and adds a half the animal does not
+have: its gap junctions are symmetric, so AVA also drives the A-type cells
+electrically, which the recordings exclude. Gap-junction rectification is listed
+in §5A as not modelled; this is the first measurement in hand of which way one
+class of junction conducts. Whether the shared swing is the right *size* is a
+separate question, which no measurement in hand answers.
+
+So the common drive that holds the RMDs together is how this network carries
+the gait through electrical coupling. That is not a defect of the head circuit,
+and nothing in the head can remove it. **Next:** rectifying AVA–A gap junctions
+as Liu et al. measured them. It is the measured half of the escape circuit
+(§5AO.1–5AO.2) that the model gets wrong, not a fix for the head.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

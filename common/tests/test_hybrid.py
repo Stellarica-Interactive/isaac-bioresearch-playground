@@ -159,3 +159,18 @@ def test_substepping_is_finer_than_the_network_step(hybrid: HybridRuntime) -> No
     """The conductance model needs dt <= 0.05 ms; the network runs at 1 ms."""
     assert hybrid.substep_ms <= 0.1
     assert hybrid.runtime.dt_ms > hybrid.substep_ms
+
+
+def test_threshold_offset_follows_the_network_convention_when_asked() -> None:
+    """By default a promoted cell's sigmoid sits on its measured rest, as this
+    module always did; ``threshold_offset_mv`` places it that far above instead,
+    the convention every graded cell has followed since model_assumptions 5L."""
+    default = HybridRuntime.build(_runtime())
+    rest = float(default.model.resting_state()[0, 0])
+    thresholds = default.runtime.model.v_threshold_mv[default.indices]
+    np.testing.assert_allclose(thresholds, rest)
+
+    runtime = _runtime()
+    offset = runtime.model.params.v_threshold_offset_mv
+    shifted = HybridRuntime.build(runtime, threshold_offset_mv=offset)
+    np.testing.assert_allclose(shifted.runtime.model.v_threshold_mv[shifted.indices], rest + offset)

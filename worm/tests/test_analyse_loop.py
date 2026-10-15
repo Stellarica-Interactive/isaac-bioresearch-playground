@@ -180,3 +180,41 @@ def test_a_rebuilt_lesion_builds_the_network_without_the_cells() -> None:
         assert len(pop.sensed_segment) == len(pop.targets)
     assert any(c.startswith("RMD") for c in loop.extra_proprio[0].targets)
     loop.step()  # feedback reaches only cells that exist
+
+
+def test_the_loop_can_run_cells_on_their_measured_biophysics() -> None:
+    """``intrinsic`` hands named cells to their conductance model (5AO.12): they
+    start at the measured resting potential, their sigmoid follows the network's
+    offset convention, and the loop steps with them."""
+    import argparse
+
+    from tools.analyse_loop import Loop
+
+    loop = Loop(
+        argparse.Namespace(
+            unknown_sign="exclude",
+            physics_hz=240.0,
+            neural_dt_ms=1.0,
+            torque_scale=1e-3,
+            proprioceptive_mv=400.0,
+            proprio_rate=0.7,
+            command_mv=20.0,
+            settle_s=0.0,
+            open_loop=False,
+            param=[],
+            intrinsic="rmd_nicoletti2019",
+        )
+    )
+    assert loop.hybrid is not None
+    assert set(loop.hybrid.cells) == {"RMDDL", "RMDDR", "RMDVL", "RMDVR", "RMDL", "RMDR"}
+    rest = float(loop.hybrid.model.resting_state()[0, 0])
+    offset = loop.runtime.model.params.v_threshold_offset_mv
+    np.testing.assert_allclose(
+        loop.runtime.model.v_threshold_mv[loop.hybrid.indices], rest + offset
+    )
+    np.testing.assert_allclose(loop.runtime.state[0, loop.hybrid.indices], rest)
+    for _ in range(24):  # 0.1 s
+        loop.step()
+    v = loop.runtime.state[0, loop.hybrid.indices]
+    assert np.all(np.isfinite(v))
+    np.testing.assert_array_equal(v, loop.hybrid.state[0])  # the conductance model owns them

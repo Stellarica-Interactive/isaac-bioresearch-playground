@@ -295,9 +295,13 @@ ventral, and forced bends excite each.
 **Hendricks M, Ha H, Maffey N, Zhang Y. Compartmentalized calcium dynamics in a
 *C. elegans* interneuron encode head movement.** *Nature* 487:99–103 (2012).
 doi:[10.1038/nature11081](https://doi.org/10.1038/nature11081)
-RIA's compartmentalised calcium encodes head movement. Cited in §5AO.7 only as
-part of the head circuit a head oscillator would have to involve; nothing in the
-model uses it yet.
+RIA's compartmentalised calcium encodes head movement: the dorsal and ventral
+segments of its nerve-ring axon follow dorsal and ventral head bends separately,
+take their SMD synapses by side (SMDD only in nrD, SMDV only in nrV), and need the
+motor neurons' acetylcholine through GAR-3 to stay apart. Cited in §5AO.7 as part
+of the head circuit, and in §5AO.12, where it made RIA the first suspect for the
+RMD synchrony; removing RIA altogether changed nothing. Nothing in the model uses
+it yet.
 
 **Gray JM, Hill JJ, Bargmann CI. A circuit for navigation in *Caenorhabditis
 elegans*.** *PNAS* 102:3184–3191 (2005).
@@ -317,6 +321,15 @@ GABA-B receptor GBB-1/GBB-2 on SMD -- so neither link is a synapse in the
 connectome. Also: SMDD and RMED are active during dorsal head bends, SMDV and
 RMEV during ventral; RMED innervates ventral head muscle and RMEV dorsal. Cited in
 §5AO.8–5AO.9; the model has neither link.
+
+**Liu P, Chen B, Mailler R, Wang ZW. Antidromic-rectifying gap junctions amplify
+chemical transmission at functionally mixed electrical-chemical synapses.**
+*Nature Communications* 8:14818 (2017).
+doi:[10.1038/ncomms14818](https://doi.org/10.1038/ncomms14818)
+Paired recordings of AVA and the A-type motor neurons: their gap junctions "only
+allow antidromic current", from motor neuron into AVA, and that back-flow
+amplifies AVA's chemical drive of the motor neurons; disrupting either kind of
+synapse impairs escape. Cited in §5AO.13: the model's gap junctions are symmetric.
 
 **Fouad AD, Teng S, Mark JR, Liu A, Alvarez-Illera P, Ji H, Du A, Bhirgoo PD,
 Cornblath E, Guan SA, Fang-Yen C. Distributed rhythm generators underlie

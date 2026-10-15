@@ -164,6 +164,26 @@ def main() -> int:
         "after calibration (5AO.10)",
     )
     parser.add_argument(
+        "--rme-loop",
+        action="store_true",
+        help="the head's extrasynaptic gain control: SMD excites RME, RME inhibits SMD "
+        "(Shen et al. 2016; 5AO.11). Signs measured, conductances not",
+    )
+    parser.add_argument("--rme-excite-ns", type=float, default=1.0, help="SMD -> RME, nS")
+    parser.add_argument("--rme-inhibit-ns", type=float, default=1.0, help="RME -> SMD, nS")
+    parser.add_argument(
+        "--rme-pairing",
+        choices=("same", "all"),
+        default="same",
+        help="which SMD each RME inhibits: the ones that drive it, or all four",
+    )
+    parser.add_argument(
+        "--intrinsic",
+        default=None,
+        help="run these cells on their measured conductance model, e.g. "
+        "rmd_nicoletti2019 (common/neural/hybrid.py; 5AO.12)",
+    )
+    parser.add_argument(
         "--lesion-mode",
         choices=("acute", "rebuilt"),
         default="acute",
@@ -252,6 +272,11 @@ def main() -> int:
             muscle_gap_scale=args.muscle_gap_scale,
             lesion=args.lesion,
             lesion_mode=args.lesion_mode,
+            rme_loop=args.rme_loop,
+            intrinsic=args.intrinsic,
+            rme_excite_ns=args.rme_excite_ns,
+            rme_inhibit_ns=args.rme_inhibit_ns,
+            rme_pairing=args.rme_pairing,
             stimulate=args.stimulate,
         )
     )
@@ -262,6 +287,11 @@ def main() -> int:
         rng = np.random.default_rng(args.seed)
         loop.body.joint_angles = np.radians(args.perturb_deg) * rng.standard_normal(loop.sizes[3])
     r = measure(loop, args.seconds, args.transient)
+    loop_label = (
+        f", SMD-RME loop {args.rme_excite_ns:g}/{args.rme_inhibit_ns:g} nS {args.rme_pairing}"
+        if args.rme_loop
+        else ""
+    )
     print(
         f"  {'OPEN LOOP, ' if args.open_loop else ''}"
         f"rate {args.proprio_rate:g}, {args.proprioceptive_mv:g} mV/rad"
@@ -281,6 +311,8 @@ def main() -> int:
         f"{f', torque {args.torque_scale:g}' if args.torque_scale != 3.0e-3 else ''}"
         f"{f', start {args.perturb_deg:g} deg seed {args.seed}' if args.perturb_deg else ''}"
         f"{f', lesion {args.lesion} ({args.lesion_mode})' if args.lesion else ''}"
+        f"{loop_label}"
+        f"{f', intrinsic {args.intrinsic}' if args.intrinsic else ''}"
         f"{', stimulate ' + ' '.join(args.stimulate) if args.stimulate else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
         f"axial {r['axial']:+.4f} BL/s, share {r['share']:+.2f}, amp {r['amp']:5.1f} deg, "
