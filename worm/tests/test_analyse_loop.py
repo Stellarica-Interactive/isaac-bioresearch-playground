@@ -249,3 +249,45 @@ def test_a_sign_override_reclassifies_exactly_the_named_synapses() -> None:
 
     with pytest.raises(ValueError):
         override_signs(connectome, "NOBODY>DA=excitatory")
+
+
+def test_rectified_junctions_conduct_only_from_source_to_sink() -> None:
+    """``"DA,VA>AVA"``: a junction is open exactly while its A-type cell is the
+    more depolarised, and the row sums the integrator reads always match the
+    matrix (model_assumptions 5AO.16)."""
+    import argparse
+
+    from tools.analyse_loop import Loop
+
+    loop = Loop(
+        argparse.Namespace(
+            unknown_sign="exclude",
+            physics_hz=240.0,
+            neural_dt_ms=1.0,
+            torque_scale=1e-3,
+            proprioceptive_mv=400.0,
+            proprio_rate=0.7,
+            command_mv=20.0,
+            settle_s=0.0,
+            open_loop=False,
+            param=[],
+            rectify="DA,VA>AVA",
+        )
+    )
+    rect = loop.rectified
+    net = loop.runtime.network
+    ids = net.cell_ids
+    assert rect is not None and len(rect.src) > 10
+    assert all(ids[i][:2] in ("DA", "VA") for i in rect.src)
+    assert all(ids[i] in ("AVAL", "AVAR") for i in rect.dst)
+
+    v = loop.runtime.state[0]
+    v[rect.src] = -40.0
+    v[rect.dst] = -60.0  # every source above its sink: all open
+    rect.update()
+    np.testing.assert_allclose(net.g_gap[rect.src, rect.dst], rect.g)
+    v[rect.dst] = -20.0  # every sink above: all shut
+    rect.update()
+    assert not net.g_gap[rect.src, rect.dst].any()
+    assert not net.g_gap[rect.dst, rect.src].any()
+    np.testing.assert_allclose(net.gap_row_sum, net.g_gap.sum(axis=1))

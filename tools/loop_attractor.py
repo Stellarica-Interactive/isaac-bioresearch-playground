@@ -239,6 +239,13 @@ def main() -> int:
         help="how far the command interneurons are depolarised, mV (the runner's 20)",
     )
     parser.add_argument(
+        "--rectify",
+        default=None,
+        metavar="FROM>TO",
+        help="make the gap junctions between two sets of cells pass current only from "
+        "FROM into TO, e.g. DA,VA>AVA (Liu et al. 2017; 5AO.16)",
+    )
+    parser.add_argument(
         "--sign-override",
         action="append",
         default=[],
@@ -287,6 +294,7 @@ def main() -> int:
             lesion_mode=args.lesion_mode,
             rme_loop=args.rme_loop,
             sign_override=args.sign_override,
+            rectify=args.rectify,
             intrinsic=args.intrinsic,
             rme_excite_ns=args.rme_excite_ns,
             rme_inhibit_ns=args.rme_inhibit_ns,
@@ -329,6 +337,7 @@ def main() -> int:
         f"{f', intrinsic {args.intrinsic}' if args.intrinsic else ''}"
         f"{f', command {args.command_mv:g} mV' if args.command_mv != 20.0 else ''}"
         f"{', ' + ', '.join(args.sign_override) if args.sign_override else ''}"
+        f"{f', rectified {args.rectify}' if args.rectify else ''}"
         f"{', stimulate ' + ' '.join(args.stimulate) if args.stimulate else ''}: "
         f"period {r['period']:5.2f} s, step {r['step']:+6.1f} deg, "
         f"axial {r['axial']:+.4f} BL/s, share {r['share']:+.2f}, amp {r['amp']:5.1f} deg, "

@@ -7355,6 +7355,53 @@ probe is reproducible from `tools/loop_attractor.py`. **Next for reversal:** hol
 the A loop down while the forward command is on, then a touch pathway that can
 flip the commands (§5AO.1).
 
+### 5AO.16 One-way AVA–A junctions: measured, and they break the backward crawl
+
+`--rectify "DA,VA>AVA"` (`RectifiedJunctions` in `tools/analyse_loop.py`) makes
+the gap junctions between AVA and the A-type motor neurons what Liu et al. 2017
+recorded. Each conducts only while its A cell is the more depolarised, re-decided
+every step, so current flows from the motor neuron into AVA and never back. While
+open, a junction is the network's ordinary one, so the integrator treats it as it
+treats every other: the cell's own gap conductance implicitly, the coupling
+explicitly. Thresholds stay as solved with every junction in place. A test holds
+that a junction is open exactly while its source is above its sink, and that the
+row sums the integrator reads always match the matrix.
+
+With §5AO.15's other settings (A and B loops, AVA's synapses onto the A cells
+excitatory), 120 s from starts 2° off straight:
+
+| command | junctions symmetric (§5AO.15) | junctions one-way, as measured |
+|---|---|---|
+| AVA, 40 mV | backward, −0.109 to −0.123 BL/s, from 3 of 6 starts | −0.006 to −0.018 BL/s, no clear rhythm (3 starts) |
+| AVB, 40 mV | never forward | −0.006 to −0.020 BL/s, no clear rhythm (3 starts) |
+| AVA, 40 mV, one-way junctions only (synapse as committed) | no motion | −0.007 and −0.017 BL/s |
+| the committed crawl (B loop, AVB at 20 mV) | 0.087 BL/s | 0.092 BL/s |
+
+The measured junction direction makes things worse. The clean backward crawl
+goes, and the forward command still does not win. The committed crawl does not
+care. The A loop evidently relied on the electrical push from AVA that the animal
+does not have.
+
+**Why the measured parts do not fit.** In the animal the A cells' rhythm is their
+own. Gao et al. 2018 show they oscillate intrinsically, through the UNC-2 calcium
+current, and AVA inhibits or potentiates that oscillation according to its state.
+In the model their rhythm comes from the assumed proprioceptive loop of §5AO.2,
+and the measured connections around it were built for something else. The one
+measured A-type cell the project holds, Nicoletti et al. 2024's VA5, cannot stand
+in. Its seven conductances do not include UNC-2 (§5W), and §5AN.10 measured it
+as a plain resistor across the gait band. So the model has no measured source for
+the A cells' oscillation, and the wiring Liu et al. and Gao et al. measured
+cannot be tested properly without one.
+
+**Decision.** Not adopted; `--rectify` stays as a probe. **This is where the
+reversal work stops for now, at the same wall as the head (§5AO.12–5AO.13).** The
+measured circuits depend on cells with rhythms of their own and on asymmetric
+coupling, while this model's rhythms come from assumed feedback through graded
+cells. The next step for either is a modelling decision rather than another
+connection: an A-type oscillator built from Gao et al.'s UNC-2 current, which
+would itself be assumed in its parameters, or motor neurons with intrinsic
+dynamics more generally.
+
 ## 6. Decisions taken, and what remains open
 
 ### 6.1 Synaptic sign — DECIDED

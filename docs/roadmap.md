@@ -13,7 +13,7 @@ What does not work yet:
 |---|---|---|
 | the head | stays nearly straight. It joins the wave only with feedback onto RMD that nobody has measured, and then the crawl circles. Measured parts added since (RME, the SMD–RME loop, RMD's own biophysics) do not give it a rhythm, because the whole network moves in step with the body | §1.0, `model_assumptions.md` §5AO.7–5AO.13 |
 | touch | the receptors fire and the worm does not respond: no escape. `--touch-demo` shows it | §5AO.1 |
-| reversal | commands work only through gap junctions here, and the measured backward route is chemical. With AVA's synapses onto the A-type motor neurons excitatory (their measured function), a 40 mV command and the assumed A-type loop, the backward command switches on a backward crawl from half the starts; the forward command never wins with both loops present | §5AO.2, §5AO.14–5AO.15 |
+| reversal | commands work only through gap junctions here, and the measured backward route is chemical. With AVA's synapses onto the A-type motor neurons excitatory (their measured function), a 40 mV command and the assumed A-type loop, the backward command switches on a backward crawl from half the starts; the forward command never wins with both loops present. Making AVA's junctions one-way, as measured, breaks even that: the A cells' rhythm in the animal is their own (Gao et al. 2018), and the model has no measured source for it | §5AO.2, §5AO.14–5AO.16 |
 | steering | no chemotaxis | §5AO.3 |
 
 Until 2026-10-03 the nervous system did not crawl at all, and the history of how

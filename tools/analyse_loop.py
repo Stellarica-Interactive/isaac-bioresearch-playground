@@ -51,6 +51,7 @@ import numpy as np
 
 from common.data.schemas import CellCategory, Connectome, Sign, SynapseType
 from common.neural.hybrid import HybridRuntime
+from common.neural.runtime import NeuralRuntime
 from common.neural.stimulus import scale_for_depolarisation, solve_for_depolarisation
 from common.neural.synapses import UnknownSignPolicy
 from worm.body.geometry import BodyPlan
@@ -74,6 +75,57 @@ from worm.neural.config import (
 )
 
 GAIT_HZ = 0.5
+
+
+class RectifiedJunctions:
+    """Gap junctions that pass current one way only, re-decided every step.
+
+    ``"DA,VA>AVA"`` makes every gap junction between a DA or VA cell and an AVA
+    cell conduct only while the DA or VA cell is the more depolarised, so current
+    flows from it into AVA and never back -- the "antidromic only" junctions Liu et
+    al. 2017 recorded between AVA and the A-type motor neurons (model_assumptions
+    5AO.16). While conducting, a junction is the network's ordinary one, so the
+    exponential integrator treats it exactly as it treats the rest: the cell's own
+    gap conductance implicitly, the coupling explicitly. Thresholds stay as solved
+    with every junction in place.
+    """
+
+    def __init__(self, runtime: NeuralRuntime, connectome: Connectome, spec: str) -> None:
+        from_spec, _, to_spec = spec.partition(">")
+        net = runtime.network
+        present = set(net.cell_ids)
+        sources = sorted(_resolve_cells(connectome, from_spec) & present)
+        sinks = sorted(_resolve_cells(connectome, to_spec) & present)
+        pairs = [
+            (net.index(a), net.index(b))
+            for a in sources
+            for b in sinks
+            if net.g_gap[net.index(a), net.index(b)] > 0.0
+        ]
+        if not pairs:
+            raise ValueError(f"{spec!r}: no gap junctions between those cells")
+        self.src = np.array([a for a, _ in pairs], dtype=np.int64)
+        self.dst = np.array([b for _, b in pairs], dtype=np.int64)
+        self.g = net.g_gap[self.src, self.dst].copy()
+        self.on = np.ones(len(pairs), dtype=bool)  # as built: every junction open
+        self.runtime = runtime
+
+    def update(self) -> None:
+        """Open the junctions whose source is the more depolarised, close the rest."""
+        net = self.runtime.network
+        v = self.runtime.state[0]
+        on = v[self.src] > v[self.dst]
+        flip = np.flatnonzero(on != self.on)
+        for k in flip:
+            a, b, g = self.src[k], self.dst[k], self.g[k]
+            delta = g if on[k] else -g
+            # In place: NetworkMatrices is frozen, its arrays are not, and the
+            # integrator reads both of these afresh every step.
+            net.g_gap[a, b] += delta
+            net.g_gap[b, a] += delta
+            net.gap_row_sum[a] += delta
+            net.gap_row_sum[b] += delta
+        self.on = on
 
 
 def override_signs(connectome: Connectome, spec: str) -> tuple[Connectome, int]:
@@ -346,6 +398,12 @@ class Loop:
         # convention: the output sigmoid 5L's offset above the cell's measured
         # rest. Simulation only -- ``get``/``put``, and so ``fixed_point``, do not
         # carry the conductance model's state. model_assumptions 5AO.12.
+        # One-way gap junctions, measured for AVA and the A-type motor neurons
+        # (Liu et al. 2017; model_assumptions 5AO.16).
+        self.rectified: RectifiedJunctions | None = None
+        if getattr(args, "rectify", None):
+            self.rectified = RectifiedJunctions(self.runtime, connectome, args.rectify)
+
         self.hybrid: HybridRuntime | None = None
         model_id = getattr(args, "intrinsic", None)
         if model_id:
@@ -420,6 +478,8 @@ class Loop:
         for cell, current in self.extra.items():
             self.runtime.i_ext_pa[self.runtime.network.index(cell)] += current
         for _ in range(self.substeps):
+            if self.rectified is not None:
+                self.rectified.update()
             if self.hybrid is not None:
                 self.hybrid.step()
             else:
