@@ -63,7 +63,10 @@ SEED_GAIN = 5.0e-5 / 3.0e-3
 def main() -> int:
     dt = 1.0 / args.physics_hz
     plan = BodyPlan()
-    root_path, joint_paths = build_scene(plan)
+    # As the runner builds it under --quasistatic: PhysX on its CPU pipeline
+    # (build_scene, gpu_dynamics). A check of the other pipeline checks nothing
+    # the runner does.
+    root_path, joint_paths = build_scene(plan, gpu_dynamics=False)
     SimulationManager.set_physics_dt(dt)
     articulation = Articulation(root_path)
     links = RigidPrim([f"{root_path}/segment_{i:02d}" for i in range(plan.n_segments)])

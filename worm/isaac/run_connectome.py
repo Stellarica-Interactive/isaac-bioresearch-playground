@@ -632,6 +632,7 @@ from worm.importers.naming import body_wall_muscle_ids  # noqa: E402
 from worm.isaac.stage import (  # noqa: E402
     DEFAULT_PROBE_RADIUS_SCALE,
     ActivityTint,
+    Probe,
     add_camera,
     add_ground_grid,
     add_probe,
@@ -997,11 +998,8 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         if (args.probe or poke or demo is not None)
         else None
     )
-    # With the standard translate/orient/scale ops, so the probe can still be placed
-    # when there is no physics view to write through -- the timeline paused or
-    # stopped -- and Isaac falls back to USD, which needs an orient op the sphere
-    # was authored without. Without it the demo crashed mid-run on exactly that.
-    probe = RigidPrim(probe_path, reset_xform_op_properties=True) if probe_path else None
+    # Moved and read through the stage, never through PhysX: see Probe.
+    probe = Probe.at(probe_path) if probe_path else None
     tint = (
         ActivityTint.build(plan.n_segments, probe_path=probe_path, paint_segments=skin is None)
         if not args.no_tint
@@ -1531,7 +1529,7 @@ def _command_state(runtime: NeuralRuntime) -> dict[str, float]:
 
 
 def _drive_poke(
-    probe: RigidPrim, links: RigidPrim, plan: BodyPlan, t: float, poke: list[float]
+    probe: Probe, links: RigidPrim, plan: BodyPlan, t: float, poke: list[float]
 ) -> None:
     """Move the probe onto the body between two times, then take it away.
 
@@ -1581,17 +1579,10 @@ def _drive_poke(
         )
     if not np.all(np.isfinite(target)):
         return  # the body has already diverged; do not feed PhysX a NaN pose
-    # Orientation is passed explicitly: PhysX rejects a pose whose quaternion it
-    # cannot read, and an omitted one is not necessarily identity.
-    probe.set_world_poses(
-        positions=np.asarray(target, dtype=np.float32).reshape(1, 3),
-        orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
-    )
+    probe.move_to(target)
 
 
-def _drive_touch_demo(
-    probe: RigidPrim, links: RigidPrim, plan: BodyPlan, t: float, demo: TouchDemo
-):
+def _drive_touch_demo(probe: Probe, links: RigidPrim, plan: BodyPlan, t: float, demo: TouchDemo):
     """Place the probe where the demo's schedule says, on the body as it is now.
 
     Waiting points sit beside the target segment and raised above it, so that
@@ -1626,11 +1617,7 @@ def _drive_touch_demo(
     contact, waiting = places(pose.station)
     _, waiting_before = places(pose.previous)
     hover = waiting_before + (waiting - waiting_before) * pose.glide
-    target = demo_probe_point(contact, hover, pose.depth)
-    probe.set_world_poses(
-        positions=np.asarray(target, dtype=np.float32).reshape(1, 3),
-        orientations=np.array([[1.0, 0.0, 0.0, 0.0]], dtype=np.float32),
-    )
+    probe.move_to(demo_probe_point(contact, hover, pose.depth))
     return pose
 
 
@@ -1643,9 +1630,7 @@ def _side_name(side: int) -> str:
     return "dorsal" if side > 0 else "ventral"
 
 
-def _probe_contact(
-    probe: RigidPrim, links: RigidPrim, plan: BodyPlan
-) -> tuple[np.ndarray, np.ndarray]:
+def _probe_contact(probe: Probe, links: RigidPrim, plan: BodyPlan) -> tuple[np.ndarray, np.ndarray]:
     """Which segments the probe is pressing on, and from which side.
 
     Contact is measured geometrically here rather than read from PhysX contact
@@ -1659,7 +1644,7 @@ def _probe_contact(
     and the direction to the probe. That distinction only matters for AVM and PVM,
     the two genuinely ventral receptors.
     """
-    centre = np.asarray(probe.get_world_poses()[0]).reshape(-1)[:3]
+    centre = probe.position()
     positions = np.asarray(links.get_world_poses()[0])[:, :3]
     seg_radii = np.array([s.radius_m for s in plan.segments()])
     probe_radius = DEFAULT_PROBE_RADIUS_SCALE * plan.max_radius_m

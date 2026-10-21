@@ -428,8 +428,16 @@ where their own muscle synapses are; every other neuron is placed by region
 (nerve ring, mid-body, tail ganglia) with a scatter, because the repository has
 no soma coordinates. **It is a display layout, not anatomy.**
 
+Once a stroke, most of the network lights up together. That is the model, not
+the display: the gait floods the command layer through the motor neurons' gap
+junctions, so the whole network moves in step with the body, and a touch's
+1–2 mV is lost in swings of 40–60 mV
+([`model_assumptions.md`](docs/model_assumptions.md) §5AO.12–5AO.13).
+
 `--screenshot-every 5 --screenshot-dir shots` saves the viewport every five
 simulated seconds, and with `--connectome screen` the panel beside each frame.
+Five seconds is two gait periods, so every frame catches the same phase; for a
+fair sample pick an interval that is not a multiple of 2.5 s, such as 0.7.
 `--no-skin --ground grid` brings back the capsules and the checkerboard.
 
 All of this is display only. Nothing in it feeds back into the body or the

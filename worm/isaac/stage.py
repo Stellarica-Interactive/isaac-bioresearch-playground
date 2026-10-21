@@ -426,6 +426,54 @@ def add_probe(
     return path
 
 
+@dataclass
+class Probe:
+    """The touch probe, moved and read through its transform on the stage.
+
+    The probe is a kinematic body, and for a kinematic body the stage is the
+    authority: PhysX follows a transform changed there, but a pose written into
+    PhysX -- as the demo and the scripted poke used to, through a ``RigidPrim`` --
+    is never written back. The viewport went on drawing the probe where it
+    started while the touch happened somewhere nobody could see, and a probe
+    dragged by hand was overwritten every frame (reported from the viewport:
+    "it does not move ... nothing reacts"). Through the stage, the probe that is
+    drawn, the one that touches and the one under the mouse are the same probe.
+    """
+
+    prim: Any
+
+    @classmethod
+    def at(cls, path: str) -> Probe:
+        import isaacsim.core.experimental.utils.stage as stage_utils
+
+        return cls(prim=stage_utils.get_current_stage().GetPrimAtPath(path))
+
+    def position(self) -> np.ndarray:
+        """Where the probe is, ``(3,)``: wherever a script or the mouse put it."""
+        from pxr import Usd, UsdGeom
+
+        world = UsdGeom.Xformable(self.prim).ComputeLocalToWorldTransform(Usd.TimeCode.Default())
+        return np.array(world.ExtractTranslation(), dtype=np.float64)
+
+    def move_to(self, xyz: np.ndarray) -> None:
+        """Put the probe's centre at ``xyz``. Its parent is the untransformed
+        ``/World``, so the translate is the world position."""
+        from pxr import Gf, UsdGeom
+
+        x, y, z = (float(v) for v in np.asarray(xyz).reshape(-1)[:3])
+        translate = next(
+            (
+                op
+                for op in UsdGeom.Xformable(self.prim).GetOrderedXformOps()
+                if op.GetOpType() == UsdGeom.XformOp.TypeTranslate
+            ),
+            None,
+        )
+        if translate is None:
+            translate = UsdGeom.Xformable(self.prim).AddTranslateOp()
+        translate.Set(Gf.Vec3d(x, y, z))
+
+
 def add_ground_grid(
     plan: BodyPlan | None = None,
     *,

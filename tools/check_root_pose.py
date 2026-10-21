@@ -44,7 +44,10 @@ from worm.isaac.stage import build_scene, dof_order  # noqa: E402
 
 def main() -> int:
     plan = BodyPlan()
-    root_path, joint_paths = build_scene(plan)
+    # As the runner builds it under --quasistatic: PhysX on its CPU pipeline
+    # (build_scene, gpu_dynamics). A check of the other pipeline checks nothing
+    # the runner does.
+    root_path, joint_paths = build_scene(plan, gpu_dynamics=False)
     SimulationManager.set_physics_dt(1.0 / 240.0)
     articulation = Articulation(root_path)
     links = RigidPrim([f"{root_path}/segment_{i:02d}" for i in range(plan.n_segments)])

@@ -7251,6 +7251,23 @@ and nothing in the head can remove it. **Next:** rectifying AVA–A gap junction
 as Liu et al. measured them. It is the measured half of the escape circuit
 (§5AO.1–5AO.2) that the model gets wrong, not a fix for the head.
 
+**Re-measured on the committed model of §5AO.17 (2026-10-21).** The shared swing
+did not go away with variant B and the chloride split; it is what the
+connectome display (`--connectome`, README "Presentation") shows as most of the
+network lighting up together once a stroke. Over 20 s of settled crawling
+(`tools/analyse_loop.py`'s loop at the committed settings, proprioception 70%
+rate-sensing, sampled 20 times a second), the share of the 302 neurons whose
+synaptic activation is more than 30% of the way from its own resting value to
+the ceiling `a_r / (a_r + a_d)` swings from 3% (10th percentile) to 81% (90th),
+on a 2.50 s period -- the gait's. More than half the network is past that mark at
+once for 35% of the time. The command interneurons span 39–63 mV over the run
+(range, not the s.d. of the table above): AVA 56, AVB 39–50, AVD 52–54, PVC 63.
+A touch moves them 1–2 mV (§5AO.1), which is why the touch demo's readout
+reports every touch as indistinguishable from background.
+
+The Isaac screenshots first said otherwise: taken every 5 s, two gait periods,
+every frame caught the same quiet phase. §5.1 of the roadmap, again.
+
 ### 5AO.14 Toward reversal: AVA's synapses onto the A-type motor neurons
 
 The backward command interneuron AVA reaches the A-type motor neurons, which
