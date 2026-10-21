@@ -29,6 +29,7 @@ from worm.body.visuals import (
     skin_geometry,
     skin_rings,
     skin_topology,
+    sphere,
     spine,
 )
 
@@ -83,6 +84,26 @@ def test_the_skin_topology_indexes_every_vertex_and_nothing_else() -> None:
     assert counts.sum() == len(indices)
     assert indices.min() == 0 and indices.max() == n_rings * n_around + 1
     assert set(np.unique(indices)) == set(range(n_rings * n_around + 2))
+
+
+def test_the_neuron_sphere_is_closed_unit_and_faces_outwards() -> None:
+    vertices, counts, indices = sphere(n_lat=4, n_lon=8)
+    np.testing.assert_allclose(np.linalg.norm(vertices, axis=1), 1.0)
+    assert counts.sum() == len(indices)
+    assert set(np.unique(indices)) == set(range(len(vertices)))
+    start = np.r_[0, np.cumsum(counts)[:-1]]
+    for s, n in zip(start, counts, strict=True):
+        a, b, c = vertices[indices[s : s + 3]]
+        centre = vertices[indices[s : s + n]].mean(axis=0)
+        assert np.dot(np.cross(b - a, c - a), centre) > 0.0  # wound outwards
+    # Closed: every edge is shared by exactly two faces.
+    edges: dict[tuple[int, int], int] = {}
+    for s, n in zip(start, counts, strict=True):
+        face = indices[s : s + n]
+        for i in range(n):
+            key = tuple(sorted((int(face[i]), int(face[(i + 1) % n]))))
+            edges[key] = edges.get(key, 0) + 1
+    assert set(edges.values()) == {2}
 
 
 def test_ring_colours_cover_every_vertex() -> None:

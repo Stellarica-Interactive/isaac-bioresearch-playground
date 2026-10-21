@@ -176,6 +176,7 @@ def build_scene(
     ground: bool = False,
     planar: bool = True,
     self_collision: bool = False,
+    gpu_dynamics: bool = True,
 ) -> tuple[str, list[str]]:
     """Create a fresh stage containing a physics scene, a light and the worm.
 
@@ -202,6 +203,14 @@ def build_scene(
 
     Set ``gravity=True, ground=True`` to reproduce the contact-based version and
     see the anisotropy disappear.
+
+    ``gpu_dynamics=False`` runs PhysX on the CPU pipeline. The GPU pipeline is
+    PhysX's default here, and with the CPU-side API this code drives it through,
+    every pose written to the articulation costs a sync: measured, writing the
+    root pose and joint angles each step took a frame from about 20 ms to 42 ms,
+    and the CPU pipeline brings it back to 18. Where PhysX integrates the body that
+    choice is part of the physics, so the default stays what every result was
+    measured with; where it only carries a pose solved elsewhere, it is not.
     """
     import isaacsim.core.experimental.utils.stage as stage_utils
     from isaacsim.core.experimental.objects import DistantLight, GroundPlane
@@ -213,6 +222,12 @@ def build_scene(
     scene = UsdPhysics.Scene.Define(stage, "/World/PhysicsScene")
     scene.CreateGravityDirectionAttr().Set(Gf.Vec3f(0.0, 0.0, -1.0))
     scene.CreateGravityMagnitudeAttr().Set(9.81 if gravity else 0.0)
+    if not gpu_dynamics:
+        from pxr import PhysxSchema
+
+        physx = PhysxSchema.PhysxSceneAPI.Apply(scene.GetPrim())
+        physx.CreateEnableGPUDynamicsAttr().Set(False)
+        physx.CreateBroadphaseTypeAttr().Set("MBP")
 
     if ground:
         GroundPlane("/World/GroundPlane", positions=[0, 0, 0])

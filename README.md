@@ -405,14 +405,20 @@ can be drawn live on top:
 
 ```powershell
 # inside the body's outline, bending with it
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --connectome inside --camera-framing 1.3
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --quasistatic --connectome inside --camera-framing 1.3
 
 # larger, floating over the agar beside the worm, bending with it
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --connectome above --camera-framing 1.8
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --quasistatic --connectome above --camera-framing 1.8
 
 # flat, in a panel of its own
-C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --physics-hz 240 --quasistatic --connectome screen
+C:\isaacsim\python.bat worm\isaac\run_connectome.py --seconds 120 --quasistatic --connectome screen
 ```
+
+These run at the default 60 Hz physics, which renders about 30 frames a
+second on a laptop RTX 4070: the worm moves at half its real pace, against an
+eighth at 240 Hz. Their numbers are not for quoting (see above); add
+`--physics-hz 240` to measure. Every run ends by printing its wall clock and
+frame rate.
 
 Neurons are coloured by synaptic activation on a fixed scale -- blue at rest,
 rose half-way, gold at the most a synapse can release -- and each synapse takes

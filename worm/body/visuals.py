@@ -138,6 +138,43 @@ def skin_geometry(
     return points, normals
 
 
+def sphere(n_lat: int = 4, n_lon: int = 8) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """A unit sphere as a small mesh: ``(vertices, face counts, face indices)``.
+
+    A pole at each end and ``n_lat - 1`` rings of ``n_lon`` between, faces wound
+    to face outwards. Enough to read as round at the size a neuron is drawn, and
+    small enough that three hundred of them update as one cheap mesh.
+    """
+    theta = 2 * np.pi * np.arange(n_lon) / n_lon
+    rings = [
+        np.column_stack(
+            [
+                np.sin(phi) * np.cos(theta),
+                np.sin(phi) * np.sin(theta),
+                np.full(n_lon, np.cos(phi)),
+            ]
+        )
+        for phi in np.pi * np.arange(1, n_lat) / n_lat
+    ]
+    vertices = np.vstack([[0.0, 0.0, 1.0], *rings, [0.0, 0.0, -1.0]])
+    bottom, last = len(vertices) - 1, 1 + (n_lat - 2) * n_lon
+    counts: list[int] = []
+    indices: list[int] = []
+    for k in range(n_lon):
+        counts.append(3)
+        indices += [0, 1 + k, 1 + (k + 1) % n_lon]
+    for r in range(n_lat - 2):
+        upper, lower = 1 + r * n_lon, 1 + (r + 1) * n_lon
+        for k in range(n_lon):
+            k1 = (k + 1) % n_lon
+            counts.append(4)
+            indices += [upper + k, lower + k, lower + k1, upper + k1]
+    for k in range(n_lon):
+        counts.append(3)
+        indices += [bottom, last + (k + 1) % n_lon, last + k]
+    return vertices, np.array(counts, dtype=np.int32), np.array(indices, dtype=np.int32)
+
+
 def skin_rings(n_segments: int, per_segment: int = 4) -> int:
     """How many rings :func:`skin_points` produces for a body of ``n_segments``."""
     return (n_segments + 1) * per_segment + 1

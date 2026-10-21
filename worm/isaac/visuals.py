@@ -12,7 +12,7 @@ tested without Isaac Sim; this module only turns it into USD.
   texture is generated at run time, so nothing binary enters the repository.
 * :func:`presentation_lighting` -- a softer key light and a fill, which the skin
   and agar colours are chosen under.
-* :class:`ConnectomeOverlay` -- the neurons as points and the strongest synapses
+* :class:`ConnectomeOverlay` -- the neurons as spheres and the strongest synapses
   as curves that run along the body, coloured by synaptic activation: ``inside``
   the body's outline (drawn over the top of the skin, which from the camera above
   reads as inside, with no transparency to depend on), ``above`` it and beside
@@ -48,6 +48,7 @@ from worm.body.visuals import (
     skin_rings,
     skin_tint,
     skin_topology,
+    sphere,
 )
 
 CONNECTOME_MODES = ("off", "screen", "above", "inside")
@@ -226,7 +227,7 @@ def presentation_lighting(
 
 @dataclass
 class ConnectomeOverlay:
-    """The connectome drawn live: points for neurons, curves for synapses.
+    """The connectome drawn live: spheres for neurons, curves for synapses.
 
     ``inside`` places it in the body, so it bends with the animal; ``above`` draws
     the same, larger, floating over the agar beside the worm -- directly over it,
@@ -238,7 +239,12 @@ class ConnectomeOverlay:
     mode: str
     drawing: ConnectomeDrawing
     plan: BodyPlan
-    points: Any = None
+    #: The neurons: one mesh holding a small sphere per cell. A ``UsdGeom.Points``
+    #: drew the same, but RTX rebuilt it on every change -- updating it every
+    #: frame cost 20 ms a frame, against about 1 ms for a mesh (measured).
+    dots: Any = None
+    #: Radius of each neuron's sphere, metres.
+    dot_radius: float = 0.0
     curves: Any = None
     provider: Any = None
     window: Any = None
@@ -250,6 +256,7 @@ class ConnectomeOverlay:
     #: frames both.
     view_shift: np.ndarray = field(default_factory=lambda: np.zeros(2))
     _pre: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.int64))
+    _unit_sphere: np.ndarray = field(default_factory=lambda: np.zeros((0, 3)))
 
     @classmethod
     def build(cls, mode: str, drawing: ConnectomeDrawing, plan: BodyPlan) -> ConnectomeOverlay:
@@ -276,11 +283,25 @@ class ConnectomeOverlay:
         inside = mode == "inside"
         if not inside:
             overlay.beside = Beside(distance_m=ABOVE_OFFSET_BODY_LENGTHS * plan.total_length_m)
-        overlay.points = UsdGeom.Points.Define(stage, "/World/Connectome/Neurons")
-        width = (0.32 if inside else 0.55) * plan.max_radius_m
-        overlay.points.CreateWidthsAttr().Set(Vt.FloatArray([width] * n_cells))
-        overlay.points.SetWidthsInterpolation(UsdGeom.Tokens.vertex)
-        overlay.points.CreateDisplayColorPrimvar(UsdGeom.Tokens.vertex)
+        overlay.dot_radius = (0.16 if inside else 0.275) * plan.max_radius_m
+        unit, counts, indices = sphere()
+        overlay._unit_sphere = unit
+        overlay.dots = UsdGeom.Mesh.Define(stage, "/World/Connectome/Neurons")
+        overlay.dots.CreateFaceVertexCountsAttr().Set(
+            Vt.IntArray(np.tile(counts, n_cells).tolist())
+        )
+        overlay.dots.CreateFaceVertexIndicesAttr().Set(
+            Vt.IntArray(
+                (indices[None, :] + len(unit) * np.arange(n_cells)[:, None]).ravel().tolist()
+            )
+        )
+        overlay.dots.CreateSubdivisionSchemeAttr().Set(UsdGeom.Tokens.none)
+        # A sphere's normals are its own unit vertices, wherever it is moved to.
+        overlay.dots.CreateNormalsAttr().Set(
+            Vt.Vec3fArray.FromNumpy(np.tile(unit, (n_cells, 1)).astype(np.float32))
+        )
+        overlay.dots.SetNormalsInterpolation(UsdGeom.Tokens.vertex)
+        overlay.dots.CreateDisplayColorPrimvar(UsdGeom.Tokens.vertex)
         overlay.curves = UsdGeom.BasisCurves.Define(stage, "/World/Connectome/Synapses")
         overlay.curves.CreateTypeAttr().Set(UsdGeom.Tokens.cubic)
         overlay.curves.CreateBasisAttr().Set(UsdGeom.Tokens.catmullRom)
@@ -322,20 +343,24 @@ class ConnectomeOverlay:
             paths += shift
             self.view_shift = 0.5 * shift[:2]
         colours = activity_colours(level)
-        self.points.GetPointsAttr().Set(Vt.Vec3fArray.FromNumpy(xyz.astype(np.float32)))
-        self.points.GetDisplayColorPrimvar().Set(
-            Vt.Vec3fArray.FromNumpy(linear(colours).astype(np.float32))
+        unit = self._unit_sphere
+        dots = (xyz[:, None, :] + self.dot_radius * unit[None, :, :]).reshape(-1, 3)
+        self.dots.GetPointsAttr().Set(Vt.Vec3fArray.FromNumpy(dots.astype(np.float32)))
+        self.dots.GetDisplayColorPrimvar().Set(
+            Vt.Vec3fArray.FromNumpy(
+                np.repeat(linear(colours), len(unit), axis=0).astype(np.float32)
+            )
         )
         self.curves.GetPointsAttr().Set(Vt.Vec3fArray.FromNumpy(paths.astype(np.float32)))
         # Each synapse in its presynaptic cell's colour, a shade darker than the cells.
         self.curves.GetDisplayColorPrimvar().Set(
             Vt.Vec3fArray.FromNumpy(linear(0.8 * colours[self._pre]).astype(np.float32))
         )
-        both = np.vstack([xyz, paths]) if len(paths) else xyz
+        both = np.vstack([dots, paths]) if len(paths) else dots
         extent = Vt.Vec3fArray.FromNumpy(
             np.vstack([both.min(axis=0), both.max(axis=0)]).astype(np.float32)
         )
-        self.points.GetExtentAttr().Set(extent)
+        self.dots.GetExtentAttr().Set(extent)
         self.curves.GetExtentAttr().Set(extent)
 
 

@@ -954,7 +954,12 @@ def _run_condition(  # noqa: PLR0913 - one experimental condition, all of it exp
         ),
     )
 
-    root_path, joint_paths = build_scene(plan, self_collision=args.self_collision)
+    # The quasi-static body is solved here, in numpy; PhysX only carries its pose
+    # to the viewport, and on the CPU pipeline that costs half the frame time it
+    # does on the GPU one (build_scene).
+    root_path, joint_paths = build_scene(
+        plan, self_collision=args.self_collision, gpu_dynamics=not args.quasistatic
+    )
     camera = add_camera(plan, **({"framing": args.camera_framing} if args.camera_framing else {}))
     ground = "none" if args.no_grid else args.ground
     if ground == "grid":
